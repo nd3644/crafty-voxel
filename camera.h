@@ -1,13 +1,18 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <glm/glm.hpp>
 
 class Camera
 {
-	Camera();
-	~Camera();
+    public:
+        Camera();
+        ~Camera();
 
-	void Update();
+        void Update();
+    private:
+        void CheckInput();
+        glm::vec3 position, direction, up, right;
 };
 
 #endif

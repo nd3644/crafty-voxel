@@ -1,4 +1,4 @@
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <GL/glew.h>
 
 #include <iostream>
@@ -13,6 +13,8 @@
 #include "map.h"
 #include "shader.h"
 #include "cube.h"
+#include "camera.h"
+
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
@@ -56,6 +58,7 @@ extern void SetSolidFlag(int i);
 int main(int argc, char* args[]) {
 
 	Map myMap;
+    Camera myCamera;
 	myMap.FromBMP("heightmap.bmp");
 
 	CompileArr();
@@ -64,7 +67,7 @@ int main(int argc, char* args[]) {
 	viewMatrix = glm::mat4(1);
 	modelMatrix = glm::mat4(1);
 
-	projMatrix = glm::frustum(-1, 1, 1, -1, 1, 100);
+	projMatrix = glm::frustum(-1, 1, -1, 1, 1, 100);
 
 	Init();
 
@@ -72,7 +75,7 @@ int main(int argc, char* args[]) {
 	float fdelta = 0.0f;
 
 	bool bDone = false;
-	while (SDL_GetTicks() - iTicks < 10000 && bDone == false) {
+	while (SDL_GetTicks() - iTicks < 100000 && bDone == false) {
 		fdelta += 0.01f;
 		while (SDL_PollEvent(&myEvent)) {
 			if ((myEvent.type == SDL_WINDOWEVENT && myEvent.window.event == SDL_WINDOWEVENT_CLOSE) || SDL_GetKeyboardState(0)[SDL_SCANCODE_ESCAPE]) {
@@ -95,8 +98,10 @@ int main(int argc, char* args[]) {
 		glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 		glBindVertexArray(myVAO);
-		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
+//		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
 
+
+        myCamera.Update();
 		myMap.Draw();
 
 
@@ -107,7 +112,7 @@ int main(int argc, char* args[]) {
 		glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 		glBindVertexArray(myVAO);
-		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
+//		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
 
 		SDL_GL_SwapWindow(myWindow);
 	}
@@ -191,14 +196,14 @@ void Init() {
 	glBindBuffer(GL_ARRAY_BUFFER, myArrBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3_t) * vertList.size(), &vertList[0], GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 	glEnableVertexAttribArray(0);
 
 	glGenBuffers(1, &myTexArrBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, myTexArrBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vec2_t) * uvList.size(), &uvList[0], GL_STATIC_DRAW);
 
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 	glEnableVertexAttribArray(1);
 
 	// Load the texture

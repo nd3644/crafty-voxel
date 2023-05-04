@@ -13,6 +13,9 @@
 
 Map::Map() {
 	iBricks = new int[width*height*depth];
+    for(int i = 0;i < width*height*depth;i++) {
+        iBricks[i] = 0;
+    }
 }
 
 Map::~Map() {
@@ -28,29 +31,26 @@ void Map::FromBMP(std::string sfile) {
 
 	for (int x = 0; x < 128;x++) {
 		for (int z = 0; z < 128; z++) {
-			int height = myBmp.GetPixelRGBA(x, z).R / 4;
-			for (int y = 0; y < height; y++) {
+			int height = myBmp.GetPixelRGBA(x, z).R;
+			for (int y = 0; y < height/4; y++) {
 				SetBrick(x, z, y, 1);
 			}
+            std::cout << height << " ";
 		}
+        std::cout << std::endl;
 	}
 }
 
 void Map::Draw() {
 	for (int x = 0; x < 32; x++) {
 		for (int z = 0; z < 32; z++) {
-			for (int y = 0; y < 16; y++) {
-				if (GetBrick(x, z, 256 - y) != 0) {
+			for (int y = 0; y < 32; y++) {
+				if (GetBrick(x, z, y) != 0) {
 					GLuint model = glGetUniformLocation(myProgram, "Model");
-					GLuint view = glGetUniformLocation(myProgram, "View");
-					modelMatrix = glm::mat4(1);
-					modelMatrix = glm::translate(modelMatrix, glm::vec3(x*2, y*2, -5*2 - z));
-					glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-					viewMatrix = glm::mat4(1);
-					viewMatrix = glm::rotate(viewMatrix, 0.5f, glm::vec3(0, 0, 0.5f));
-					viewMatrix = glm::translate(viewMatrix, glm::vec3(2,5,-5));
-					glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+					modelMatrix = glm::mat4(1);
+					modelMatrix = glm::translate(modelMatrix, glm::vec3(x, y, z));
+					glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 					glBindVertexArray(myVAO);
 					glDrawArrays(GL_TRIANGLES, 0, vertList.size());

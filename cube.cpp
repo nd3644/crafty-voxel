@@ -7,15 +7,15 @@ std::vector<vec3_t>vertList;
 std::vector<vec2_t>uvList;
 
 void CompileArr() {
-	cube_verts[0] = { -1, -1, -1 };
-	cube_verts[1] = { 1, -1, -1 };
-	cube_verts[2] = { 1, 1, -1 };
-	cube_verts[3] = { -1, 1, -1 };
+	cube_verts[0] = { -0.5, -0.5, -0.5 };
+	cube_verts[1] = { 0.5, -0.5, -0.5 };
+	cube_verts[2] = { 0.5, 0.5, -0.5 };
+	cube_verts[3] = { -0.5, 0.5, -0.5 };
 
-	cube_verts[4] = { -1, -1, 1 };
-	cube_verts[5] = { 1, -1, 1 };
-	cube_verts[7] = { -1, 1, 1 };
-	cube_verts[6] = { 1, 1, 1 };
+	cube_verts[4] = { -0.5, -0.5, 0.5 };
+	cube_verts[5] = { 0.5, -0.5, 0.5 };
+	cube_verts[7] = { -0.5, 0.5, 0.5 };
+	cube_verts[6] = { 0.5, 0.5, 0.5 };
 
 	uvList.clear();
 	vertList.clear();
