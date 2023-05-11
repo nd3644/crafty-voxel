@@ -24,5 +24,26 @@ extern GLuint texID;
 extern GLuint myVAO;
 extern GLuint myArrBuffer, myTexArrBuffer;
 
+class Shader {
+    public:
+
+        ~Shader();
+        Shader();
+        enum Type {
+            SHADER_VERTEX = 0,
+            SHADER_FRAGMENT
+        };
+
+        void SetUniformVec3f(std::string name, float f[3]);
+        void Initialize();
+        void Initialize(std::string sVertexFile, std::string sFragmentFile);
+        void Bind();
+    private:
+        GLuint myShaders[2];
+        GLuint myProgram;
+        GLint tex[4];
+        bool bLoaded;
+};
+
 #endif
 

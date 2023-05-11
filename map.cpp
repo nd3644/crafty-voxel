@@ -11,15 +11,27 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-Map::Map() {
-	iBricks = new int[width*height*depth];
-    for(int i = 0;i < width*height*depth;i++) {
-        iBricks[i] = 0;
+#include <thread>
+
+Map::Map() : iBricks { 0 } {
+    height = 32;
+    width = 128;
+    depth = 128;
+    iBricks = nullptr;
+
+    unsigned int num_cores = std::thread::hardware_concurrency();
+    if (num_cores == 0) {
+        std::cerr << "Unable to determine the number of cores." << std::endl;
+        NUM_THREADS = 2;
+    } else {
+        std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
+        NUM_THREADS = num_cores/2;
     }
 }
 
 Map::~Map() {
-	delete[] iBricks;
+    if(iBricks != nullptr)
+        delete[] iBricks;
 }
 
 void Map::FromBMP(std::string sfile) {
@@ -29,33 +41,153 @@ void Map::FromBMP(std::string sfile) {
 		exit(-1);
 	}
 
-	for (int x = 0; x < 128;x++) {
-		for (int z = 0; z < 128; z++) {
+    width = myBmp.GetWidth();
+    depth = myBmp.GetHeight();
+    iBricks = new int[width*height*depth];
+    for(int i = 0;i < width*height*depth;i++) {
+        iBricks[i] = 0;
+    }
+	for (int x = 0; x < width;x++) {
+		for (int z = 0; z < depth; z++) {
 			int height = myBmp.GetPixelRGBA(x, z).R;
 			for (int y = 0; y < height/4; y++) {
 				SetBrick(x, z, y, 1);
 			}
-            std::cout << height << " ";
 		}
-        std::cout << std::endl;
 	}
+/*
+    
+    */
 }
 
 void Map::Draw() {
-	for (int x = 0; x < 32; x++) {
-		for (int z = 0; z < 32; z++) {
-			for (int y = 0; y < 32; y++) {
-				if (GetBrick(x, z, y) != 0) {
-					GLuint model = glGetUniformLocation(myProgram, "Model");
+    GLuint model = glGetUniformLocation(myProgram, "Model");
 
-					modelMatrix = glm::mat4(1);
-					modelMatrix = glm::translate(modelMatrix, glm::vec3(x, y, z));
-					glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    modelMatrix = glm::mat4(1);
+//					modelMatrix = glm::translate(modelMatrix, glm::vec3(x, y, z));
+    glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-					glBindVertexArray(myVAO);
-					glDrawArrays(GL_TRIANGLES, 0, vertList.size());
-				}
-			}
-		}
-	}
+    cube_verts[0] = { -0.5, -0.5, -0.5 };
+    cube_verts[1] = { 0.5, -0.5, -0.5 };
+    cube_verts[2] = { 0.5, 0.5, -0.5 };
+    cube_verts[3] = { -0.5, 0.5, -0.5 };
+
+    cube_verts[4] = { -0.5, -0.5, 0.5 };
+    cube_verts[5] = { 0.5, -0.5, 0.5 };
+    cube_verts[7] = { -0.5, 0.5, 0.5 };
+    cube_verts[6] = { 0.5, 0.5, 0.5 };
+
+    glEnable(GL_CULL_FACE);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    int pCount = 0;
+
+    std::thread threads[NUM_THREADS];
+
+    for(int i = 0;i < NUM_THREADS;i++) {
+        threads[i] = std::thread(&Map::DrawSection, this, i);
+    }
+
+    for(int i = 0;i < NUM_THREADS;i++) {
+        threads[i].join();
+    }
+
+    for(int i = 0;i < NUM_THREADS;i++) {
+        myMeshes[i].Draw(Mesh::MODE_TRIANGLES);
+    }
+}
+
+void Map::DrawSection(int which) {
+    myMeshes[which].Clean();
+    // Second half
+    for (int y = 0; y < height; y++) {
+        for (int x = (width/NUM_THREADS)*which; x < ((width/NUM_THREADS)*which)+(width/NUM_THREADS); x++) {
+		    for (int z = 0; z < depth; z++) {
+				if (GetBrick(x, z, y) > 0) {
+                    if(GetBrick(x-1,z,y) != 0
+                    && GetBrick(x+1,z,y) != 0
+                    && GetBrick(x,z-1,y) != 0
+                    && GetBrick(x,z+1,y) != 0
+                    && GetBrick(x,z,y+1) != 0
+                    && GetBrick(x,z,y-1) != 0) {
+        //                    std::cout << "yes" << std::endl;
+                        continue;
+                    }
+
+                    myMeshes[which].SetTranslation(x,y,z);
+                    float c = 0.8f;
+                    int len = 0;
+                    for(int i = z+1;i < depth;i++) {
+                        if(GetBrick(x,z,y) != GetBrick(x,i,y)) {
+                            //std::cout << "stopping: " << z << " , " << i << " : " << GetBrick(x,z,y) << " , " << GetBrick(x,i,y) << std::endl;
+                            len = i-z;
+                            break;
+                        }
+                    }
+                    if(len == 0) {
+                        len = depth-z;
+                    }
+
+                    // Draw top
+                    myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(1, 1+len);     myMeshes[which].Vert3(0.5, 0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
+
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
+
+                    c = 0.4f;
+                    // Draw left
+                    myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1+len, 1);     myMeshes[which].Vert3(0.5, -0.5, 0.5+len);
+
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
+
+                    c = 0.6f;
+                    // Draw right
+                    myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
+                    myMeshes[which].TexCoord2(1+len, 1);     myMeshes[which].Vert3(-0.5, -0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(-0.5, 0.5, 0.5+len);
+
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(-0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
+
+                    c = 0.7f;
+                    // Draw back
+                    myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
+                    myMeshes[which].TexCoord2(1, 1);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
+
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
+
+
+                    // Draw front
+                    myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1, 1);         myMeshes[which].Vert3(0.5, -0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
+
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, 0.5+len);
+ 
+                    z += len;
+                }
+            }
+        }
+    }
+}
+
+void DrawMiniMap() {
+    
 }

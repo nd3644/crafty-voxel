@@ -3,6 +3,8 @@
 
 #include "ebmp.h"
 #include <array>
+#include "mesh.h"
+
 
 class Map
 {
@@ -10,24 +12,35 @@ public:
 	Map();
 	~Map();
 
-	static const int height = 64;
-	static const int width = 128;
-	static const int depth = 128;
+	 int height;
+	 int width;
+	 int depth;
+
+    int NUM_THREADS;
 
 	inline void SetBrick(int x, int z, int y, int id) {
+        if(x < 0 || z < 0 || y < 0 || x >= width || z >= depth || y >= height) {
+            return;
+        } 
 		iBricks[((z * height * depth) + (y * width) + x)] = id;
 	}
 
 
 	inline int GetBrick(int x, int z, int y) {
+        if(x < 0 || z < 0 || y < 0 || x >= width || z >= depth || y >= height) {
+            return -1;
+        } 
 		return iBricks[((z * height * depth) + (y * width) + x)];
 	}
 
 	void FromBMP(std::string sfile);
 	void Draw();
+
+private:
+    void DrawSection(int i);
 private:	
 	int *iBricks;
-
+    Mesh myMeshes[16];
 };
 
 #endif

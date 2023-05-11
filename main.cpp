@@ -15,6 +15,11 @@
 #include "cube.h"
 #include "camera.h"
 
+#include "mesh.h"
+
+#include "func_timer.h"
+#include <chrono>
+
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
@@ -25,35 +30,32 @@ SDL_Event myEvent;
 std::string VertShaderStr = "#version 430 core\n\
 							layout(location = 0) in vec3 vPosition;\n\
 							layout(location = 1) in vec2 vTexCoord;\n\
+                            layout(location = 2) in vec4 vColor;\n\
 							out vec2 texCoord0;\n\
+                            out vec4 color0;\n\
 							uniform mat4 View;\n\
 							uniform mat4 Model;\n\
 							uniform mat4 Proj;\n\
 							void main() \n\
 							{ \n\
 								texCoord0 = vec2(vTexCoord.x, vTexCoord.y); \n\
+                                color0 = vColor; \n\
 								gl_Position = Proj * View * Model * vec4(vPosition.x, vPosition.y, vPosition.z, 1);\n\
+                                //gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1);\n\
 							}\n";
 std::string FragShaderStr = "#version 430 core\n\
 							in vec2 texCoord0;\n\
+                            in vec4 color0; \n\
 							uniform sampler2D tex;\n\
-							uniform int iSolid;\n\
 							out vec4 fColor;\n\
 							void main() \n\
 							{ \n\
-								if(iSolid == 1) {\n\
-									fColor = texture2D(tex, texCoord0); \n\
-								}\n\
-								else {\n\
-									fColor = vec4(0,0.2,0.5,1);\n\
-								}\n\
+                                fColor = texture(tex, texCoord0) * color0; \n\
 							}\n";
 
 extern void Init();
 extern void Cleanup();
 extern void CompileArr();
-
-extern void SetSolidFlag(int i);
 
 int main(int argc, char* args[]) {
 
@@ -67,7 +69,8 @@ int main(int argc, char* args[]) {
 	viewMatrix = glm::mat4(1);
 	modelMatrix = glm::mat4(1);
 
-	projMatrix = glm::frustum(-1, 1, -1, 1, 1, 100);
+//	projMatrix = glm::frustum(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 50.0f);
+    projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
 
@@ -88,31 +91,32 @@ int main(int argc, char* args[]) {
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texID);
 
-		GLuint model = glGetUniformLocation(myProgram, "Model");
+        projMatrix = glm::ortho(0,1,1,0);
 
-		// Draw cube
-		SetSolidFlag(1);
-		modelMatrix = glm::mat4(1);
-		modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0, -5));
-		modelMatrix = glm::rotate(modelMatrix, fdelta, glm::vec3(0.0f, 0.1f, 0.1f));
-		glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+        viewMatrix = glm::mat4(1);
+        modelMatrix = glm::mat4(1);
+        projMatrix = glm::mat4(1);
 
-		glBindVertexArray(myVAO);
-//		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
+        Mesh myMesh;
 
+        myMesh.Color4(1,1,1,1);myMesh.Color4(1,1,1,1);myMesh.Color4(1,1,1,1);
+        myMesh.TexCoord2(0,0);
+        myMesh.TexCoord2(1,0);
+        myMesh.TexCoord2(1,1);
+        
+        myMesh.Vert3(0,0,0);
+        myMesh.Vert3(64,0,0);
+        myMesh.Vert3(64,64,0);
 
-        myCamera.Update();
-		myMap.Draw();
+        projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
+        myCamera.Update(myMap);
+        auto start = std::chrono::high_resolution_clock::now();
+        myMap.Draw();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-		// 2
-		modelMatrix = glm::mat4(1);
-		modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 0, -5));
-		modelMatrix = glm::rotate(modelMatrix, fdelta, glm::vec3(0.0f, 0.1f, 0.1f));
-		glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-
-		glBindVertexArray(myVAO);
-//		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
+//        std::cout << delta.count() << std::endl;
 
 		SDL_GL_SwapWindow(myWindow);
 	}
@@ -129,7 +133,7 @@ void Init() {
 		exit(0);
 	}
 
-	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL);
+	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL);
 	if (myWindow == NULL) {
 		std::cout << "Couldn't create window" << std::endl;
 		std::cout << "\t *" << SDL_GetError() << std::endl;
@@ -220,11 +224,20 @@ void Init() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, surf->w, surf->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surf->pixels);
 
 	SDL_FreeSurface(surf);
 
 	glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    //glPolygonMode(GL_FRONT, GL_LINE);
+   // glPolygonMode(GL_BACK, GL_LINE);
+
 }
 
 void Cleanup() {
