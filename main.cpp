@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <GL/glew.h>
 
 #include <iostream>
@@ -17,7 +18,6 @@
 
 #include "mesh.h"
 
-#include "func_timer.h"
 #include <chrono>
 
 
@@ -61,7 +61,7 @@ int main(int argc, char* args[]) {
 
 	Map myMap;
     Camera myCamera;
-	myMap.FromBMP("heightmap.bmp");
+	myMap.FromBMP("textures/heightmap.bmp");
 
 	CompileArr();
 
@@ -211,7 +211,7 @@ void Init() {
 	glEnableVertexAttribArray(1);
 
 	// Load the texture
-	SDL_Surface* surf = SDL_LoadBMP("logo.bmp");
+	SDL_Surface* surf = IMG_Load("textures/grass.png");
 	if (surf == NULL) {
 		std::cout << "Couldn't load logo.bmp" << std::endl;
 		std::cout << "\t *" << SDL_GetError() << std::endl;
