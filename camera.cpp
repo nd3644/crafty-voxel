@@ -27,7 +27,7 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     const float STRAFE_SPD = 0.25f;
     const float pi = 3.14159f;
 
-    viewMatrix = glm::lookAt(position, position + direction, up);
+    myShader.viewMatrix = glm::lookAt(position, position + direction, up);
 
     // todo
     right = glm::normalize(glm::cross(direction, up));
@@ -95,7 +95,7 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     direction = glm::normalize(direction);
 
     GLuint view = glGetUniformLocation(myShader.myProgram, "View");
-    glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+    glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
 
     bool bground = false;
     for(float x = -0.5f;x < 1.2f;x += 0.1f) {

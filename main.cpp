@@ -39,12 +39,12 @@ int main(int argc, char* args[]) {
 
 	CompileArr();
 
-	projMatrix = glm::mat4(1);
-	viewMatrix = glm::mat4(1);
-	modelMatrix = glm::mat4(1);
+	myShader.projMatrix = glm::mat4(1);
+	myShader.viewMatrix = glm::mat4(1);
+	myShader.modelMatrix = glm::mat4(1);
 
 //	projMatrix = glm::frustum(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 50.0f);
-    projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+    myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
 	int iTicks = SDL_GetTicks();
@@ -64,11 +64,11 @@ int main(int argc, char* args[]) {
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texID);
 
-        projMatrix = glm::ortho(0,1,1,0);
+        myShader.projMatrix = glm::ortho(0,1,1,0);
 
-        viewMatrix = glm::mat4(1);
-        modelMatrix = glm::mat4(1);
-        projMatrix = glm::mat4(1);
+        myShader.viewMatrix = glm::mat4(1);
+        myShader.modelMatrix = glm::mat4(1);
+        myShader.projMatrix = glm::mat4(1);
 
         Mesh myMesh;
 
@@ -81,7 +81,7 @@ int main(int argc, char* args[]) {
         myMesh.Vert3(64,0,0);
         myMesh.Vert3(64,64,0);
 
-        projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+        myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
         myCamera.Update(myMap, myShader);
         auto start = std::chrono::high_resolution_clock::now();
@@ -133,13 +133,13 @@ void Init() {
 
 	// Set up the uniforms
 	GLuint model = glGetUniformLocation(myShader.myProgram, "Model");
-	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(myShader.modelMatrix));
 
 	GLuint view = glGetUniformLocation(myShader.myProgram, "View");
-	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
 
 	GLuint proj = glGetUniformLocation(myShader.myProgram, "Proj");
-	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(projMatrix));
+	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(myShader.projMatrix));
 
 	// Setup vertex array & attach buffer
 	glGenVertexArrays(1, &myVAO);

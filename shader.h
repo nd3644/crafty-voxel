@@ -16,10 +16,6 @@ bool CheckShaderErrors(GLuint shader);
 bool CheckProgramLinkErrors(GLuint program);
 void SetSolidFlag(int i);
 
-extern glm::mat4 projMatrix;
-extern glm::mat4 viewMatrix;
-extern glm::mat4 modelMatrix;
-
 extern GLuint texID;
 extern GLuint myVAO;
 extern GLuint myArrBuffer, myTexArrBuffer;
@@ -48,6 +44,10 @@ class Shader {
         GLuint myProgram;
         GLint tex[4];
         bool bLoaded;
+
+        glm::mat4 projMatrix;
+        glm::mat4 viewMatrix;
+        glm::mat4 modelMatrix;
 };
 
 #endif

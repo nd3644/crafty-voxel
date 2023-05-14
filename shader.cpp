@@ -5,10 +5,6 @@
 
 //GLuint myProgram;
 
-glm::mat4 projMatrix;
-glm::mat4 viewMatrix;
-glm::mat4 modelMatrix;
-
 GLuint texID;
 GLuint myVAO;
 GLuint myArrBuffer, myTexArrBuffer;
