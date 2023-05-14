@@ -61,7 +61,6 @@ void Map::FromBMP(std::string sfile) {
 }
 
 void Map::Draw() {
-
     cube_verts[0] = { -0.5, -0.5, -0.5 };
     cube_verts[1] = { 0.5, -0.5, -0.5 };
     cube_verts[2] = { 0.5, 0.5, -0.5 };
@@ -120,6 +119,10 @@ void Map::DrawSection(int which) {
                     }
                     if(len == 0) {
                         len = depth-z;
+                    }
+
+                    for(int i = 0;i < 6*6*6;i++) {
+                        myMeshes[which].Index1(2);
                     }
 
                     // Draw top

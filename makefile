@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++11 -Wall -O2
+CXXFLAGS=-std=c++11 -Wall -g
 LDFLAGS=-lSDL2main -lSDL2 -lSDL2_image -lGL -lGLEW
 SRCS=$(wildcard *.cpp)
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))

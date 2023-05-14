@@ -18,6 +18,7 @@ Mesh::~Mesh() {
     vVertBuffer.clear();
     vTexCoords.clear();
     ColorBuffer.clear();
+    Indices.clear();
 }
 
 void Mesh::Vert3(float x, float y,float z) {
@@ -41,11 +42,15 @@ void Mesh::SetTranslation(float x, float y, float z) {
     zTrans = z;
 }
 
+void Mesh::Index1(int i) {
+    Indices.push_back(i);
+}
+
 void Mesh::Draw(Mode mode) {
     if(!glIsVertexArray(vertArrObj)) {
         glGenVertexArrays(1, &vertArrObj);
         glBindVertexArray(vertArrObj);
-        glGenBuffers(3, arrayBuffers);
+        glGenBuffers(4, arrayBuffers);
 
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -58,6 +63,10 @@ void Mesh::Draw(Mode mode) {
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
         glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, 0);  
         glEnableVertexAttribArray(2);
+
+        glEnableVertexAttribArray(3);
+        glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
+        glVertexAttribIPointer(3, 1, GL_INT, 0, 0);
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
@@ -69,6 +78,9 @@ void Mesh::Draw(Mode mode) {
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
 	glBufferData(GL_ARRAY_BUFFER, (ColorBuffer.size()*4) * sizeof(float), &ColorBuffer[0], GL_DYNAMIC_DRAW);
 
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
+	glBufferData(GL_ARRAY_BUFFER, (Indices.size()) * sizeof(int), &Indices[0], GL_DYNAMIC_DRAW);
+
 	glBindVertexArray(vertArrObj);
 	glDrawArrays(mode, 0, vVertBuffer.size());
 }
@@ -77,4 +89,5 @@ void Mesh::Clean() {
     vVertBuffer.clear();
     vTexCoords.clear();
     ColorBuffer.clear();
+    Indices.clear();
 }

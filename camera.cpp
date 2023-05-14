@@ -65,7 +65,7 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     static int lastX = mouseX, lastY = mouseY;
 
 //    std::cout << direction.x << " , " << direction.y << " , " << direction.z << std::endl;
-    if(bFocus) {
+/*    if(bFocus) {
         if(!SDL_GetWindowGrab(myWindow)) {
             SDL_SetWindowGrab(myWindow,SDL_TRUE);
             SDL_ShowCursor(SDL_DISABLE);
@@ -89,9 +89,9 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     else {
         if(SDL_GetWindowGrab(myWindow)) {
             SDL_SetWindowGrab(myWindow,SDL_FALSE);
-            SDL_ShowCursor(SDL_ENABLE);
+            SDL_ShowCursor(SDL_DISABLE);//SDL_ENABLE);
         }
-    }
+    }*/
     direction = glm::normalize(direction);
 
     GLuint view = glGetUniformLocation(myShader.myProgram, "View");

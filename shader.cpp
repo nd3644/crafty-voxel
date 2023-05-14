@@ -37,31 +37,6 @@ bool CheckProgramLinkErrors(GLuint program) {
 	return false;
 }
 
-std::string VertShaderStr = "#version 430 core\n\
-							layout(location = 0) in vec3 vPosition;\n\
-							layout(location = 1) in vec2 vTexCoord;\n\
-                            layout(location = 2) in vec4 vColor;\n\
-							out vec2 texCoord0;\n\
-                            out vec4 color0;\n\
-							uniform mat4 View;\n\
-							uniform mat4 Model;\n\
-							uniform mat4 Proj;\n\
-							void main() \n\
-							{ \n\
-								texCoord0 = vec2(vTexCoord.x, vTexCoord.y); \n\
-                                color0 = vColor; \n\
-								gl_Position = Proj * View * Model * vec4(vPosition.x, vPosition.y, vPosition.z, 1);\n\
-                                //gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1);\n\
-							}\n";
-std::string FragShaderStr = "#version 430 core\n\
-							in vec2 texCoord0;\n\
-                            in vec4 color0; \n\
-							uniform sampler2D tex;\n\
-							out vec4 fColor;\n\
-							void main() \n\
-							{ \n\
-                                fColor = texture(tex, texCoord0) * color0; \n\
-							}\n";
 
 Shader::Shader() {
 }
