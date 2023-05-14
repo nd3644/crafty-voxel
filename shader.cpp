@@ -130,7 +130,6 @@ void Shader::Initialize(std::string sVertexFile, std::string sFragmentFile) {
     if(myShaders[Type::SHADER_FRAGMENT] == 0)
         std::cerr << "Couldn't create frag shader" << std::endl;
 
-
     // Compile the vertex shader
 	CompileShader(Type::SHADER_VERTEX, sVertex);
 
@@ -156,8 +155,4 @@ void Shader::Initialize(std::string sVertexFile, std::string sFragmentFile) {
 
 void Shader::Bind() {
     glUseProgram(myProgram);
-//    tex[0] = glGetUniformLocation(myProgram, "tex1");
-
-    GLint texArrayLoc = glGetUniformLocation(myProgram, "texArr");
-    glUniform1i(texArrayLoc, 0);
 }

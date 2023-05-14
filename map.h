@@ -37,13 +37,17 @@ public:
 	void FromBMP(std::string sfile);
 	void Draw();
 
+    void LoadBrickMetaData();
+
 private:
     void DrawSection(int i);
+    void ProcessMap_Simple();
     
 private:
 	int *iBricks;
     Mesh myMeshes[16];
     TextureArray myTexArray;
+    std::vector<std::array<int,6>>BrickLookup;
 };
 
 #endif

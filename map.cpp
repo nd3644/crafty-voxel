@@ -3,6 +3,7 @@
 #include "ebmp.h"
 
 #include <iostream>
+#include <fstream>
 #include "shader.h"
 #include "cube.h"
 #include <GL/glew.h>
@@ -57,8 +58,10 @@ void Map::FromBMP(std::string sfile) {
 	}
 /*
 */
-    std::vector<std::string>images = { "textures/grass.png", "textures/grass_side.png" };
+    std::vector<std::string>images = { "textures/grass.png", "textures/grass_side.png","textures/dirt.png" };
     myTexArray.Load(images);
+    LoadBrickMetaData();
+    ProcessMap_Simple();
 }
 
 void Map::Draw() {
@@ -123,10 +126,9 @@ void Map::DrawSection(int which) {
                         len = depth-z;
                     }
 
-                    int id = (rand()%2);
-                    for(int i = 0;i < 6;i++) {
-                        myMeshes[which].Index1(0);
-                    }
+                    int brickID = GetBrick(x,z,y);
+                    for(int i = 0;i < 6*6;i++)
+                        myMeshes[which].Index1(BrickLookup[brickID-1][i/6]);
 
                     // Draw top
                     myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
@@ -138,9 +140,15 @@ void Map::DrawSection(int which) {
                     myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
                     myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
 
-                    for(int i = 0;i < 4*6;i++) {
-                        myMeshes[which].Index1(1);
-                    }
+                    // Draw bottom
+                    myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, -0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(1, 1+len);     myMeshes[which].Vert3(0.5, -0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
+
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, -0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
 
                     c = 0.4f;
                     // Draw left
@@ -193,6 +201,28 @@ void Map::DrawSection(int which) {
     }
 }
 
-void DrawMiniMap() {
-    
+void Map::LoadBrickMetaData() {
+    std::ifstream infile("bricks.txt");
+    while(!infile.eof()) {
+        std::array<int,6>arr;
+        for(int i = 0;i < 6;i++) {
+            infile >> arr[i];
+        }
+        BrickLookup.push_back(arr);
+    }
 }
+
+void Map::ProcessMap_Simple() {
+    for (int x = 0; x < width;x++) {
+		for (int z = 0; z < depth; z++) {
+			for (int y = height-1;y > 0; y--) {
+
+                //
+                if(GetBrick(x,z,y+1) == 1 || GetBrick(x,z,y+1) == 2) {
+                    SetBrick(x,z,y,2);
+                }
+            }
+        }
+    }
+}
+
