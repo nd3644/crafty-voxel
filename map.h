@@ -4,6 +4,7 @@
 #include "ebmp.h"
 #include <array>
 #include "mesh.h"
+#include "texture_array.h"
 
 
 class Map
@@ -38,9 +39,11 @@ public:
 
 private:
     void DrawSection(int i);
-private:	
+    
+private:
 	int *iBricks;
     Mesh myMeshes[16];
+    TextureArray myTexArray;
 };
 
 #endif

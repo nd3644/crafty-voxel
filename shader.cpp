@@ -156,5 +156,8 @@ void Shader::Initialize(std::string sVertexFile, std::string sFragmentFile) {
 
 void Shader::Bind() {
     glUseProgram(myProgram);
-    tex[0] = glGetUniformLocation(myProgram, "tex1");
+//    tex[0] = glGetUniformLocation(myProgram, "tex1");
+
+    GLint texArrayLoc = glGetUniformLocation(myProgram, "texArr");
+    glUniform1i(texArrayLoc, 0);
 }

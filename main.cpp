@@ -35,7 +35,6 @@ int main(int argc, char* args[]) {
 
 	Map myMap;
     Camera myCamera;
-	myMap.FromBMP("textures/heightmap.bmp");
 
 	CompileArr();
 
@@ -47,6 +46,9 @@ int main(int argc, char* args[]) {
     myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
+
+    myMap.FromBMP("textures/heightmap.bmp");
+    
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
 

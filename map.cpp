@@ -56,8 +56,9 @@ void Map::FromBMP(std::string sfile) {
 		}
 	}
 /*
-    
-    */
+*/
+    std::vector<std::string>images = { "textures/grass.png", "textures/grass_side.png" };
+    myTexArray.Load(images);
 }
 
 void Map::Draw() {
@@ -85,6 +86,7 @@ void Map::Draw() {
         threads[i].join();
     }
 
+ //   myTexArray.Bind();
     for(int i = 0;i < NUM_THREADS;i++) {
         myMeshes[i].Draw(Mesh::MODE_TRIANGLES);
     }
@@ -121,8 +123,9 @@ void Map::DrawSection(int which) {
                         len = depth-z;
                     }
 
-                    for(int i = 0;i < 6*6*6;i++) {
-                        myMeshes[which].Index1(2);
+                    int id = (rand()%2);
+                    for(int i = 0;i < 6;i++) {
+                        myMeshes[which].Index1(0);
                     }
 
                     // Draw top
@@ -134,6 +137,10 @@ void Map::DrawSection(int which) {
                     myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5 + len);
                     myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
                     myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
+
+                    for(int i = 0;i < 4*6;i++) {
+                        myMeshes[which].Index1(1);
+                    }
 
                     c = 0.4f;
                     // Draw left

@@ -15,11 +15,16 @@ TextureArray::~TextureArray() {
 }
 
 void TextureArray::Load(std::vector<std::string> files) {
+    
     glGenTextures(1, &texArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
 
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
     // TODO: Remove hardcodes
-    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_BGR, 16, 16, files.size());
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGB8, 16, 16, 2);
 
     for(int i = 0;i < files.size();i++) {
         SDL_Surface *curSurf = IMG_Load(files[i].c_str());
@@ -29,9 +34,15 @@ void TextureArray::Load(std::vector<std::string> files) {
         }
 
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, curSurf->w, curSurf->h,
-                             1, GL_BGR, GL_UNSIGNED_BYTE, curSurf->pixels);
+                             1, GL_RGB, GL_UNSIGNED_BYTE, curSurf->pixels);
         
         SDL_FreeSurface(curSurf);
+    }
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        std::cerr << "OpenGL error: " << err << std::endl;
+        exit(1);
     }
 }
 
