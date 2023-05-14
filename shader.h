@@ -10,7 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-extern GLuint myProgram;
+//extern GLuint myProgram;
 
 bool CheckShaderErrors(GLuint shader);
 bool CheckProgramLinkErrors(GLuint program);
@@ -38,7 +38,12 @@ class Shader {
         void Initialize();
         void Initialize(std::string sVertexFile, std::string sFragmentFile);
         void Bind();
+
     private:
+        std::string FileToString(std::string filename);
+        void CompileShader(Type shaderType, std::string source);
+
+    public:
         GLuint myShaders[2];
         GLuint myProgram;
         GLint tex[4];

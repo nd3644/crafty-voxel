@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 #include "map.h"
+#include "shader.h"
 
 class Camera
 {
@@ -10,7 +11,7 @@ class Camera
         Camera();
         ~Camera();
 
-        void Update(Map &myMap);
+        void Update(Map &myMap, Shader &myShader);
     private:
         bool bFocus;
         void CheckInput();

@@ -8,9 +8,9 @@ uniform mat4 View;
 uniform mat4 Model;
 uniform mat4 Proj;
 void main() 
-{
+{ 
     texCoord0 = vec2(vTexCoord.x, vTexCoord.y); 
     color0 = vColor; 
-    //gl_Position = Proj * View * Model * vec4(vPosition.x, vPosition.y, vPosition.z, 1);
-    gl_Position = Proj * vec4(vPosition.x, vPosition.y, vPosition.z, 1);
+    gl_Position = Proj * View * Model * vec4(vPosition.x, vPosition.y, vPosition.z, 1);
+    //gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1);
 }

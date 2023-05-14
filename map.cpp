@@ -61,11 +61,6 @@ void Map::FromBMP(std::string sfile) {
 }
 
 void Map::Draw() {
-    GLuint model = glGetUniformLocation(myProgram, "Model");
-
-    modelMatrix = glm::mat4(1);
-//					modelMatrix = glm::translate(modelMatrix, glm::vec3(x, y, z));
-    glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
     cube_verts[0] = { -0.5, -0.5, -0.5 };
     cube_verts[1] = { 0.5, -0.5, -0.5 };

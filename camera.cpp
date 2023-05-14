@@ -21,7 +21,7 @@ void Camera::CheckInput() {
 
 }
 
-void Camera::Update(Map &myMap) {
+void Camera::Update(Map &myMap, Shader &myShader) {
 	const Uint8 * keys = SDL_GetKeyboardState(0);
 
     const float STRAFE_SPD = 0.25f;
@@ -94,7 +94,7 @@ void Camera::Update(Map &myMap) {
     }
     direction = glm::normalize(direction);
 
-    GLuint view = glGetUniformLocation(myProgram, "View");
+    GLuint view = glGetUniformLocation(myShader.myProgram, "View");
     glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(viewMatrix));
 
     bool bground = false;

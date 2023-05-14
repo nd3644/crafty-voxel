@@ -20,43 +20,17 @@
 
 #include <chrono>
 
-
 #define BUFFER_OFFSET(i) ((void*)(i))
 
 SDL_Window* myWindow;
 SDL_GLContext myGLContext;
 SDL_Event myEvent;
 
-std::string VertShaderStr = "#version 430 core\n\
-							layout(location = 0) in vec3 vPosition;\n\
-							layout(location = 1) in vec2 vTexCoord;\n\
-                            layout(location = 2) in vec4 vColor;\n\
-							out vec2 texCoord0;\n\
-                            out vec4 color0;\n\
-							uniform mat4 View;\n\
-							uniform mat4 Model;\n\
-							uniform mat4 Proj;\n\
-							void main() \n\
-							{ \n\
-								texCoord0 = vec2(vTexCoord.x, vTexCoord.y); \n\
-                                color0 = vColor; \n\
-								gl_Position = Proj * View * Model * vec4(vPosition.x, vPosition.y, vPosition.z, 1);\n\
-                                //gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1);\n\
-							}\n";
-std::string FragShaderStr = "#version 430 core\n\
-							in vec2 texCoord0;\n\
-                            in vec4 color0; \n\
-							uniform sampler2D tex;\n\
-							out vec4 fColor;\n\
-							void main() \n\
-							{ \n\
-                                fColor = texture(tex, texCoord0) * color0; \n\
-							}\n";
-
 extern void Init();
 extern void Cleanup();
 extern void CompileArr();
 
+Shader myShader;
 int main(int argc, char* args[]) {
 
 	Map myMap;
@@ -73,7 +47,6 @@ int main(int argc, char* args[]) {
     projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
-
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
 
@@ -110,7 +83,7 @@ int main(int argc, char* args[]) {
 
         projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
-        myCamera.Update(myMap);
+        myCamera.Update(myMap, myShader);
         auto start = std::chrono::high_resolution_clock::now();
         myMap.Draw();
         auto end = std::chrono::high_resolution_clock::now();
@@ -154,42 +127,18 @@ void Init() {
 
 	SDL_GL_SetSwapInterval(1);
 
-	glClearColor(0, 0, 0.25f, 0);
+	glClearColor(0, 0, 0.25f, 0);   
 
-	// compile vert shader
-	GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
-	const GLchar* source = VertShaderStr.c_str();
-
-	glShaderSource(vertShader, 1, &source, 0);
-	glCompileShader(vertShader);
-	CheckShaderErrors(vertShader);
-
-	// compile frag shader
-	GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-	source = FragShaderStr.c_str();
-	glShaderSource(fragShader, 1, &source, 0);
-	glCompileShader(fragShader);
-	CheckShaderErrors(fragShader);
-
-	// Create program
-	myProgram = glCreateProgram();
-
-	glAttachShader(myProgram, vertShader);
-	glAttachShader(myProgram, fragShader);
-
-	glLinkProgram(myProgram);
-	CheckProgramLinkErrors(myProgram);
-
-	glUseProgram(myProgram);
+    myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");
 
 	// Set up the uniforms
-	GLuint model = glGetUniformLocation(myProgram, "Model");
+	GLuint model = glGetUniformLocation(myShader.myProgram, "Model");
 	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-	GLuint view = glGetUniformLocation(myProgram, "View");
+	GLuint view = glGetUniformLocation(myShader.myProgram, "View");
 	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(viewMatrix));
 
-	GLuint proj = glGetUniformLocation(myProgram, "Proj");
+	GLuint proj = glGetUniformLocation(myShader.myProgram, "Proj");
 	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(projMatrix));
 
 	// Setup vertex array & attach buffer
