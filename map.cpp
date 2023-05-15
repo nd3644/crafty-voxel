@@ -84,14 +84,15 @@ void Map::FromBMP(std::string sfile) {
 }
 
 void Map::DrawChunk(int chunkX, int chunkZ) {
+    glEnable(GL_CULL_FACE);
     Mesh &mesh = *Chunks[chunkX][chunkZ];
+
     if(mesh.IsEmpty()) {
         for (int y = 0; y < 32; y++) {
             for (int x = 0; x < 16;x++) {
-                for (int z = 0; z < 16; z++) {
-                    int xindex = (chunkX*16)+x;
+                int xindex = (chunkX*16)+x;
+                for (int z = 0; z < 16;z++) {
                     int zindex = (chunkZ*16)+z;
-
                     if (GetBrick(xindex, zindex, y) <= 0) {
                         continue;
                     }
@@ -101,72 +102,95 @@ void Map::DrawChunk(int chunkX, int chunkZ) {
                     && GetBrick(x,z+1,y) != 0
                     && GetBrick(x,z,y+1) != 0
                     && GetBrick(x,z,y-1) != 0) {
-        //                    std::cout << "yes" << std::endl;
                         continue;
                     }
-
+                    
                     float posX = (chunkX*16)+x;
                     float posZ = (chunkZ*16)+z;
                     mesh.SetTranslation(posX,y,posZ);
                     float c = 0.8f;
                     int brickID = GetBrick(xindex,zindex,y);
 
-                    for(int i = 0;i < 5*6;i++)
-                        mesh.Index1(0);//BrickLookup[brickID-1][i/6]);
+                    int len = 1;
+
+                    for(int i = 1;i < 15;i++) {
+                        if(z < 15-i && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)) {
+                            len++;
+                        }
+                        else {
+                            break;
+                        }
+                    }
+
+                    z += len-1;
+
+
+                    for(int i = 0;i < 6*6;i++)
+                        mesh.Index1(BrickLookup[brickID-1][i/6]);
 
                     // Draw top
                     mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
-                    mesh.TexCoord2(0, 1);     mesh.Vert3(-0.5, 0.5, 0.5 );
-                    mesh.TexCoord2(1, 1);     mesh.Vert3(0.5, 0.5, 0.5 );
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
+                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
 
-                    mesh.TexCoord2(0, 1);     mesh.Vert3(-0.5, 0.5, 0.5 );
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0.5);
+                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
+
+                    // Draw bottom
+                    mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+
+                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
 
                     c = 0.4f;
                     // Draw left
                     mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0.5);
-                    mesh.TexCoord2(1, 0);     mesh.Vert3(0.5, 0.5, 0.5);
-                    mesh.TexCoord2(1, 1);     mesh.Vert3(0.5, -0.5, 0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
+                    mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
+                    mesh.TexCoord2(len, 1);     mesh.Vert3(0.5, -0.5, len);
 
-                    mesh.TexCoord2(1, 0);     mesh.Vert3(0.5, 0.5, 0.5);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0.5);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+                    mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0);
 
                     c = 0.6f;
                     // Draw right
                     mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
-                    mesh.TexCoord2(1, 1);     mesh.Vert3(-0.5, -0.5, 0.5);
-                    mesh.TexCoord2(1, 0);     mesh.Vert3(-0.5, 0.5, 0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                    mesh.TexCoord2(len, 1);     mesh.Vert3(-0.5, -0.5, len);
+                    mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
 
-                    mesh.TexCoord2(1, 0);     mesh.Vert3(-0.5, 0.5, 0.5);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0.5);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
+                    mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
                     c = 0.7f;
                     // Draw back
                     mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
-                    mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
+                    mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0);
 
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0.5);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
 
 
                     // Draw front
                     mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, 0.5);
-                    mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, 0.5);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
+                    mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
 
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0.5);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, 0.5);
-                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, 0.5);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
                 }
             }
         }
@@ -176,16 +200,21 @@ void Map::DrawChunk(int chunkX, int chunkZ) {
 
 void Map::Draw() {
 
+    glEnable(GL_CULL_FACE);
     for(int x = 0;x < 256/16;x++) {
         for(int z = 0;z < 256/16;z++) {
             DrawChunk(x,z);
         }
     }
 
-    glEnable(GL_CULL_FACE);
-/*//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    if(SDL_GetKeyboardState(0)[SDL_SCANCODE_J]) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+    else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
     int pCount = 0;
-
+/*
     std::thread threads[NUM_THREADS];
 
     for(int i = 0;i < NUM_THREADS;i++) {
@@ -239,21 +268,21 @@ void Map::DrawSection(int which) {
 
                     // Draw top
                     myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
-                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5 + len);
-                    myMeshes[which].TexCoord2(1, 1+len);     myMeshes[which].Vert3(0.5, 0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(1, 1+len);     myMeshes[which].Vert3(0.5, 0.5, 0.5*len);
                     myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
 
-                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, 0.5, 0.5*len);
                     myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
                     myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
 
                     // Draw bottom
                     myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
-                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, -0.5, 0.5 + len);
-                    myMeshes[which].TexCoord2(1, 1+len);     myMeshes[which].Vert3(0.5, -0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, -0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(1, 1+len);     myMeshes[which].Vert3(0.5, -0.5, 0.5*len);
                     myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
 
-                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, -0.5, 0.5 + len);
+                    myMeshes[which].TexCoord2(0, 1+len);     myMeshes[which].Vert3(-0.5, -0.5, 0.5*len);
                     myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
                     myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
 
@@ -261,10 +290,10 @@ void Map::DrawSection(int which) {
                     // Draw left
                     myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
                     myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
-                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
-                    myMeshes[which].TexCoord2(1+len, 1);     myMeshes[which].Vert3(0.5, -0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(0.5, 0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(1+len, 1);     myMeshes[which].Vert3(0.5, -0.5, 0.5*len);
 
-                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(0.5, 0.5, 0.5*len);
                     myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(0.5, -0.5, -0.5);
                     myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(0.5, 0.5, -0.5);
 
@@ -272,10 +301,10 @@ void Map::DrawSection(int which) {
                     // Draw right
                     myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
                     myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
-                    myMeshes[which].TexCoord2(1+len, 1);     myMeshes[which].Vert3(-0.5, -0.5, 0.5+len);
-                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(-0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1+len, 1);     myMeshes[which].Vert3(-0.5, -0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(-0.5, 0.5, 0.5*len);
 
-                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(-0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1+len, 0);     myMeshes[which].Vert3(-0.5, 0.5, 0.5*len);
                     myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, -0.5);
                     myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, -0.5);
 
@@ -293,13 +322,13 @@ void Map::DrawSection(int which) {
 
                     // Draw front
                     myMeshes[which].Color4(c, c, c, c);      myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c); myMeshes[which].Color4(c, c, c, c);
-                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, 0.5+len);
-                    myMeshes[which].TexCoord2(1, 1);         myMeshes[which].Vert3(0.5, -0.5, 0.5+len);
-                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(1, 1);         myMeshes[which].Vert3(0.5, -0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, 0.5*len);
 
-                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, 0.5+len);
-                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, 0.5+len);
-                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, 0.5+len);
+                    myMeshes[which].TexCoord2(1, 0);         myMeshes[which].Vert3(0.5, 0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(0, 0);         myMeshes[which].Vert3(-0.5, 0.5, 0.5*len);
+                    myMeshes[which].TexCoord2(0, 1);         myMeshes[which].Vert3(-0.5, -0.5, 0.5*len);
  
                     z += len;
                 }
@@ -323,10 +352,9 @@ void Map::ProcessMap_Simple() {
     for (int x = 0; x < width;x++) {
 		for (int z = 0; z < depth; z++) {
 			for (int y = height-1;y > 0; y--) {
-
                 //
-                if(GetBrick(x,z,y+1) == 1 || GetBrick(x,z,y+1) == 2) {
-                    SetBrick(x,z,y,2);
+                if(rand()%8 == 1 && GetBrick(x,z,y) != 0) {
+                    //SetBrick(x,z,y,2);
                 }
             }
         }

@@ -24,7 +24,7 @@ void Camera::CheckInput() {
 void Camera::Update(Map &myMap, Shader &myShader) {
 	const Uint8 * keys = SDL_GetKeyboardState(0);
 
-    const float STRAFE_SPD = 0.25f;
+    const float STRAFE_SPD = 2.25f;
     const float pi = 3.14159f;
 
     myShader.viewMatrix = glm::lookAt(position, position + direction, up);
@@ -106,7 +106,7 @@ void Camera::Update(Map &myMap, Shader &myShader) {
         }
     }
     if(!bground) {
-        position.y -= 0.1f;
+//        position.y -= 0.1f;
     }
 //    std::cout << position.y << std::endl;
 }
