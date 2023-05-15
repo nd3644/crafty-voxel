@@ -5,7 +5,7 @@
 #include <array>
 #include "mesh.h"
 #include "texture_array.h"
-
+#include <iostream>
 
 class Map
 {
@@ -34,6 +34,13 @@ public:
 		return iBricks[((z * height * depth) + (y * width) + x)];
 	}
 
+    Mesh *GetChunk(int x, int z) {
+        std::cout << "returning: " << (z*(depth/16)+x) << ", from: " << x << " , " << z << std::endl;
+        return &myMeshes[x*(width/16)+z];
+    }
+    
+    void DrawChunk(int x, int z);
+
 	void FromBMP(std::string sfile);
 	void Draw();
 
@@ -45,6 +52,7 @@ private:
     
 private:
 	int *iBricks;
+    Mesh ***Chunks;
     Mesh myMeshes[16];
     TextureArray myTexArray;
     std::vector<std::array<int,6>>BrickLookup;

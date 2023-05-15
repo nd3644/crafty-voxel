@@ -27,6 +27,10 @@ class Mesh {
         void Draw(Mode mode);
 
         void SetTranslation(float x, float y, float z);
+
+        bool IsEmpty() {
+            return (vVertBuffer.size() == 0);
+        }
     private:
         float xTrans, yTrans, zTrans;
         GLuint vertArrObj;

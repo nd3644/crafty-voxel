@@ -33,6 +33,16 @@ Map::Map() : iBricks { 0 } {
 Map::~Map() {
     if(iBricks != nullptr)
         delete[] iBricks;
+
+
+        for (int i = 0; i < width / 16; i++) {
+            for (int j = 0; j < depth / 16; j++) {
+                delete Chunks[i][j];
+            }
+            delete[] Chunks[i];
+        }
+        delete[] Chunks;
+
 }
 
 void Map::FromBMP(std::string sfile) {
@@ -62,21 +72,118 @@ void Map::FromBMP(std::string sfile) {
     myTexArray.Load(images);
     LoadBrickMetaData();
     ProcessMap_Simple();
+
+
+    Chunks = new Mesh**[width / 16];
+    for (int i = 0; i < width / 16; i++) {
+        Chunks[i] = new Mesh*[depth / 16];
+        for (int j = 0; j < depth / 16; j++) {
+            Chunks[i][j] = new Mesh();
+        }
+    }
+}
+
+void Map::DrawChunk(int chunkX, int chunkZ) {
+    Mesh &mesh = *Chunks[chunkX][chunkZ];
+    if(mesh.IsEmpty()) {
+        for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 16;x++) {
+                for (int z = 0; z < 16; z++) {
+                    int xindex = (chunkX*16)+x;
+                    int zindex = (chunkZ*16)+z;
+
+                    if (GetBrick(xindex, zindex, y) <= 0) {
+                        continue;
+                    }
+                    if(GetBrick(x-1,z,y) != 0
+                    && GetBrick(x+1,z,y) != 0
+                    && GetBrick(x,z-1,y) != 0
+                    && GetBrick(x,z+1,y) != 0
+                    && GetBrick(x,z,y+1) != 0
+                    && GetBrick(x,z,y-1) != 0) {
+        //                    std::cout << "yes" << std::endl;
+                        continue;
+                    }
+
+                    float posX = (chunkX*16)+x;
+                    float posZ = (chunkZ*16)+z;
+                    mesh.SetTranslation(posX,y,posZ);
+                    float c = 0.8f;
+                    int brickID = GetBrick(xindex,zindex,y);
+
+                    for(int i = 0;i < 5*6;i++)
+                        mesh.Index1(0);//BrickLookup[brickID-1][i/6]);
+
+                    // Draw top
+                    mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                    mesh.TexCoord2(0, 1);     mesh.Vert3(-0.5, 0.5, 0.5 );
+                    mesh.TexCoord2(1, 1);     mesh.Vert3(0.5, 0.5, 0.5 );
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+
+                    mesh.TexCoord2(0, 1);     mesh.Vert3(-0.5, 0.5, 0.5 );
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0.5);
+
+                    c = 0.4f;
+                    // Draw left
+                    mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0.5);
+                    mesh.TexCoord2(1, 0);     mesh.Vert3(0.5, 0.5, 0.5);
+                    mesh.TexCoord2(1, 1);     mesh.Vert3(0.5, -0.5, 0.5);
+
+                    mesh.TexCoord2(1, 0);     mesh.Vert3(0.5, 0.5, 0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0.5);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+
+                    c = 0.6f;
+                    // Draw right
+                    mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
+                    mesh.TexCoord2(1, 1);     mesh.Vert3(-0.5, -0.5, 0.5);
+                    mesh.TexCoord2(1, 0);     mesh.Vert3(-0.5, 0.5, 0.5);
+
+                    mesh.TexCoord2(1, 0);     mesh.Vert3(-0.5, 0.5, 0.5);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
+
+                    c = 0.7f;
+                    // Draw back
+                    mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+                    mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0.5);
+
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0.5);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0.5);
+
+
+                    // Draw front
+                    mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, 0.5);
+                    mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, 0.5);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0.5);
+
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0.5);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, 0.5);
+                    mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, 0.5);
+                }
+            }
+        }
+    }
+    mesh.Draw(Mesh::MODE_TRIANGLES);
 }
 
 void Map::Draw() {
-    cube_verts[0] = { -0.5, -0.5, -0.5 };
-    cube_verts[1] = { 0.5, -0.5, -0.5 };
-    cube_verts[2] = { 0.5, 0.5, -0.5 };
-    cube_verts[3] = { -0.5, 0.5, -0.5 };
 
-    cube_verts[4] = { -0.5, -0.5, 0.5 };
-    cube_verts[5] = { 0.5, -0.5, 0.5 };
-    cube_verts[7] = { -0.5, 0.5, 0.5 };
-    cube_verts[6] = { 0.5, 0.5, 0.5 };
+    for(int x = 0;x < 256/16;x++) {
+        for(int z = 0;z < 256/16;z++) {
+            DrawChunk(x,z);
+        }
+    }
 
     glEnable(GL_CULL_FACE);
-//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+/*//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     int pCount = 0;
 
     std::thread threads[NUM_THREADS];
@@ -92,7 +199,7 @@ void Map::Draw() {
  //   myTexArray.Bind();
     for(int i = 0;i < NUM_THREADS;i++) {
         myMeshes[i].Draw(Mesh::MODE_TRIANGLES);
-    }
+    }*/
 }
 
 void Map::DrawSection(int which) {
