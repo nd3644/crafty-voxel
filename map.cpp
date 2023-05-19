@@ -35,8 +35,8 @@ Map::~Map() {
         delete[] iBricks;
 
 
-        for (int i = 0; i < width / 16; i++) {
-            for (int j = 0; j < depth / 16; j++) {
+        for (int i = 0; i < width / CHUNK_SIZE; i++) {
+            for (int j = 0; j < depth / CHUNK_SIZE; j++) {
                 delete Chunks[i][j];
             }
             delete[] Chunks[i];
@@ -74,53 +74,64 @@ void Map::FromBMP(std::string sfile) {
     ProcessMap_Simple();
 
 
-    Chunks = new Mesh**[width / 16];
-    for (int i = 0; i < width / 16; i++) {
-        Chunks[i] = new Mesh*[depth / 16];
-        for (int j = 0; j < depth / 16; j++) {
+    Chunks = new Mesh**[width / CHUNK_SIZE];
+    for (int i = 0; i < width / CHUNK_SIZE; i++) {
+        Chunks[i] = new Mesh*[depth / CHUNK_SIZE];
+        for (int j = 0; j < depth / CHUNK_SIZE; j++) {
             Chunks[i][j] = new Mesh();
+        }
+    }
+
+    // Build chunks
+    for(int x = 0;x < width/CHUNK_SIZE;x++) {
+        for(int z = 0;z < depth/CHUNK_SIZE;z++) {
+            BuildChunk(x,z);
         }
     }
 }
 
-void Map::DrawChunk(int chunkX, int chunkZ) {
-    glEnable(GL_CULL_FACE);
+void Map::BuildChunk(int chunkX, int chunkZ) {
     Mesh &mesh = *Chunks[chunkX][chunkZ];
 
+    int skipped = 0;
     if(mesh.IsEmpty()) {
         for (int y = 0; y < 32; y++) {
-            for (int x = 0; x < 16;x++) {
-                int xindex = (chunkX*16)+x;
-                for (int z = 0; z < 16;z++) {
-                    int zindex = (chunkZ*16)+z;
+            for (int x = 0; x < CHUNK_SIZE;x++) {
+                int xindex = (chunkX*CHUNK_SIZE)+x;
+                for (int z = 0; z < CHUNK_SIZE;z++) {
+                    int zindex = (chunkZ*CHUNK_SIZE)+z;
                     if (GetBrick(xindex, zindex, y) <= 0) {
                         continue;
                     }
-                    if(GetBrick(x-1,z,y) != 0
-                    && GetBrick(x+1,z,y) != 0
-                    && GetBrick(x,z-1,y) != 0
-                    && GetBrick(x,z+1,y) != 0
-                    && GetBrick(x,z,y+1) != 0
-                    && GetBrick(x,z,y-1) != 0) {
+                    if(GetBrick(xindex-1,zindex,y) != 0
+                    && GetBrick(xindex+1,zindex,y) != 0
+                    && GetBrick(xindex,zindex-1,y) != 0
+                    && GetBrick(xindex,zindex+1,y) != 0
+                    && GetBrick(xindex,zindex,y+1) != 0
+                    && GetBrick(xindex,zindex,y-1) != 0) {
+                        skipped++;
                         continue;
                     }
                     
-                    float posX = (chunkX*16)+x;
-                    float posZ = (chunkZ*16)+z;
+                    float posX = (chunkX*CHUNK_SIZE)+x;
+                    float posZ = (chunkZ*CHUNK_SIZE)+z;
                     mesh.SetTranslation(posX,y,posZ);
                     float c = 0.8f;
                     int brickID = GetBrick(xindex,zindex,y);
 
                     int len = 1;
 
-                    for(int i = 1;i < 15;i++) {
-                        if(z < 15-i && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)) {
+                    for(int i = 1;i < CHUNK_SIZE-1;i++) {
+                        if(z < CHUNK_SIZE-1-i && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)) {
                             len++;
                         }
                         else {
                             break;
                         }
                     }
+                    //if(zindex==0||zindex==CHUNK_SIZE-1){
+                        len=1;
+                    //}
 
                     z += len-1;
 
@@ -141,12 +152,12 @@ void Map::DrawChunk(int chunkX, int chunkZ) {
                     // Draw bottom
                     mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
                     mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
-                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
                     mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
 
                     mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
                     mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
                     c = 0.4f;
                     // Draw left
@@ -195,15 +206,15 @@ void Map::DrawChunk(int chunkX, int chunkZ) {
             }
         }
     }
-    mesh.Draw(Mesh::MODE_TRIANGLES);
 }
 
 void Map::Draw() {
 
     glEnable(GL_CULL_FACE);
-    for(int x = 0;x < 256/16;x++) {
-        for(int z = 0;z < 256/16;z++) {
-            DrawChunk(x,z);
+
+    for(int x = 0;x < width/CHUNK_SIZE;x++) {
+        for(int z = 0;z < depth/CHUNK_SIZE;z++) {
+            Chunks[x][z]->Draw(Mesh::MODE_TRIANGLES);
         }
     }
 

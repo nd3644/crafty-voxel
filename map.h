@@ -19,6 +19,8 @@ public:
 
     int NUM_THREADS;
 
+    static constexpr int CHUNK_SIZE = 32;
+
 	inline void SetBrick(int x, int z, int y, int id) {
         if(x < 0 || z < 0 || y < 0 || x >= width || z >= depth || y >= height) {
             return;
@@ -35,11 +37,10 @@ public:
 	}
 
     Mesh *GetChunk(int x, int z) {
-        std::cout << "returning: " << (z*(depth/16)+x) << ", from: " << x << " , " << z << std::endl;
         return &myMeshes[x*(width/16)+z];
     }
     
-    void DrawChunk(int x, int z);
+    void BuildChunk(int x, int z);
 
 	void FromBMP(std::string sfile);
 	void Draw();

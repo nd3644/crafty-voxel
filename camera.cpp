@@ -109,4 +109,6 @@ void Camera::Update(Map &myMap, Shader &myShader) {
 //        position.y -= 0.1f;
     }
 //    std::cout << position.y << std::endl;
+
+    std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
 }
