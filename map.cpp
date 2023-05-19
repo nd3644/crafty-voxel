@@ -129,9 +129,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                             break;
                         }
                     }
-                    //if(zindex==0||zindex==CHUNK_SIZE-1){
+                    if(zindex==0||zindex==CHUNK_SIZE-1){
                         len=1;
-                    //}
+                    }
 
                     z += len-1;
 
