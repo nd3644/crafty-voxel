@@ -19,14 +19,12 @@ void TextureArray::Load(std::vector<std::string> files) {
     glGenTextures(1, &texArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
 
-
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     // TODO: Remove hardcodes
     glTexStorage3D(GL_TEXTURE_2D_ARRAY, 4, GL_RGB8, 16, 16, files.size());
-
 
     for(int i = 0;i < files.size();i++) {
         SDL_Surface *curSurf = IMG_Load(files[i].c_str());

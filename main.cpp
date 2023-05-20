@@ -43,7 +43,7 @@ int main(int argc, char* args[]) {
 	myShader.modelMatrix = glm::mat4(1);
 
 //	projMatrix = glm::frustum(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 50.0f);
-    myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+    myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
 
@@ -83,15 +83,14 @@ int main(int argc, char* args[]) {
         myMesh.Vert3(64,0,0);
         myMesh.Vert3(64,64,0);
 
-        myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+        //myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 1.0f, 1000.0f);
 
         myCamera.Update(myMap, myShader);
         auto start = std::chrono::high_resolution_clock::now();
         myMap.Draw();
         auto end = std::chrono::high_resolution_clock::now();
         auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-//        std::cout << delta.count() << std::endl;
+        //std::cout << delta.count() << std::endl;
 
 		SDL_GL_SwapWindow(myWindow);
 	}

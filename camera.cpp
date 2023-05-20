@@ -24,13 +24,17 @@ void Camera::CheckInput() {
 void Camera::Update(Map &myMap, Shader &myShader) {
 	const Uint8 * keys = SDL_GetKeyboardState(0);
 
-    const float STRAFE_SPD = 2.25f;
+    float STRAFE_SPD = 0.1f;
     const float pi = 3.14159f;
 
     myShader.viewMatrix = glm::lookAt(position, position + direction, up);
 
     // todo
     right = glm::normalize(glm::cross(direction, up));
+
+    if (keys[SDL_SCANCODE_LSHIFT]) {
+        STRAFE_SPD = 0.4f;
+	}
 
 	if (keys[SDL_SCANCODE_A]) {
         position -= right * STRAFE_SPD;
@@ -54,6 +58,19 @@ void Camera::Update(Map &myMap, Shader &myShader) {
 	else if (keys[SDL_SCANCODE_LCTRL]) {
         position -= up;
 	}
+
+    static bool lastpress = 0;
+    if (keys[SDL_SCANCODE_R]) {
+        if(lastpress == false) {
+            myMap.SetBrick((int)position.x, (int)position.z, (int)position.y, 3);
+            myMap.AddLight((int)position.x, (int)position.z, (int)position.y);
+            myMap.RebuildAll();
+        }
+        lastpress = true;
+	}
+    else {
+        lastpress =false;
+    }
 
     int mouseX = 0, mouseY = 0;
     if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
@@ -106,9 +123,9 @@ void Camera::Update(Map &myMap, Shader &myShader) {
         }
     }
     if(!bground) {
-//        position.y -= 0.1f;
+        position.y -= 0.1f;
     }
 //    std::cout << position.y << std::endl;
 
-    std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
+   //std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
 }
