@@ -28,6 +28,7 @@ Map::Map() : iBricks { 0 } {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores/2;
     }
+    fAmbient = 0.3f;
 }
 
 Map::~Map() {
@@ -36,6 +37,9 @@ Map::~Map() {
 
     if(LightLevels != nullptr)
         delete[] LightLevels;
+
+    if(LightColors != nullptr)
+        delete[] LightColors;
 
 
         for (int i = 0; i < width / CHUNK_SIZE; i++) {
@@ -72,10 +76,15 @@ void Map::FromBMP(std::string sfile) {
 
     LightLevels = new int[width*height*depth];
     for(int i = 0;i < width*height*depth;i++) {
-        LightLevels[i] = 4;
+        LightLevels[i] = 0;
     }
-/*
-*/
+
+    LightColors = new RGB[width*height*depth];
+    for(int i = 0;i < width*height*depth;i++) {
+        LightColors[i] = {0.1,0.1,0.1};
+        RGB c;
+    }
+
     std::vector<std::string>images = { "textures/grass.png", "textures/grass_side.png","textures/dirt.png","textures/torch.png" };
     myTexArray.Load(images);
     LoadBrickMetaData();
@@ -149,12 +158,17 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 z += len-1;
 
-
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
 
+                float lv = (float)GetLightLvl(xindex,zindex,y) / 16.0f;
+                if(lv > 1)
+                    lv = 1;
+                if(lv < fAmbient)
+                    lv = fAmbient;
+
                 // Draw top
-                mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
                 mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
@@ -164,7 +178,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
 
                 // Draw bottom
-                mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
                 mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
@@ -174,7 +188,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
                 // Draw left
-                mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
                 mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
                 mesh.TexCoord2(len, 1);     mesh.Vert3(0.5, -0.5, len);
@@ -184,7 +198,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0);
 
                 // Draw right
-                mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(len, 1);     mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
@@ -194,7 +208,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
                 // Draw back
-                mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
                 mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0);
@@ -205,7 +219,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
 
                 // Draw front
-                mesh.Color4(c, c, c, c);      mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c); mesh.Color4(c, c, c, c);
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);

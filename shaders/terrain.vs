@@ -12,6 +12,7 @@ out flat int outIndex;
 uniform mat4 View;
 uniform mat4 Model;
 uniform mat4 Proj;
+
 void main() 
 { 
     texCoord0 = vec2(vTexCoord.x, vTexCoord.y); 
