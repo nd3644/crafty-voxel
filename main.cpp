@@ -34,12 +34,15 @@ extern void Init();
 extern void Cleanup();
 extern void CompileArr();
 
+extern void DrawMiniMap();
+
 bool bEnableVSync = true;
+
+Map myMap;
+Camera myCamera;
 
 Shader myShader, myShader2D;
 int main(int argc, char* args[]) {
-	Map myMap;
-    Camera myCamera;
 
 	CompileArr();
 
@@ -66,7 +69,7 @@ int main(int argc, char* args[]) {
     int fpsTimer = SDL_GetTicks();
     int lastAvgFps = 0;
 	bool bDone = false;
-	while (SDL_GetTicks() - iTicks < 100000 && bDone == false) {        
+	while (bDone == false) {        
 		fdelta += 0.01f;
 		while (SDL_PollEvent(&myEvent)) {
             ImGui_ImplSDL2_ProcessEvent(&myEvent);
@@ -81,7 +84,7 @@ int main(int argc, char* args[]) {
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texID);
 
-        myShader.projMatrix = glm::ortho(0,1,1,0);
+        myShader.projMatrix = glm::ortho(0,800,600,0);
 
         //myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 1.0f, 1000.0f);
 
@@ -98,7 +101,6 @@ int main(int argc, char* args[]) {
         // 2D rendering
         myShader2D.Bind();
         glDisable(GL_DEPTH_TEST);
-
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
@@ -107,10 +109,13 @@ int main(int argc, char* args[]) {
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowBgAlpha(0.0f);
         // ImGui content goes here
+        ImGui::SetNextWindowSizeConstraints(ImVec2(-1, -1), ImVec2(-1, -1));
         ImGui::Begin("Debug");
         std::string str = "MapDraw: " + std::to_string(delta.count()) + "ms";
         ImGui::Text(str.c_str());
         str = "avg fps: " + std::to_string(lastAvgFps);
+
+        str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.z) + ")";
         ImGui::Text(str.c_str());
 
         ImGui::Separator();
@@ -133,6 +138,7 @@ int main(int argc, char* args[]) {
             frameCounter = 0;
         }
 
+        DrawMiniMap();
 
 		SDL_GL_SwapWindow(myWindow);
 
@@ -270,4 +276,36 @@ void Cleanup() {
 	SDL_DestroyWindow(myWindow);
 
 	SDL_Quit();
+}
+
+void DrawMiniMap() {
+    Mesh myMesh;
+
+    glDisable(GL_TEXTURE_2D);
+
+    int level = (int)myCamera.position.y-1;
+
+    glPointSize(4);
+    for(int x = 0;x < 256;x++) {
+        for(int z = 0;z < 256;z++) {
+            for(int i = 0;i < 3;i++) { // lol
+            myMesh.SetTranslation(-200,-200,0);
+                if(x == (int)myCamera.position.x && z == (int)myCamera.position.z) {
+                    myMesh.Color4(1,0.2,0.2,1);
+                    myMesh.Index1(1);
+                    myMesh.Vert3(x*4,z*4,0);
+                    myMesh.TexCoord2(0,0);
+                }
+                else {
+                    if(myMap.GetBrick(x,z,level) != 0) {
+                        myMesh.Color4(0.2f,0.2f,0.2f,1);
+                        myMesh.Index1(1);
+                        myMesh.Vert3(x*4,z*4,0);
+                        myMesh.TexCoord2(0,0);
+                    }
+                }
+            }
+        }
+    }
+//    myMesh.Draw(Mesh::MODE_POINTS);
 }

@@ -12,10 +12,12 @@ class Camera
         ~Camera();
 
         void Update(Map &myMap, Shader &myShader);
-    private:
-        bool bFocus;
-        void CheckInput();
         glm::vec3 position, direction, up, right;
+    private:
+        float fJumpVel;
+        bool bFocus;
+        bool bground;
+        void CheckInput();
 };
 
 #endif

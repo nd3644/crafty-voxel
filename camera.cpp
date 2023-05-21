@@ -32,31 +32,57 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     // todo
     right = glm::normalize(glm::cross(direction, up));
 
+    glm::vec3 moveDelta = glm::vec3(0,0,0);
     if (keys[SDL_SCANCODE_LSHIFT]) {
         STRAFE_SPD = 0.4f;
 	}
-
 	if (keys[SDL_SCANCODE_A]) {
-        position -= right * STRAFE_SPD;
+        moveDelta -= right * STRAFE_SPD;
 	}
 	else if (keys[SDL_SCANCODE_D]) {
-        position += right * STRAFE_SPD;
+        moveDelta += right * STRAFE_SPD;
 	}
+
+
 	if (keys[SDL_SCANCODE_W]) {
         glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
-        position += forward * STRAFE_SPD;
+        moveDelta += forward * STRAFE_SPD;
 	}
 	else if (keys[SDL_SCANCODE_S]) {
         glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
         forward.y = 0;
-        position -= forward * STRAFE_SPD;
+        moveDelta -= forward * STRAFE_SPD;
 	}
 
+    bool xMoveAccepted = true;
+    bool zMoveAccepted = true;
+
+    for(float z = -0.5f;z < 0.5f;z += 0.01f) {
+        for(float x = -0.5f;x < 0.5f;x += 0.01f) {
+            if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+z), (int)position.y-1) != 0) {
+                xMoveAccepted = false;
+            }
+        }
+    }
+    if(xMoveAccepted) {
+        position.x += moveDelta.x;
+    }
+    for(float z = -0.5f;z < 0.5f;z += 0.01f) {
+        for(float x = -0.5f;x < 0.5f;x += 0.01f) {
+            if(myMap.GetBrick((int)((position.x+x+0.5f)), (int)((position.z+moveDelta.z)+z), (int)position.y-1) != 0) {
+                zMoveAccepted = false;
+            }
+        }
+    }
+    if(zMoveAccepted) {
+        position.z += moveDelta.z;
+    }
+
     if (keys[SDL_SCANCODE_SPACE]) {
-        position += up;
+        position += up * 0.25f;
 	}
 	else if (keys[SDL_SCANCODE_LCTRL]) {
-        position -= up;
+        position -= up * 0.25f;
 	}
 
     static bool lastpress = 0;
@@ -125,7 +151,7 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     if(!bground) {
         position.y -= 0.1f;
     }
+    
 //    std::cout << position.y << std::endl;
-
    //std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
 }

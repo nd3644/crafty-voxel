@@ -143,7 +143,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 int len = 1;
 
                 for(int i = 1;i < CHUNK_SIZE-1;i++) {
-                    if(z < CHUNK_SIZE-1-i 
+                    if(z < CHUNK_SIZE-1-i
                     && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)
                     && GetLightLvl(xindex,zindex,y) == GetLightLvl(xindex,zindex+i,y)) {
                         len++;

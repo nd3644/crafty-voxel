@@ -15,7 +15,7 @@ class Mesh {
         ~Mesh();
 
         enum Mode : GLenum {
-            MODE_PONTS = GL_POINTS,
+            MODE_POINTS = GL_POINTS,
             MODE_TRIANGLES = GL_TRIANGLES
         };
 
