@@ -35,8 +35,13 @@ extern void Cleanup();
 extern void CompileArr();
 
 extern void DrawMiniMap();
+extern void DrawDebugUI();
 
 bool bEnableVSync = true;
+int frameCounter = 0;
+int fpsTimer = SDL_GetTicks();
+int lastAvgFps = 0;
+std::chrono::milliseconds MapDrawDuration;
 
 Map myMap;
 Camera myCamera;
@@ -64,10 +69,6 @@ int main(int argc, char* args[]) {
     
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
-
-    int frameCounter = 0;
-    int fpsTimer = SDL_GetTicks();
-    int lastAvgFps = 0;
 	bool bDone = false;
 	while (bDone == false) {        
 		fdelta += 0.01f;
@@ -91,46 +92,16 @@ int main(int argc, char* args[]) {
         myShader.Bind();
 
         myCamera.Update(myMap, myShader);
+
         auto start = std::chrono::high_resolution_clock::now();
         myMap.Draw();
         auto end = std::chrono::high_resolution_clock::now();
-        auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        //std::cout << delta.count() << std::endl;
-
+        MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         // 2D rendering
         myShader2D.Bind();
-        glDisable(GL_DEPTH_TEST);
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
 
-
-        ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowBgAlpha(0.0f);
-        // ImGui content goes here
-        ImGui::SetNextWindowSizeConstraints(ImVec2(-1, -1), ImVec2(-1, -1));
-        ImGui::Begin("Debug");
-        std::string str = "MapDraw: " + std::to_string(delta.count()) + "ms";
-        ImGui::Text(str.c_str());
-        str = "avg fps: " + std::to_string(lastAvgFps);
-
-        str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.z) + ")";
-        ImGui::Text(str.c_str());
-
-        ImGui::Separator();
-        ImGui::Checkbox("V-Sync", &bEnableVSync);
-        if (ImGui::IsItemDeactivatedAfterEdit()) {
-            SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
-            std::cout << "b: " << bEnableVSync << std::endl;
-        }
-        ImGui::End();
- 
-
-        ImGui::Render();
-        glViewport(0, 0, 800, 600);
-        //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        DrawDebugUI();
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
             fpsTimer = SDL_GetTicks();
@@ -147,6 +118,19 @@ int main(int argc, char* args[]) {
 
 	Cleanup();
 	return 0;
+}
+
+void SetupImgui() {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL2_InitForOpenGL(myWindow, myGLContext);
+    ImGui_ImplOpenGL3_Init();
 }
 
 void Init() {
@@ -179,18 +163,11 @@ void Init() {
 
 	SDL_GL_SetSwapInterval(1);
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplSDL2_InitForOpenGL(myWindow, myGLContext);
-    ImGui_ImplOpenGL3_Init();
+    SetupImgui();
 
 	glClearColor(0, 0, 0.25f, 0);   
+
+    // TODO: Clean this up
 
     // Init shader
     myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");
@@ -262,16 +239,20 @@ void Init() {
 }
 
 void Cleanup() {
+
+    // Imgui
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
+    // Data
 	glDeleteBuffers(1, &myArrBuffer);
 	glDeleteBuffers(1, &myTexArrBuffer);
 	glDeleteVertexArrays(1, &myVAO);
 
 	glDeleteTextures(1, &texID);
 
+    // SDL/GL
 	SDL_GL_DeleteContext(myGLContext);
 	SDL_DestroyWindow(myWindow);
 
@@ -308,4 +289,39 @@ void DrawMiniMap() {
         }
     }
 //    myMesh.Draw(Mesh::MODE_POINTS);
+}
+
+void DrawDebugUI() {
+    glDisable(GL_DEPTH_TEST);
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGui::SetNextWindowSize(ImVec2(-1, 256));
+    // ImGui content goes here
+
+    bool open = true;
+    ImGui::Begin("Debug",&open, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
+    ImGui::Text(str.c_str());
+    str = "avg fps: " + std::to_string(lastAvgFps);
+    ImGui::Text(str.c_str());
+    str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.z) + ")";
+    ImGui::Text(str.c_str());
+
+    ImGui::Separator();
+    ImGui::Checkbox("V-Sync", &bEnableVSync);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
+        std::cout << "b: " << bEnableVSync << std::endl;
+    }
+    ImGui::End();
+
+    ImGui::Render();
+    glViewport(0, 0, 800, 600);
+    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
