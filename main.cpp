@@ -20,6 +20,10 @@
 
 #include <chrono>
 
+#include <imgui.h>
+#include <imgui_impl_sdl.h>
+#include <imgui_impl_opengl3.h>
+
 #define BUFFER_OFFSET(i) ((void*)(i))
 
 SDL_Window* myWindow;
@@ -30,9 +34,10 @@ extern void Init();
 extern void Cleanup();
 extern void CompileArr();
 
-Shader myShader;
-int main(int argc, char* args[]) {
+bool bEnableVSync = true;
 
+Shader myShader, myShader2D;
+int main(int argc, char* args[]) {
 	Map myMap;
     Camera myCamera;
 
@@ -43,6 +48,11 @@ int main(int argc, char* args[]) {
 	myShader.modelMatrix = glm::mat4(1);
 
 //	projMatrix = glm::frustum(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 50.0f);
+
+    myShader2D.projMatrix = glm::mat4(1);//glm::ortho(0,800,600,0);
+    myShader2D.modelMatrix = glm::mat4(1);
+    myShader2D.viewMatrix = glm::mat4(1);
+
     myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
@@ -52,15 +62,20 @@ int main(int argc, char* args[]) {
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
 
+    int frameCounter = 0;
+    int fpsTimer = SDL_GetTicks();
+    int lastAvgFps = 0;
 	bool bDone = false;
-	while (SDL_GetTicks() - iTicks < 100000 && bDone == false) {
+	while (SDL_GetTicks() - iTicks < 100000 && bDone == false) {        
 		fdelta += 0.01f;
 		while (SDL_PollEvent(&myEvent)) {
-			if ((myEvent.type == SDL_WINDOWEVENT && myEvent.window.event == SDL_WINDOWEVENT_CLOSE) || SDL_GetKeyboardState(0)[SDL_SCANCODE_ESCAPE]) {
+            ImGui_ImplSDL2_ProcessEvent(&myEvent);
+			if ((myEvent.type == SDL_WINDOWEVENT && myEvent.window.event == SDL_WINDOWEVENT_CLOSE) || SDL_GetKeyboardState(0)[SDL_SCANCODE_GRAVE]) {
 				bDone = true;
 			}
 		}
 
+        glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glEnable(GL_TEXTURE_2D);
@@ -68,22 +83,9 @@ int main(int argc, char* args[]) {
 
         myShader.projMatrix = glm::ortho(0,1,1,0);
 
-        myShader.viewMatrix = glm::mat4(1);
-        myShader.modelMatrix = glm::mat4(1);
-        myShader.projMatrix = glm::mat4(1);
-
-        Mesh myMesh;
-
-        myMesh.Color4(1,1,1,1);myMesh.Color4(1,1,1,1);myMesh.Color4(1,1,1,1);
-        myMesh.TexCoord2(0,0);
-        myMesh.TexCoord2(1,0);
-        myMesh.TexCoord2(1,1);
-        
-        myMesh.Vert3(0,0,0);
-        myMesh.Vert3(64,0,0);
-        myMesh.Vert3(64,64,0);
-
         //myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 1.0f, 1000.0f);
+
+        myShader.Bind();
 
         myCamera.Update(myMap, myShader);
         auto start = std::chrono::high_resolution_clock::now();
@@ -92,7 +94,49 @@ int main(int argc, char* args[]) {
         auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         //std::cout << delta.count() << std::endl;
 
+
+        // 2D rendering
+        myShader2D.Bind();
+        glDisable(GL_DEPTH_TEST);
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        // ImGui content goes here
+        ImGui::Begin("Debug");
+        std::string str = "MapDraw: " + std::to_string(delta.count()) + "ms";
+        ImGui::Text(str.c_str());
+        str = "avg fps: " + std::to_string(lastAvgFps);
+        ImGui::Text(str.c_str());
+
+        ImGui::Separator();
+        ImGui::Checkbox("V-Sync", &bEnableVSync);
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
+            std::cout << "b: " << bEnableVSync << std::endl;
+        }
+        ImGui::End();
+ 
+
+        ImGui::Render();
+        glViewport(0, 0, 800, 600);
+        //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        if(SDL_GetTicks() - fpsTimer > 1000) {
+            fpsTimer = SDL_GetTicks();
+            lastAvgFps = frameCounter;
+            frameCounter = 0;
+        }
+
+
 		SDL_GL_SwapWindow(myWindow);
+
+        frameCounter++;
 	}
 
 	Cleanup();
@@ -113,8 +157,9 @@ void Init() {
 		std::cout << "\t *" << SDL_GetError() << std::endl;
 		exit(0);
 	}
-
+    
 	myGLContext = SDL_GL_CreateContext(myWindow);
+    SDL_GL_MakeCurrent(myWindow, myGLContext);
 	if (myGLContext == NULL) {
 		std::cout << "Problem creating GL context" << std::endl;
 		std::cout << "\t *" << SDL_GetError() << std::endl;
@@ -128,11 +173,21 @@ void Init() {
 
 	SDL_GL_SetSwapInterval(1);
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL2_InitForOpenGL(myWindow, myGLContext);
+    ImGui_ImplOpenGL3_Init();
+
 	glClearColor(0, 0, 0.25f, 0);   
 
+    // Init shader
     myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");
-
-	// Set up the uniforms
 	GLuint model = glGetUniformLocation(myShader.myProgram, "Model");
 	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(myShader.modelMatrix));
 
@@ -141,6 +196,17 @@ void Init() {
 
 	GLuint proj = glGetUniformLocation(myShader.myProgram, "Proj");
 	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(myShader.projMatrix));
+
+    // Init 2D shader
+    myShader2D.Initialize("shaders/default.vs", "shaders/default.fs");
+    model = glGetUniformLocation(myShader.myProgram, "Model");
+	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(myShader2D.modelMatrix));
+
+	view = glGetUniformLocation(myShader.myProgram, "View");
+	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader2D.viewMatrix));
+
+	proj = glGetUniformLocation(myShader.myProgram, "Proj");
+	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(myShader2D.projMatrix));
 
 	// Setup vertex array & attach buffer
 	glGenVertexArrays(1, &myVAO);
@@ -187,10 +253,12 @@ void Init() {
 
     // glPolygonMode(GL_FRONT, GL_LINE);
     // glPolygonMode(GL_BACK, GL_LINE);
-
 }
 
 void Cleanup() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
 
 	glDeleteBuffers(1, &myArrBuffer);
 	glDeleteBuffers(1, &myTexArrBuffer);

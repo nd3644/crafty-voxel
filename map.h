@@ -42,6 +42,9 @@ public:
         if(x < 0 || z < 0 || y < 0 || x >= width || z >= depth || y >= height) {
             return;
         } 
+        if(id < 0)
+            id = 0;
+        
 		LightLevels[((z * height * depth) + (y * width) + x)] = id;
 	}
 
@@ -81,18 +84,11 @@ public:
             for(int y = vec.y-32;y < vec.y+32;y++) {
                 for(int z = vec.z-32;z < vec.z+32;z++) {
                     int dist = sqrtf(pow(x-lx,2) + pow(y-ly,2) + pow(z-lz,2));
-
-                    if(dist < min || min == -1) {
-                        min = dist;
-                    }
-                    if(dist > max || max == -1) {
-                        max = dist;
-                    }
                     float level = 28 - ((float)dist);
-
+/*
                     if(level != 0)
                         std::cout << level << " ";
-
+*/
                     if(level < 0)
                         level = 0;
 

@@ -73,7 +73,7 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     }
 
     int mouseX = 0, mouseY = 0;
-    if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
+    if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(3)) {
         bFocus = true;
     }
     if(keys[SDL_SCANCODE_ESCAPE]) {
