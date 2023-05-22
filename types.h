@@ -9,6 +9,13 @@ struct vec3_t {
 	float x, y, z;
 };
 
+struct Rect {
+    Rect() {
+        x = y = w = h = 0;
+    }
+    float x, y, w, h;
+};
+
 struct RGBA {
     RGBA() {
         r = g = b = a = 1.0f;

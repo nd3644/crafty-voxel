@@ -6,6 +6,7 @@
 #include <fstream>
 #include "shader.h"
 #include "cube.h"
+#include "camera.h"
 #include <GL/glew.h>
 
 #include <glm/glm.hpp>
@@ -14,7 +15,7 @@
 
 #include <thread>
 
-Map::Map() : iBricks { 0 } {
+Map::Map(Camera &c) : iBricks { 0 }, camera(c) {
     height = 32;
     width = 128;
     depth = 128;

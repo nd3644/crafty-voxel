@@ -4,6 +4,8 @@
 
 #include <SDL2/SDL.h>
 
+#include "mesh.h"
+
 
 extern SDL_Window* myWindow;
 
@@ -21,10 +23,12 @@ void Camera::CheckInput() {
 
 }
 
-void Camera::Update(Map &myMap, Shader &myShader) {
+void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
 	const Uint8 * keys = SDL_GetKeyboardState(0);
 
-    float STRAFE_SPD = 0.1f;
+    FindTargettedBrick(myMap, input);
+
+    float STRAFE_SPD = 0.05f;
     const float pi = 3.14159f;
 
     myShader.viewMatrix = glm::lookAt(position, position + direction, up);
@@ -43,7 +47,6 @@ void Camera::Update(Map &myMap, Shader &myShader) {
         moveDelta += right * STRAFE_SPD;
 	}
 
-
 	if (keys[SDL_SCANCODE_W]) {
         glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
         moveDelta += forward * STRAFE_SPD;
@@ -57,9 +60,10 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     bool xMoveAccepted = true;
     bool zMoveAccepted = true;
 
-    for(float z = -0.5f;z < 0.5f;z += 0.01f) {
-        for(float x = -0.5f;x < 0.5f;x += 0.01f) {
-            if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+z), (int)position.y-1) != 0) {
+    float distf = 0.6f;
+    for(float z = -distf;z < distf;z += 0.01f) {
+        for(float x = -distf;x < distf;x += 0.01f) {
+            if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+0.5f+z), (int)position.y-1) != 0) {
                 xMoveAccepted = false;
             }
         }
@@ -67,9 +71,9 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     if(xMoveAccepted) {
         position.x += moveDelta.x;
     }
-    for(float z = -0.5f;z < 0.5f;z += 0.01f) {
-        for(float x = -0.5f;x < 0.5f;x += 0.01f) {
-            if(myMap.GetBrick((int)((position.x+x+0.5f)), (int)((position.z+moveDelta.z)+z), (int)position.y-1) != 0) {
+    for(float z = -distf-0.2f;z < distf+0.2f;z += 0.01f) {
+        for(float x = -distf;x < distf;x += 0.01f) {
+            if(myMap.GetBrick((int)((position.x+x+0.5f)), (int)((position.z+0.5f+moveDelta.z)+z), (int)position.y-1) != 0) {
                 zMoveAccepted = false;
             }
         }
@@ -77,13 +81,6 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     if(zMoveAccepted) {
         position.z += moveDelta.z;
     }
-
-    if (keys[SDL_SCANCODE_SPACE]) {
-        position += up * 0.25f;
-	}
-	else if (keys[SDL_SCANCODE_LCTRL]) {
-        position -= up * 0.25f;
-	}
 
     static bool lastpress = 0;
     if (keys[SDL_SCANCODE_R]) {
@@ -95,11 +92,11 @@ void Camera::Update(Map &myMap, Shader &myShader) {
         lastpress = true;
 	}
     else {
-        lastpress =false;
+        lastpress = false;
     }
 
     int mouseX = 0, mouseY = 0;
-    if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(3)) {
+    if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
         bFocus = true;
     }
     if(keys[SDL_SCANCODE_ESCAPE]) {
@@ -114,7 +111,6 @@ void Camera::Update(Map &myMap, Shader &myShader) {
             SDL_ShowCursor(SDL_DISABLE);
         }
         float LookSens = 0.05f;
-
 
         float yDelta = (300 - mouseY) * LookSens;
         glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians((yDelta)), right); // The rotation matrix
@@ -140,18 +136,62 @@ void Camera::Update(Map &myMap, Shader &myShader) {
     GLuint view = glGetUniformLocation(myShader.myProgram, "View");
     glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
 
+    float d = 0.1f;
     bool bground = false;
-    for(float x = -0.5f;x < 1.2f;x += 0.1f) {
-        for(float z = -0.5f;z < 1.2f;z += 0.1f) {
+    for(float x = -0.20f;x < 1.1f;x += 0.001) {
+        for(float z = -0.20f;z < 1.1f;z += 0.001f) {
             if( myMap.GetBrick((int)(position.x+x), (int)(position.z+z), (int)(position.y-1.5f)) != 0) {
                 bground=true;
             }
         }
     }
     if(!bground) {
-        position.y -= 0.1f;
+        fJumpVel += 0.005f;
     }
+    else {
+        fJumpVel = 0;
+    }
+
+
+    static int cooldown = 60;
+    if (keys[SDL_SCANCODE_SPACE] && bground) {
+        fJumpVel = -0.1f;
+        position.y += 0.25f;
+	}
+	else if (keys[SDL_SCANCODE_LCTRL]) {
+        position -= up * 0.25f;
+	}
+
+    position.y -= fJumpVel;
     
 //    std::cout << position.y << std::endl;
    //std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
+}
+
+void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
+    glm::vec3 p = position;
+    glm::vec3 outter;
+
+    p.x += 0.5f;
+    p.y += 0.5f;
+
+    for(int i = 0;i < 1000;i++) {
+        p += direction / 100.0f;
+        if(myMap.GetBrick((int)p.x, (int)p.z, (int)p.y) != 0) {
+            outter = p - (direction / 100.0f);
+            break;
+        }
+    }
+
+    int mx = 0, my = 0;
+    if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
+        myMap.SetBrick((int)p.x, (int)p.z, (int)p.y,0);
+        myMap.RebuildAll(); 
+    }
+
+    if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
+        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,1);
+        myMap.RebuildAll(); 
+    }
+    targetted_brick = p;
 }

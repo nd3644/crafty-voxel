@@ -9,10 +9,11 @@
 #include <map>
 #include <cmath>
 
+class Camera;
 class Map
 {
 public:
-	Map();
+	Map(Camera &c);
 	~Map();
 
 	 int height;
@@ -116,6 +117,7 @@ private:
     void ProcessMap_Simple();
     
 private:
+    Camera &camera;
     float fAmbient;
 	int *iBricks;
     int *LightLevels;

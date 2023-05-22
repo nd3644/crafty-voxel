@@ -18,6 +18,10 @@
 
 #include "mesh.h"
 
+#include "input.h"
+
+#include "sprite.h"
+
 #include <chrono>
 
 #include <imgui.h>
@@ -36,6 +40,7 @@ extern void CompileArr();
 
 extern void DrawMiniMap();
 extern void DrawDebugUI();
+extern void DrawCursor();
 
 bool bEnableVSync = true;
 int frameCounter = 0;
@@ -43,13 +48,15 @@ int fpsTimer = SDL_GetTicks();
 int lastAvgFps = 0;
 std::chrono::milliseconds MapDrawDuration;
 
-Map myMap;
 Camera myCamera;
+Map myMap(myCamera);
 
 Shader myShader, myShader2D;
 int main(int argc, char* args[]) {
 
 	CompileArr();
+
+    Eternal::InputHandle myInputHandle;
 
 	myShader.projMatrix = glm::mat4(1);
 	myShader.viewMatrix = glm::mat4(1);
@@ -66,11 +73,14 @@ int main(int argc, char* args[]) {
 	Init();
 
     myMap.FromBMP("textures/heightmap.bmp");
+
+    Eternal::Sprite spr;
+    spr.Load("textures/cursor.png");
     
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
 	bool bDone = false;
-	while (bDone == false) {        
+	while (bDone == false) {
 		fdelta += 0.01f;
 		while (SDL_PollEvent(&myEvent)) {
             ImGui_ImplSDL2_ProcessEvent(&myEvent);
@@ -78,6 +88,7 @@ int main(int argc, char* args[]) {
 				bDone = true;
 			}
 		}
+        myInputHandle.PollInputs();
 
         glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -91,15 +102,18 @@ int main(int argc, char* args[]) {
 
         myShader.Bind();
 
-        myCamera.Update(myMap, myShader);
+        myCamera.Update(myMap, myShader, myInputHandle);
 
         auto start = std::chrono::high_resolution_clock::now();
+        myMap.RebuildAll();
         myMap.Draw();
         auto end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         // 2D rendering
         myShader2D.Bind();
+        DrawCursor();
+
 
         DrawDebugUI();
 
@@ -257,6 +271,21 @@ void Cleanup() {
 	SDL_DestroyWindow(myWindow);
 
 	SDL_Quit();
+}
+
+void DrawCursor() {
+    Mesh myMesh;
+
+    glDisable(GL_TEXTURE_2D);
+
+    glPointSize(2);
+    for(int i = 0;i < 3;i++) {
+        myMesh.Color4(1,1,1,1);
+        myMesh.Index1(1);
+        myMesh.Vert3(0,0,0);
+        myMesh.TexCoord2(0,0);
+    }
+    myMesh.Draw(Mesh::MODE_POINTS);
 }
 
 void DrawMiniMap() {
