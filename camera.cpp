@@ -175,12 +175,19 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
     p.x += 0.5f;
     p.y += 0.5f;
 
+    bool bFound = false;
     for(int i = 0;i < 1000;i++) {
         p += direction / 100.0f;
         if(myMap.GetBrick((int)p.x, (int)p.z, (int)p.y) != 0) {
             outter = p - (direction / 100.0f);
+            bFound = true;
             break;
         }
+    }
+
+    if(!bFound) {
+        targetted_brick = { -1, -1, -1 };
+        return;
     }
 
     int mx = 0, my = 0;

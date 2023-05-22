@@ -7,15 +7,15 @@ std::vector<vec3_t>vertList;
 std::vector<vec2_t>uvList;
 
 void CompileArr() {
-	cube_verts[0] = { -0.5, -0.5, -0.5 };
-	cube_verts[1] = { 0.5, -0.5, -0.5 };
-	cube_verts[2] = { 0.5, 0.5, -0.5 };
-	cube_verts[3] = { -0.5, 0.5, -0.5 };
+	cube_verts[0] = { -0.51, -0.51, -0.51 };
+	cube_verts[1] = { 0.51, -0.51, -0.51 };
+	cube_verts[2] = { 0.51, 0.51, -0.51 };
+	cube_verts[3] = { -0.51, 0.51, -0.51 };
 
-	cube_verts[4] = { -0.5, -0.5, 0.5 };
-	cube_verts[5] = { 0.5, -0.5, 0.5 };
-	cube_verts[7] = { -0.5, 0.5, 0.5 };
-	cube_verts[6] = { 0.5, 0.5, 0.5 };
+	cube_verts[4] = { -0.51, -0.51, 0.51 };
+	cube_verts[5] = { 0.51, -0.51, 0.51 };
+	cube_verts[7] = { -0.51, 0.51, 0.51 };
+	cube_verts[6] = { 0.51, 0.51, 0.51 };
 
 	uvList.clear();
 	vertList.clear();
@@ -31,12 +31,12 @@ void CompileArr() {
 	};
 
 	tex2(0, 0); vert3(cube_verts[0].x, cube_verts[0].y, cube_verts[0].z);
+    tex2(0, 1); vert3(cube_verts[3].x, cube_verts[3].y, cube_verts[3].z);
 	tex2(1, 0); vert3(cube_verts[1].x, cube_verts[1].y, cube_verts[1].z);
-	tex2(0, 1); vert3(cube_verts[3].x, cube_verts[3].y, cube_verts[3].z);
 
 	tex2(0, 1); vert3(cube_verts[3].x, cube_verts[3].y, cube_verts[3].z);
+    tex2(1, 1); vert3(cube_verts[2].x, cube_verts[2].y, cube_verts[2].z);
 	tex2(1, 0); vert3(cube_verts[1].x, cube_verts[1].y, cube_verts[1].z);
-	tex2(1, 1); vert3(cube_verts[2].x, cube_verts[2].y, cube_verts[2].z);
 
 	// back
 	tex2(0, 0); vert3(cube_verts[0 + 4].x, cube_verts[0 + 4].y, cube_verts[0 + 4].z);
@@ -74,13 +74,13 @@ void CompileArr() {
 	tex2(1, 1); vert3(cube_verts[7].x, cube_verts[7].y, cube_verts[7].z);
 
 	tex2(0, 0); vert3(cube_verts[0].x, cube_verts[0].y, cube_verts[0].z);
+    tex2(1, 1); vert3(cube_verts[7].x, cube_verts[7].y, cube_verts[7].z);
 	tex2(0, 1); vert3(cube_verts[3].x, cube_verts[3].y, cube_verts[3].z);
-	tex2(1, 1); vert3(cube_verts[7].x, cube_verts[7].y, cube_verts[7].z);
 
 	// right
 	tex2(0, 0); vert3(cube_verts[1].x, cube_verts[1].y, cube_verts[1].z);
+    tex2(1, 1); vert3(cube_verts[6].x, cube_verts[6].y, cube_verts[6].z);
 	tex2(1, 0); vert3(cube_verts[5].x, cube_verts[5].y, cube_verts[5].z);
-	tex2(1, 1); vert3(cube_verts[6].x, cube_verts[6].y, cube_verts[6].z);
 
 	tex2(0, 0); vert3(cube_verts[1].x, cube_verts[1].y, cube_verts[1].z);
 	tex2(0, 1); vert3(cube_verts[2].x, cube_verts[2].y, cube_verts[2].z);

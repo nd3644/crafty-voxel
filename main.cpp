@@ -110,6 +110,20 @@ int main(int argc, char* args[]) {
         auto end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
+        glBindVertexArray(myVAO);
+		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        Mesh m;
+        m.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
+        for(int i = 0;i < vertList.size();i++) {
+            m.Index1(1); m.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
+            m.TexCoord2(uvList[i].x, uvList[i].y);
+            m.Color4(10,10,10,0.25f);
+        }
+        m.Draw(Mesh::MODE_TRIANGLES);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
         // 2D rendering
         myShader2D.Bind();
         DrawCursor();
@@ -247,6 +261,9 @@ void Init() {
 	glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // glPolygonMode(GL_FRONT, GL_LINE);
     // glPolygonMode(GL_BACK, GL_LINE);
