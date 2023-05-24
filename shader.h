@@ -38,7 +38,8 @@ class Shader {
     private:
         std::string FileToString(std::string filename);
         void CompileShader(Type shaderType, std::string source);
-
+        void UpdateUniforms();
+        
     public:
         GLuint myShaders[2];
         GLuint myProgram;

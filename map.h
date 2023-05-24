@@ -100,6 +100,8 @@ public:
             }
         }
     }
+
+    void GenerateDefaultChunk(int x, int y);
     
     void BuildChunk(int x, int z);
     void RebuildLights();
@@ -113,7 +115,6 @@ public:
 
     std::vector<vec3_t>lights;
 private:
-    void DrawSection(int i);
     void ProcessMap_Simple();
     
 private:

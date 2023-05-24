@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++11 -Wall -Og -I/usr/include/imgui/ -I/usr/include/imgui/backends/
+CXXFLAGS=-std=c++11 -Wfatal-errors -Og -I/usr/include/imgui/ -I/usr/include/imgui/backends/
 LDFLAGS=-lSDL2main -lSDL2 -lSDL2_image -lGL -lGLEW -L/usr/lib/imgui/ -limgui -lstb
 SRCS=$(wildcard *.cpp)
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))

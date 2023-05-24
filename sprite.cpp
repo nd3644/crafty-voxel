@@ -78,7 +78,7 @@ void Eternal::Sprite::Load(std::string sfile) {
 
     glGenVertexArrays(1, &vertArrObj);
     glBindVertexArray(vertArrObj);
-    glGenBuffers(4, arrayBuffers);
+    glGenBuffers(3, arrayBuffers);
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -94,10 +94,8 @@ void Eternal::Sprite::Load(std::string sfile) {
 
     SDL_Surface *surf = IMG_Load(sfile.c_str());
     if(surf == nullptr) {
-        return;
-    }
-    else {
-
+        std::cerr << "error loading " << sfile << std::endl;
+        exit(1);
     }
 
     glEnable(GL_TEXTURE_2D);
@@ -106,6 +104,7 @@ void Eternal::Sprite::Load(std::string sfile) {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    GLuint format = (surf->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGBA;
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surf->w, surf->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surf->pixels);
 
     w = surf->w;
@@ -147,7 +146,6 @@ void Eternal::Sprite::ForceResize(int width, int height) {
 
 void Eternal::Sprite::Draw(Rect &pos, Rect &clip) {
     glBindTexture(GL_TEXTURE_2D, myTexID);
-
     Draw_NoBind(pos, clip);
 }
 
@@ -161,30 +159,21 @@ void Eternal::Sprite::Draw_NoBind(Rect &pos, Rect &clip) {
     vVertexBuffer[5].x = pos.x;             vVertexBuffer[5].y = pos.y + pos.h;
 
 
-    const float cx = clip.x / w;
-    const float cy = clip.y / h;
+    const float cy = 0;//clip.y / h;
+    const float cx = 0;//clip.x / w;
 
-    const float cw = (clip.x / w) + clip.w / w;
-    const float ch = (clip.y / h) + clip.h / h;
+    const float ch = 1;//(clip.y / h) + clip.h / h;
+    const float cw = 1;//(clip.x / w) + clip.w / w;
 
-    vTexCoords[0].x = cx;        vTexCoords[0].y = cy;
-    vTexCoords[1].x = cw;        vTexCoords[1].y = cy;
-    vTexCoords[2].x = cx;        vTexCoords[2].y = ch;
+    vTexCoords[0].x = 0;        vTexCoords[0].y = 0;
+    vTexCoords[1].x = 1;        vTexCoords[1].y = 0;
+    vTexCoords[2].x = 0;        vTexCoords[2].y = 1;
 
-    vTexCoords[3].x = cw;        vTexCoords[3].y = cy;
-    vTexCoords[4].x = cw;        vTexCoords[4].y = ch;
-    vTexCoords[5].x = cx;        vTexCoords[5].y = ch;
-    for(int i = 0;i < 6;i++) {
-        vVertexBuffer[i].x /= (800 / 2);
-        vVertexBuffer[i].y /= (600 / 2);
+    vTexCoords[3].x = 1;        vTexCoords[3].y = 0;
+    vTexCoords[4].x = 1;        vTexCoords[4].y = 1;
+    vTexCoords[5].x = 0;        vTexCoords[5].y = 1;
 
-        if(bFlipV) {
-            vTexCoords[i].y = 1.0f - vTexCoords[i].y;
-        }
-        if(bFlipU) {
-            vTexCoords[i].x = 1.0f - vTexCoords[i].x;
-        }
-    }
+    glBindVertexArray(vertArrObj);
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
 	glBufferData(GL_ARRAY_BUFFER, (6*2) * sizeof(float), &vVertexBuffer[0], GL_DYNAMIC_DRAW);
@@ -195,7 +184,6 @@ void Eternal::Sprite::Draw_NoBind(Rect &pos, Rect &clip) {
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
 	glBufferData(GL_ARRAY_BUFFER, (6*4) * sizeof(float), &ColorBuffer[0], GL_DYNAMIC_DRAW);
 
-	glBindVertexArray(vertArrObj);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 

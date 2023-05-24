@@ -5,9 +5,6 @@
 
 //GLuint myProgram;
 
-GLuint texID;
-GLuint myVAO;
-GLuint myArrBuffer, myTexArrBuffer;
 bool CheckShaderErrors(GLuint shader) {
 	GLint myReturn = 0;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &myReturn);
@@ -147,6 +144,7 @@ void Shader::Initialize(std::string sVertexFile, std::string sFragmentFile) {
 	glValidateProgram(myProgram);
 
     Bind();
+    UpdateUniforms();
 
     bLoaded = true;
 
@@ -155,4 +153,17 @@ void Shader::Initialize(std::string sVertexFile, std::string sFragmentFile) {
 
 void Shader::Bind() {
     glUseProgram(myProgram);
+    UpdateUniforms();
 }
+
+void Shader::UpdateUniforms() {
+    GLuint model = glGetUniformLocation(myProgram, "Model");
+	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+	GLuint view = glGetUniformLocation(myProgram, "View");
+	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+
+	GLuint proj = glGetUniformLocation(myProgram, "Proj");
+	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(projMatrix));
+}
+

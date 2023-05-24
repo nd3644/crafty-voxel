@@ -5,7 +5,7 @@
 #include <SDL2/SDL.h>
 
 #include "mesh.h"
-
+#include <imgui.h>
 
 extern SDL_Window* myWindow;
 
@@ -97,7 +97,10 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
 
     int mouseX = 0, mouseY = 0;
     if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
-        bFocus = true;
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
+            bFocus = true;
+        }
     }
     if(keys[SDL_SCANCODE_ESCAPE]) {
         bFocus = false;
@@ -193,12 +196,11 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
     int mx = 0, my = 0;
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
         myMap.SetBrick((int)p.x, (int)p.z, (int)p.y,0);
-        myMap.RebuildAll(); 
+        myMap.BuildChunk((int)targetted_brick.x / Map::CHUNK_SIZE, (int)targetted_brick.z / Map::CHUNK_SIZE);
     }
-
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,1);
-        myMap.RebuildAll(); 
+        myMap.BuildChunk((int)targetted_brick.x / Map::CHUNK_SIZE, (int)targetted_brick.z / Map::CHUNK_SIZE);
     }
     targetted_brick = p;
 }

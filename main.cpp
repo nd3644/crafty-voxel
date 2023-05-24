@@ -47,13 +47,15 @@ int frameCounter = 0;
 int fpsTimer = SDL_GetTicks();
 int lastAvgFps = 0;
 std::chrono::milliseconds MapDrawDuration;
+bool bDebugMenuOpen = true;
 
 Camera myCamera;
 Map myMap(myCamera);
+Eternal::Sprite cursorTex;
 
 Shader myShader, myShader2D;
-int main(int argc, char* args[]) {
 
+int main(int argc, char* args[]) {
 	CompileArr();
 
     Eternal::InputHandle myInputHandle;
@@ -64,18 +66,15 @@ int main(int argc, char* args[]) {
 
 //	projMatrix = glm::frustum(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 50.0f);
 
-    myShader2D.projMatrix = glm::mat4(1);//glm::ortho(0,800,600,0);
+    myShader2D.projMatrix = glm::mat4(1);//glm::ortho(0.0f,800.0f,600.0f,0.0f,-100.0f,100.0f);
     myShader2D.modelMatrix = glm::mat4(1);
     myShader2D.viewMatrix = glm::mat4(1);
 
-    myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+    //myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
 	Init();
 
     myMap.FromBMP("textures/heightmap.bmp");
-
-    Eternal::Sprite spr;
-    spr.Load("textures/cursor.png");
     
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
@@ -93,25 +92,16 @@ int main(int argc, char* args[]) {
         glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, texID);
-
-        myShader.projMatrix = glm::ortho(0,800,600,0);
-
-        //myShader.projMatrix = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 1.0f, 1000.0f);
+        myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
         myShader.Bind();
 
         myCamera.Update(myMap, myShader, myInputHandle);
 
         auto start = std::chrono::high_resolution_clock::now();
-        myMap.RebuildAll();
         myMap.Draw();
         auto end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        glBindVertexArray(myVAO);
-		glDrawArrays(GL_TRIANGLES, 0, vertList.size());
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         Mesh m;
@@ -119,25 +109,24 @@ int main(int argc, char* args[]) {
         for(int i = 0;i < vertList.size();i++) {
             m.Index1(1); m.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
             m.TexCoord2(uvList[i].x, uvList[i].y);
-            m.Color4(10,10,10,0.25f);
+            m.Color4(0,0,0,1);
         }
         m.Draw(Mesh::MODE_TRIANGLES);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         // 2D rendering
+        myShader2D.projMatrix = glm::ortho(0.0f,800.0f,600.0f,0.0f,-100.0f,100.0f);
         myShader2D.Bind();
         DrawCursor();
 
-
         DrawDebugUI();
+//        DrawMiniMap();
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
             fpsTimer = SDL_GetTicks();
             lastAvgFps = frameCounter;
             frameCounter = 0;
         }
-
-        DrawMiniMap();
 
 		SDL_GL_SwapWindow(myWindow);
 
@@ -193,70 +182,15 @@ void Init() {
 
     SetupImgui();
 
-	glClearColor(0, 0, 0.25f, 0);   
-
-    // TODO: Clean this up
+	glClearColor(0.494, 0.752, 0.933f, 0);   
 
     // Init shader
     myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");
-	GLuint model = glGetUniformLocation(myShader.myProgram, "Model");
-	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(myShader.modelMatrix));
-
-	GLuint view = glGetUniformLocation(myShader.myProgram, "View");
-	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
-
-	GLuint proj = glGetUniformLocation(myShader.myProgram, "Proj");
-	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(myShader.projMatrix));
 
     // Init 2D shader
     myShader2D.Initialize("shaders/default.vs", "shaders/default.fs");
-    model = glGetUniformLocation(myShader.myProgram, "Model");
-	glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(myShader2D.modelMatrix));
 
-	view = glGetUniformLocation(myShader.myProgram, "View");
-	glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader2D.viewMatrix));
-
-	proj = glGetUniformLocation(myShader.myProgram, "Proj");
-	glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(myShader2D.projMatrix));
-
-	// Setup vertex array & attach buffer
-	glGenVertexArrays(1, &myVAO);
-	glBindVertexArray(myVAO);
-
-	glGenBuffers(1, &myArrBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, myArrBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3_t) * vertList.size(), &vertList[0], GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-	glEnableVertexAttribArray(0);
-
-	glGenBuffers(1, &myTexArrBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, myTexArrBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vec2_t) * uvList.size(), &uvList[0], GL_STATIC_DRAW);
-
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-	glEnableVertexAttribArray(1);
-
-	// Load the texture
-	SDL_Surface* surf = IMG_Load("textures/grass.png");
-	if (surf == NULL) {
-		std::cout << "Couldn't load logo.bmp" << std::endl;
-		std::cout << "\t *" << SDL_GetError() << std::endl;
-		exit(0);
-	}
-
-	glGenTextures(1, &texID);
-	glBindTexture(GL_TEXTURE_2D, texID);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, surf->w, surf->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surf->pixels);
-
-	SDL_FreeSurface(surf);
+    cursorTex.Load("textures/cursor.png");
 
 	glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -270,18 +204,10 @@ void Init() {
 }
 
 void Cleanup() {
-
     // Imgui
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-
-    // Data
-	glDeleteBuffers(1, &myArrBuffer);
-	glDeleteBuffers(1, &myTexArrBuffer);
-	glDeleteVertexArrays(1, &myVAO);
-
-	glDeleteTextures(1, &texID);
 
     // SDL/GL
 	SDL_GL_DeleteContext(myGLContext);
@@ -291,18 +217,27 @@ void Cleanup() {
 }
 
 void DrawCursor() {
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
     Mesh myMesh;
-
-    glDisable(GL_TEXTURE_2D);
-
-    glPointSize(2);
+    glPointSize(6);
     for(int i = 0;i < 3;i++) {
+        myMesh.SetTranslation(i*16,i*16,0);
         myMesh.Color4(1,1,1,1);
         myMesh.Index1(1);
-        myMesh.Vert3(0,0,0);
+        myMesh.Vert3(400,600,0);
         myMesh.TexCoord2(0,0);
     }
     myMesh.Draw(Mesh::MODE_POINTS);
+    
+    Rect c;
+    c.x = c.y = 0; c.w = c.h = 16;
+    Rect r;
+    r.x = 400 - 8;
+    r.y = 300 - 8;
+    r.w = r.h = 16;
+    cursorTex.Bind();
+    cursorTex.Draw(r,c);
 }
 
 void DrawMiniMap() {
@@ -334,7 +269,7 @@ void DrawMiniMap() {
             }
         }
     }
-//    myMesh.Draw(Mesh::MODE_POINTS);
+    myMesh.Draw(Mesh::MODE_POINTS);
 }
 
 void DrawDebugUI() {
@@ -343,14 +278,13 @@ void DrawDebugUI() {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowBgAlpha(0.0f);
     ImGui::SetNextWindowSize(ImVec2(-1, 256));
     // ImGui content goes here
 
-    bool open = true;
-    ImGui::Begin("Debug",&open, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));  // Set text color to red
+    ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
     std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
     ImGui::Text(str.c_str());
     str = "avg fps: " + std::to_string(lastAvgFps);
@@ -362,9 +296,9 @@ void DrawDebugUI() {
     ImGui::Checkbox("V-Sync", &bEnableVSync);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
-        std::cout << "b: " << bEnableVSync << std::endl;
     }
     ImGui::End();
+    ImGui::PopStyleColor(1);
 
     ImGui::Render();
     glViewport(0, 0, 800, 600);

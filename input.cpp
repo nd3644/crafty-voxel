@@ -1,5 +1,7 @@
 #include "input.h"
 
+#include <imgui.h>
+
 Eternal::InputHandle::InputHandle() {
 }
 
@@ -31,15 +33,21 @@ bool Eternal::InputHandle::IsKeyTap(Key key) {
 }
 
 bool Eternal::InputHandle::IsMouseClick(MouseButtons b) {
-    if((myMouse & b) && !(prevMouseState & b)) {
-        return true;
+    ImGuiIO& io = ImGui::GetIO();
+    if (!io.WantCaptureMouse) {
+        if((myMouse & b) && !(prevMouseState & b)) {
+            return true;
+        }
     }
     return false;
 }
 
 bool Eternal::InputHandle::IsMouseDown(MouseButtons b) {
-    if(myMouse & b) {
-        return true;
+    ImGuiIO& io = ImGui::GetIO();
+    if (!io.WantCaptureMouse) {
+        if(myMouse & b) {
+            return true;
+        }
     }
     return false;
 }
