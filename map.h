@@ -56,24 +56,6 @@ public:
 		return LightLevels[((z * height * depth) + (y * width) + x)];
     }
 
-    inline RGB GetLightColor(int x, int z, int y) {
-        if(x < 0 || z < 0 || y < 0 || x >= width || z >= depth || y >= height) {
-            return RGB(1,1,1);
-        } 
-		return LightColors[((z * height * depth) + (y * width) + x)];
-    }
-
-    inline void SetLightColor(int x, int z, int y, RGB rgb) {
-        if(x < 0 || z < 0 || y < 0 || x >= width || z >= depth || y >= height) {
-            return;
-        } 
-		LightColors[((z * height * depth) + (y * width) + x)] = rgb;
-    }
-
-    Mesh *GetChunk(int x, int z) {
-        return &myMeshes[x*(width/16)+z];
-    }
-
     void AddLight(int lx, int lz, int ly) {
         vec3_t vec = {lx,ly,lz};
         lights.push_back(vec);
@@ -124,9 +106,11 @@ private:
     int *LightLevels;
     RGB *LightColors;
     Mesh ***Chunks;
-    Mesh myMeshes[16];
     TextureArray myTexArray;
     std::vector<std::array<int,6>>BrickLookup;
+
+
+
 };
 
 #endif
