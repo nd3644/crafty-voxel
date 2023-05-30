@@ -86,7 +86,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
     if (keys[SDL_SCANCODE_R]) {
         if(lastpress == false) {
             myMap.SetBrick((int)position.x, (int)position.z, (int)position.y, 3);
-            myMap.AddLight((int)position.x, (int)position.z, (int)position.y);
+//            myMap.AddLight((int)position.x, (int)position.z, (int)position.y);
             myMap.RebuildAll();
         }
         lastpress = true;
@@ -181,7 +181,7 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
     bool bFound = false;
     for(int i = 0;i < 1000;i++) {
         p += direction / 100.0f;
-        if(myMap.GetBrick((int)p.x, (int)p.z, (int)p.y) != 0) {
+        if(myMap.GetBrick(p.x, p.z, p.y) != 0) {
             outter = p - (direction / 100.0f);
             bFound = true;
             break;
@@ -193,14 +193,27 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
         return;
     }
 
+
+
+    targetted_brick.x = (int)p.x;
+    targetted_brick.y = (int)p.y;
+    targetted_brick.z = (int)p.z;
     int mx = 0, my = 0;
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
-        myMap.SetBrick((int)p.x, (int)p.z, (int)p.y,0);
+        std::cout << "deleting brick " << myMap.GetBrick(targetted_brick.x, targetted_brick.z, targetted_brick.y) << " at (" << targetted_brick.x << ", " << targetted_brick.y << ", " << targetted_brick.z << std::endl;
+
+
+        std::cout << "xchunk: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
+        std::cout << "zchunk: " << floor(targetted_brick.z / Map::CHUNK_SIZE) << std::endl;
+
+        std::cout << "xtrans: " << abs((int)targetted_brick.x%Map::CHUNK_SIZE) << std::endl;
+        std::cout << "ztrans: " << abs((int)targetted_brick.z%Map::CHUNK_SIZE) << std::endl;
+
+        myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
         myMap.BuildChunk((int)targetted_brick.x / Map::CHUNK_SIZE, (int)targetted_brick.z / Map::CHUNK_SIZE);
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,1);
         myMap.BuildChunk((int)targetted_brick.x / Map::CHUNK_SIZE, (int)targetted_brick.z / Map::CHUNK_SIZE);
     }
-    targetted_brick = p;
 }
