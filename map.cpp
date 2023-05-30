@@ -15,11 +15,12 @@
 
 #include <thread>
 
-Map::Map(Camera &c) : iBricks { 0 }, camera(c) {
+#include <libnoise/noise.h>
+
+Map::Map(Camera &c) : camera(c) {
     height = 32;
     width = 128;
     depth = 128;
-    iBricks = nullptr;
 
     unsigned int num_cores = std::thread::hardware_concurrency();
     if (num_cores == 0) {
@@ -33,24 +34,31 @@ Map::Map(Camera &c) : iBricks { 0 }, camera(c) {
 }
 
 Map::~Map() {
-    if(iBricks != nullptr)
-        delete[] iBricks;
-
     if(LightLevels != nullptr)
         delete[] LightLevels;
 
     if(LightColors != nullptr)
         delete[] LightColors;
 
+}
 
-        for (int i = 0; i < width / CHUNK_SIZE; i++) {
-            for (int j = 0; j < depth / CHUNK_SIZE; j++) {
-                delete Chunks[i][j];
-            }
-            delete[] Chunks[i];
-        }
-        delete[] Chunks;
+void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
+    noise::module::Perlin myModule; 
+    myModule.SetSeed(123);
+    myModule.SetFrequency(0.02);
+    myModule.SetPersistence(0.1);
+    myModule.SetOctaveCount(3);
 
+    for (int x = 0; x < CHUNK_SIZE;x++) {
+		for (int z = 0; z < CHUNK_SIZE; z++) {
+            int height = ((myModule.GetValue((float)(chunkx*CHUNK_SIZE)+x,(float)(chunkz*CHUNK_SIZE)+z,0.5) + 1) / 2) * 32;
+            if(height < 4)
+                height = 4;
+            for (int y = 0; y < height/4; y++) {
+				map.SetBrick((chunkx*CHUNK_SIZE)+x, (chunkz*CHUNK_SIZE)+z, y, 1);
+			}
+		}
+	}
 }
 
 void Map::FromBMP(std::string sfile) {
@@ -60,21 +68,43 @@ void Map::FromBMP(std::string sfile) {
 		exit(-1);
 	}
 
+    noise::module::Perlin myModule; 
+    myModule.SetSeed(123);
+    myModule.SetFrequency(0.02);
+    myModule.SetPersistence(0.1);
+    myModule.SetOctaveCount(3);
+
     width = myBmp.GetWidth();
     depth = myBmp.GetHeight();
-    iBricks = new int[width*height*depth];
-    for(int i = 0;i < width*height*depth;i++) {
-        iBricks[i] = 0;
+
+
+    for(int x = -16;x < 16;x++) {
+        for(int z = -16;z < 16;z++) {
+            Chunks[from_pair(x,z)].Generate(x, z, *this);
+        }
     }
-	for (int x = 0; x < width;x++) {
-		for (int z = 0; z < depth; z++) {
-			int height = myBmp.GetPixelRGBA(x, z).R;
-			for (int y = 0; y < height/4; y++) {
+
+/*	for (int x = 0; x < width*2;x++) {
+		for (int z = 0; z < depth*2; z++) {
+			//int height = myBmp.GetPixelRGBA(x%width, z%depth).R;
+            int height = ((myModule.GetValue((float)x,(float)z,0.5) + 1) / 2) * 32;
+            if(height < 4)
+                height = 4;
+            for (int y = 0; y < height/4; y++) {
 				SetBrick(x, z, y, 1);
+                
+                // Set the mirror brick for negative X
+                SetBrick(-x, z, y, 1);
+
+                // Set the mirror brick for negative Z
+                SetBrick(x, -z, y, 1);
+
+                // Set the mirror brick for both negative X and Z
+                SetBrick(-x, -z, y, 1);
 			}
 		}
 	}
-
+*/
     LightLevels = new int[width*height*depth];
     for(int i = 0;i < width*height*depth;i++) {
         LightLevels[i] = 0;
@@ -91,16 +121,6 @@ void Map::FromBMP(std::string sfile) {
     LoadBrickMetaData();
     ProcessMap_Simple();
 
-
-    Chunks = new Mesh**[width / CHUNK_SIZE];
-    for (int i = 0; i < width / CHUNK_SIZE; i++) {
-        Chunks[i] = new Mesh*[depth / CHUNK_SIZE];
-        for (int j = 0; j < depth / CHUNK_SIZE; j++) {
-            Chunks[i][j] = new Mesh();
-        }
-    }
-
-    RebuildAll();
 }
 
 void Map::RebuildAll() {
@@ -113,7 +133,15 @@ void Map::RebuildAll() {
 }
 
 void Map::BuildChunk(int chunkX, int chunkZ) {
-    Mesh &mesh = *Chunks[chunkX][chunkZ];
+    Mesh &mesh = Chunks[from_pair(chunkX,chunkZ)].mesh;
+
+/*    if(!mesh.IsEmpty())
+        return;
+
+    if(!Chunks[from_pair(chunkX,chunkZ)].bGen) {
+        Chunks[from_pair(chunkX,chunkZ)].Generate(chunkX, chunkZ, *this);
+    }*/
+
     mesh.Clean();
 
     int skipped = 0;
@@ -241,9 +269,20 @@ void Map::RebuildLights() {
 void Map::Draw() {
     glEnable(GL_CULL_FACE);
 
-    for(int x = 0;x < width/CHUNK_SIZE;x++) {
-        for(int z = 0;z < depth/CHUNK_SIZE;z++) {
-            Chunks[x][z]->Draw(Mesh::MODE_TRIANGLES);
+    //int sX = camera.position.x >= 0 ? camera.position.x / CHUNK_SIZE : (camera.position.x - (CHUNK_SIZE-1)) / CHUNK_SIZE;
+    //int sZ = camera.position.z >= 0 ? camera.position.z / CHUNK_SIZE : (camera.position.z - (CHUNK_SIZE-1)) / CHUNK_SIZE;
+
+    int sX = camera.position.x / CHUNK_SIZE;
+    int sZ = camera.position.z / CHUNK_SIZE;
+
+    std::cout << "drawing chunk: " << sX << " , " << sZ << std::endl;
+
+    
+    for(int x = sX - 1;x < sX+2;x++) {
+        for(int z = sZ-1;z < sZ+2;z++) {
+            auto index = from_pair(x,z);
+            BuildChunk(x,z);
+            Chunks[index].mesh.Draw(Mesh::MODE_TRIANGLES);
         }
     }
 

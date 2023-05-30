@@ -61,8 +61,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
     bool zMoveAccepted = true;
 
     float distf = 0.6f;
-    for(float z = -distf;z < distf;z += 0.01f) {
-        for(float x = -distf;x < distf;x += 0.01f) {
+    for(float z = -distf;z < distf;z += 0.1f) {
+        for(float x = -distf;x < distf;x += 0.1f) {
             if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+0.5f+z), (int)position.y-1) != 0) {
                 xMoveAccepted = false;
             }
@@ -71,8 +71,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
     if(xMoveAccepted) {
         position.x += moveDelta.x;
     }
-    for(float z = -distf-0.2f;z < distf+0.2f;z += 0.01f) {
-        for(float x = -distf;x < distf;x += 0.01f) {
+    for(float z = -distf-0.2f;z < distf+0.2f;z += 0.1f) {
+        for(float x = -distf;x < distf;x += 0.1f) {
             if(myMap.GetBrick((int)((position.x+x+0.5f)), (int)((position.z+0.5f+moveDelta.z)+z), (int)position.y-1) != 0) {
                 zMoveAccepted = false;
             }
@@ -141,8 +141,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
 
     float d = 0.1f;
     bool bground = false;
-    for(float x = -0.20f;x < 1.1f;x += 0.001) {
-        for(float z = -0.20f;z < 1.1f;z += 0.001f) {
+    for(float x = -0.20f;x < 1.1f;x += 0.01) {
+        for(float z = -0.20f;z < 1.1f;z += 0.01f) {
             if( myMap.GetBrick((int)(position.x+x), (int)(position.z+z), (int)(position.y-1.5f)) != 0) {
                 bground=true;
             }

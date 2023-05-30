@@ -46,7 +46,7 @@ bool bEnableVSync = true;
 int frameCounter = 0;
 int fpsTimer = SDL_GetTicks();
 int lastAvgFps = 0;
-std::chrono::milliseconds MapDrawDuration;
+std::chrono::milliseconds MapDrawDuration, CameraUpdateDuration;
 bool bDebugMenuOpen = true;
 
 Camera myCamera;
@@ -96,11 +96,14 @@ int main(int argc, char* args[]) {
 
         myShader.Bind();
 
-        myCamera.Update(myMap, myShader, myInputHandle);
-
         auto start = std::chrono::high_resolution_clock::now();
-        myMap.Draw();
+        myCamera.Update(myMap, myShader, myInputHandle);
         auto end = std::chrono::high_resolution_clock::now();
+        CameraUpdateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        start = std::chrono::high_resolution_clock::now();
+        myMap.Draw();
+        end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -287,9 +290,11 @@ void DrawDebugUI() {
     ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
     std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
     ImGui::Text(str.c_str());
+    str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
+    ImGui::Text(str.c_str());
     str = "avg fps: " + std::to_string(lastAvgFps);
     ImGui::Text(str.c_str());
-    str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.z) + ")";
+    str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.y) + " , " + std::to_string(myCamera.position.z) + ")";
     ImGui::Text(str.c_str());
 
     ImGui::Separator();
