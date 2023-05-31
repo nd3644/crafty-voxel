@@ -63,7 +63,11 @@ public:
         exit(0);*/
         int xchunk = x/CHUNK_SIZE;
         int zchunk = z/CHUNK_SIZE;
-        Chunks[std::make_pair(xchunk,zchunk)].iBricks[abs(x%CHUNK_SIZE)][y][abs(z%CHUNK_SIZE)] = id;
+
+        int xindex = x%CHUNK_SIZE;
+        int zindex = z%CHUNK_SIZE;
+        
+        Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex] = id;
 	}
 
 
@@ -81,8 +85,8 @@ public:
         int xchunk = x/CHUNK_SIZE;
         int zchunk = z/CHUNK_SIZE;
 
-        int xindex = abs(x%CHUNK_SIZE);
-        int zindex = abs(z%CHUNK_SIZE);
+        int xindex = x%CHUNK_SIZE;
+        int zindex = z%CHUNK_SIZE;
 
 		return Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex];
 	}

@@ -78,12 +78,12 @@ void Map::FromBMP(std::string sfile) {
     depth = myBmp.GetHeight();
 
 
-    for(int x = -16;x < 16;x++) {
+/*    for(int x = -16;x < 16;x++) {
         for(int z = -16;z < 16;z++) {
             Chunks[std::make_pair(x,z)].Generate(x, z, *this);
         }
     }
-
+*/
 /*	for (int x = 0; x < width*2;x++) {
 		for (int z = 0; z < depth*2; z++) {
 			//int height = myBmp.GetPixelRGBA(x%width, z%depth).R;
@@ -126,7 +126,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].mesh;
 
     if(!Chunks[std::make_pair(chunkX,chunkZ)].bGen) {
-        //Chunks[std::make_pair(chunkX,chunkZ)].Generate(chunkX, chunkZ, *this);
+        Chunks[std::make_pair(chunkX,chunkZ)].Generate(chunkX, chunkZ, *this);
     }
 
     mesh.Clean();
@@ -270,7 +270,9 @@ void Map::Draw() {
     for(int x = sX - viewDist;x < sX+viewDist+1;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist+1;z++) {
             auto index = std::make_pair(x,z);
-            BuildChunk(x,z);
+            if(Chunks[index].mesh.IsEmpty()) {
+                BuildChunk(x,z);
+            }
             Chunks[index].mesh.Draw(Mesh::MODE_TRIANGLES);
         }
     }
