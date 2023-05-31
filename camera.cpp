@@ -141,8 +141,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
 
     float d = 0.1f;
     bool bground = false;
-    for(float x = -0.20f;x < 1.1f;x += 0.01) {
-        for(float z = -0.20f;z < 1.1f;z += 0.01f) {
+    for(float x = -0.20f;x < 1.1f;x += 0.1) {
+        for(float z = -0.20f;z < 1.1f;z += 0.1f) {
             if( myMap.GetBrick((int)(position.x+x), (int)(position.z+z), (int)(position.y-1.5f)) != 0) {
                 bground = true;
             }

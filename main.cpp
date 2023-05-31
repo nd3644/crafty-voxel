@@ -22,6 +22,8 @@
 
 #include "sprite.h"
 
+#include "globals.h"
+
 #include <chrono>
 
 #include <imgui.h>
@@ -64,14 +66,9 @@ int main(int argc, char* args[]) {
 	myShader.viewMatrix = glm::mat4(1);
 	myShader.modelMatrix = glm::mat4(1);
 
-//	projMatrix = glm::frustum(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 50.0f);
-
-    myShader2D.projMatrix = glm::mat4(1);//glm::ortho(0.0f,800.0f,600.0f,0.0f,-100.0f,100.0f);
+    myShader2D.projMatrix = glm::mat4(1);
     myShader2D.modelMatrix = glm::mat4(1);
     myShader2D.viewMatrix = glm::mat4(1);
-
-    //myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
-
 	Init();
 
     myMap.FromBMP("textures/heightmap.bmp");
@@ -118,7 +115,7 @@ int main(int argc, char* args[]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         // 2D rendering
-        myShader2D.projMatrix = glm::ortho(0.0f,800.0f,600.0f,0.0f,-100.0f,100.0f);
+        myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
         myShader2D.Bind();
         DrawCursor();
 
@@ -161,7 +158,7 @@ void Init() {
 		exit(0);
 	}
 
-	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL);
+	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_W, WIN_H, SDL_WINDOW_OPENGL);
 	if (myWindow == NULL) {
 		std::cout << "Couldn't create window" << std::endl;
 		std::cout << "\t *" << SDL_GetError() << std::endl;
@@ -231,13 +228,13 @@ void DrawCursor() {
         myMesh.Vert3(400,600,0);
         myMesh.TexCoord2(0,0);
     }
-    myMesh.Draw(Mesh::MODE_POINTS);
+//    myMesh.Draw(Mesh::MODE_POINTS);
     
     Rect c;
     c.x = c.y = 0; c.w = c.h = 16;
     Rect r;
-    r.x = 400 - 8;
-    r.y = 300 - 8;
+    r.x = (WIN_W/2) - 8;
+    r.y = (WIN_H/2) - 8;
     r.w = r.h = 16;
     cursorTex.Bind();
     cursorTex.Draw(r,c);
@@ -306,7 +303,7 @@ void DrawDebugUI() {
     ImGui::PopStyleColor(1);
 
     ImGui::Render();
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, WIN_W, WIN_H);
     //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

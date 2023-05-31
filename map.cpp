@@ -41,24 +41,50 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen)
         return;
 
-    std::cout << "generating " << chunkx << " , " << chunkz << std::endl;
-    noise::module::Perlin myModule; 
+    static int counter = 0;
+    std::cout << "generating " << chunkx << " , " << chunkz << " c = " << (++counter) << std::endl;
+    noise::module::Perlin myModule, myDetail; 
     myModule.SetSeed(123);
     myModule.SetFrequency(0.02);
     myModule.SetPersistence(0.1);
     myModule.SetOctaveCount(3);
 
+    myDetail.SetSeed(321);
+    double detailFrequency = 0.1;
+    double detailAmplitude = 10;
+
     for (int x = 0; x < CHUNK_SIZE;x++) {
+        int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
-            int height = ((myModule.GetValue((chunkx*CHUNK_SIZE)+x,(chunkz*CHUNK_SIZE)+z,0.5) + 1) / 2) * 32;
+            int zindex = (chunkz*CHUNK_SIZE)+z;
+            int height = 
+            (((myModule.GetValue(xindex,zindex,0.5) + 1) / 2) * MAX_HEIGHT);
             if(height < 4)
                 height = 4;
             for (int y = 0; y < height/4; y++) {
-				map.SetBrick((chunkx*CHUNK_SIZE)+x, (chunkz*CHUNK_SIZE)+z, y, 1);
+				map.SetBrick(xindex, zindex, y, 6);
 			}
 		}
 	}
     bGen = true;
+}
+
+std::vector<std::string> Map::TextureNamesFromFile(std::string filename) {
+    std::vector<std::string>result;
+    std::ifstream file(filename);
+
+    if(!file.is_open()) {
+        std::cerr << "ERROR! Couldn't open file " << filename << std::endl;
+        exit(1);
+    }
+
+    std::string line;
+    while(std::getline(file,line)) {
+        result.push_back(line);
+        std::cout << "adding texture " << line << std::endl;
+    }
+    
+    return result;
 }
 
 void Map::FromBMP(std::string sfile) {
@@ -106,11 +132,9 @@ void Map::FromBMP(std::string sfile) {
 	}
 */
 
-    std::vector<std::string>images = { "textures/grass.png", "textures/grass_side.png","textures/dirt.png","textures/torch.png" };
+    std::vector<std::string>images = TextureNamesFromFile("brick_textures.txt");
     myTexArray.Load(images);
     LoadBrickMetaData();
-    ProcessMap_Simple();
-
 }
 
 void Map::RebuildAll() {
@@ -132,7 +156,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     mesh.Clean();
 
     int skipped = 0;
-    for (int y = 0; y < 32; y++) {
+    for (int y = 0; y < MAX_HEIGHT; y++) {
         for (int x = 0; x < CHUNK_SIZE;x++) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
             for (int z = 0; z < CHUNK_SIZE;z++) {
@@ -203,6 +227,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
+                lv -= 0.2f;
                 // Draw left
                 mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
@@ -255,27 +280,9 @@ void Map::RebuildLights() {
 
 void Map::Draw() {
     glEnable(GL_CULL_FACE);
-
-    //int sX = camera.position.x >= 0 ? camera.position.x / CHUNK_SIZE : (camera.position.x - (CHUNK_SIZE-1)) / CHUNK_SIZE;
-    //int sZ = camera.position.z >= 0 ? camera.position.z / CHUNK_SIZE : (camera.position.z - (CHUNK_SIZE-1)) / CHUNK_SIZE;
-
+    
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
-/*    std::cout << "sX/Y: " << sX << " , " << sZ << std::endl;
-    auto index = std::make_pair(sX,sZ);
-    BuildChunk(sX,sZ);
-    Chunks[index].mesh.Draw(Mesh::MODE_TRIANGLES);*/
-
-    int viewDist = 2;
-    for(int x = sX - viewDist;x < sX+viewDist+1;x++) {
-        for(int z = sZ-viewDist;z < sZ+viewDist+1;z++) {
-            auto index = std::make_pair(x,z);
-            if(Chunks[index].mesh.IsEmpty()) {
-                BuildChunk(x,z);
-            }
-            Chunks[index].mesh.Draw(Mesh::MODE_TRIANGLES);
-        }
-    }
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_J]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -283,22 +290,18 @@ void Map::Draw() {
     else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
-    int pCount = 0;
-/*
-    std::thread threads[NUM_THREADS];
+    int viewDist = 4;
+    for(int x = sX - viewDist;x < sX+viewDist;x++) {
+        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+            auto index = std::make_pair(x,z);
+            auto &chunk = Chunks[index];
 
-    for(int i = 0;i < NUM_THREADS;i++) {
-        threads[i] = std::thread(&Map::DrawSection, this, i);
+            if(chunk.mesh.IsEmpty()) {
+                BuildChunk(x,z);
+            }
+            chunk.mesh.Draw(Mesh::MODE_TRIANGLES);
+        }
     }
-
-    for(int i = 0;i < NUM_THREADS;i++) {
-        threads[i].join();
-    }
-
- //   myTexArray.Bind();
-    for(int i = 0;i < NUM_THREADS;i++) {
-        myMeshes[i].Draw(Mesh::MODE_TRIANGLES);
-    }*/
 }
 
 void Map::LoadBrickMetaData() {
@@ -311,21 +314,3 @@ void Map::LoadBrickMetaData() {
         BrickLookup.push_back(arr);
     }
 }
-
-void Map::ProcessMap_Simple() {
-    for (int x = 0; x < width;x++) {
-		for (int z = 0; z < depth; z++) {
-			for (int y = height-1;y > 0; y--) {
-                //
-                if(rand()%8 == 1 && GetBrick(x,z,y) != 0) {
-                    //SetBrick(x,z,y,2);
-                }
-            }
-        }
-    }
-}
-
-void Map::GenerateDefaultChunk(int x, int y) {
-
-}
-

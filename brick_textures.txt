@@ -1,0 +1,6 @@
+textures/grass.png
+textures/grass_side.png
+textures/dirt.png
+textures/torch.png
+textures/sand.png
+textures/stone.png

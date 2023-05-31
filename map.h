@@ -25,6 +25,7 @@ public:
     int NUM_THREADS;
 
     static constexpr int CHUNK_SIZE = 64;
+    static constexpr int MAX_HEIGHT = 64;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
 
@@ -40,7 +41,7 @@ public:
             }
         }
         Mesh mesh;
-        int iBricks[CHUNK_SIZE][32][CHUNK_SIZE];
+        int iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         bool bGen;
 
         void Generate(int chunkx, int chunkz, Map &map);
@@ -61,12 +62,12 @@ public:
 /*        std::cout << "chunkx: " << floor(-64/CHUNK_SIZE) << std::endl;
         std::cout << "chunkz: " << floor(-10/CHUNK_SIZE) << std::endl;
         exit(0);*/
-        int xchunk = x/CHUNK_SIZE;
-        int zchunk = z/CHUNK_SIZE;
+        int xchunk = x / CHUNK_SIZE;
+        int zchunk = z / CHUNK_SIZE;
 
-        int xindex = x%CHUNK_SIZE;
-        int zindex = z%CHUNK_SIZE;
-        
+        int xindex = x % CHUNK_SIZE;
+        int zindex = z % CHUNK_SIZE;
+
         Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex] = id;
 	}
 
@@ -82,18 +83,15 @@ public:
         if(z < 0)
             z += half_limit;
 
-        int xchunk = x/CHUNK_SIZE;
-        int zchunk = z/CHUNK_SIZE;
+        int xchunk = x / CHUNK_SIZE;
+        int zchunk = z / CHUNK_SIZE;
 
-        int xindex = x%CHUNK_SIZE;
-        int zindex = z%CHUNK_SIZE;
+        int xindex = x % CHUNK_SIZE;
+        int zindex = z % CHUNK_SIZE;
 
 		return Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex];
 	}
 
-
-    void GenerateDefaultChunk(int x, int y);
-    
     void BuildChunk(int x, int z);
     void RebuildLights();
 
@@ -107,12 +105,11 @@ public:
     std::vector<vec3_t>lights;
 
 private:
-    void ProcessMap_Simple();
-    
+    std::vector<std::string> TextureNamesFromFile(std::string filename);
+
 private:
     Camera &camera;
     float fAmbient;
-//	int *iBricks;
     TextureArray myTexArray;
     std::vector<std::array<int,6>>BrickLookup;
 
