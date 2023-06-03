@@ -41,28 +41,34 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen)
         return;
 
+    bool bMount = (rand()%5 == 1) ? true : false;
+
+    int brickType = 1;
+    if(bMount) {
+        brickType = 6;
+    }
+
     static int counter = 0;
     std::cout << "generating " << chunkx << " , " << chunkz << " c = " << (++counter) << std::endl;
-    noise::module::Perlin myModule, myDetail; 
-    myModule.SetSeed(123);
-    myModule.SetFrequency(0.02);
-    myModule.SetPersistence(0.1);
-    myModule.SetOctaveCount(3);
-
-    myDetail.SetSeed(321);
-    double detailFrequency = 0.1;
-    double detailAmplitude = 10;
-
+    noise::module::Perlin finalTerrain;
+    noise::module::RidgedMulti mountainTerrain;
+    
+//    myModule.SetFrequency(0.02);
+/*    myModule.SetPersistence(0.1);
+    myModule.SetOctaveCount(3);*/
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
-            int height = 
-            (((myModule.GetValue(xindex,zindex,0.5) + 1) / 2) * MAX_HEIGHT);
+            int height = (((finalTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
+
+            if(bMount)
+                height += (((mountainTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
+
             if(height < 4)
                 height = 4;
             for (int y = 0; y < height/4; y++) {
-				map.SetBrick(xindex, zindex, y, 6);
+				map.SetBrick(xindex, zindex, y, brickType);
 			}
 		}
 	}
