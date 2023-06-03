@@ -50,24 +50,41 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     static int counter = 0;
     std::cout << "generating " << chunkx << " , " << chunkz << " c = " << (++counter) << std::endl;
-    noise::module::Perlin finalTerrain;
-    noise::module::RidgedMulti mountainTerrain;
-    
-//    myModule.SetFrequency(0.02);
-/*    myModule.SetPersistence(0.1);
-    myModule.SetOctaveCount(3);*/
+
+    using namespace noise;
+
+    module::Perlin baseFlatTerrain;
+
+    module::ScaleBias flatTerrain;
+    flatTerrain.SetSourceModule(0, baseFlatTerrain);
+    flatTerrain.SetScale(0.125);
+
+    module::RidgedMulti mountainTerrain;
+
+    module::Perlin terrainType;
+    terrainType.SetFrequency(0.1);
+    terrainType.SetPersistence(0.25);
+
+    module::Select finalTerrain;
+    finalTerrain.SetSourceModule(0, flatTerrain);
+    finalTerrain.SetSourceModule(1, mountainTerrain);
+    finalTerrain.SetControlModule(terrainType);
+    finalTerrain.SetBounds(0.0, 1000.0);
+    finalTerrain.SetEdgeFalloff(0.125);
+
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
             int height = (((finalTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
 
-            if(bMount)
-                height += (((mountainTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
-
             if(height < 4)
                 height = 4;
-            for (int y = 0; y < height/4; y++) {
+            if(height >= MAX_HEIGHT)
+                height = MAX_HEIGHT - 1;
+            
+            for (int y = height; y > 0; y--) {
+
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 		}
@@ -110,12 +127,12 @@ void Map::FromBMP(std::string sfile) {
     depth = myBmp.GetHeight();
 
 
-/*    for(int x = -16;x < 16;x++) {
-        for(int z = -16;z < 16;z++) {
+    for(int x = -8;x < 8;x++) {
+        for(int z = -8;z < 8;z++) {
             Chunks[std::make_pair(x,z)].Generate(x, z, *this);
         }
     }
-*/
+
 /*	for (int x = 0; x < width*2;x++) {
 		for (int z = 0; z < depth*2; z++) {
 			//int height = myBmp.GetPixelRGBA(x%width, z%depth).R;
@@ -147,7 +164,7 @@ void Map::RebuildAll() {
     // Build chunks
     for(int x = 0;x < width/CHUNK_SIZE;x++) {
         for(int z = 0;z < depth/CHUNK_SIZE;z++) {
-            BuildChunk(x,z);
+            //BuildChunk(x,z);
         }
     }
 }
@@ -285,6 +302,7 @@ void Map::RebuildLights() {
 }
 
 void Map::Draw() {
+    toDraw.clear();
     glEnable(GL_CULL_FACE);
     
     int sX = ((int)camera.position.x / CHUNK_SIZE);
@@ -296,16 +314,30 @@ void Map::Draw() {
     else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
-    int viewDist = 4;
+    int viewDist = 3;
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+
+
+            glm::vec3 centre = {
+                (float)((x * Map::CHUNK_SIZE) + (Map::CHUNK_SIZE/2)),
+                (float)((32)),
+                (float)((z * Map::CHUNK_SIZE) + (Map::CHUNK_SIZE/2)) };
+
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
 
             if(chunk.mesh.IsEmpty()) {
                 BuildChunk(x,z);
             }
-            chunk.mesh.Draw(Mesh::MODE_TRIANGLES);
+
+            if(!camera.IsInfront(centre)) {
+                //std::cout << "skip" << std::endl;
+                continue;
+            }
+            
+
+            chunk.mesh.Draw(Mesh::MODE_TRIANGLES);            
         }
     }
 }

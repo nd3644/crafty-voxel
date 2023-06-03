@@ -11,6 +11,7 @@
 #include <cmath>
 #include <limits>
 
+
 class Camera;
 class Map
 {
@@ -34,7 +35,7 @@ public:
             bGen = false;
             for(int i = 0;i < CHUNK_SIZE;i++) {
                 for(int j = 0;j < CHUNK_SIZE;j++) {
-                    for(int y = 0;y < 32;y++) {
+                    for(int y = 0;y < MAX_HEIGHT;y++) {
                         iBricks[i][y][j] = 0;
                     }
                 }
@@ -49,7 +50,7 @@ public:
 
 	inline void SetBrick(int x, int z, int y, int id) {
         using namespace std;
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit) {
+        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
             return;
         }
 
@@ -73,7 +74,7 @@ public:
 
 
 	inline int GetBrick(int x, int z, int y) {
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit) {
+        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= 60) {
             return 0;
         }
 
@@ -89,7 +90,9 @@ public:
         int xindex = x % CHUNK_SIZE;
         int zindex = z % CHUNK_SIZE;
 
-		return Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex];
+        auto chunk_index = std::make_pair(xchunk,zchunk);
+
+		return Chunks[chunk_index].iBricks[xindex][y][zindex];
 	}
 
     void BuildChunk(int x, int z);
@@ -103,6 +106,8 @@ public:
     void LoadBrickMetaData();
 
     std::vector<vec3_t>lights;
+
+    std::vector<std::tuple<float, float, RGB>>toDraw;
 
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
