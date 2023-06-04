@@ -13,8 +13,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <thread>
-
 #include <libnoise/noise.h>
 
 Map::Map(Camera &c) : camera(c) {
@@ -60,9 +58,11 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     flatTerrain.SetScale(0.125);
 
     module::RidgedMulti mountainTerrain;
+    mountainTerrain.SetLacunarity(1.5);
+    mountainTerrain.SetOctaveCount(1);
 
     module::Perlin terrainType;
-    terrainType.SetFrequency(0.1);
+    terrainType.SetFrequency(0.05);
     terrainType.SetPersistence(0.25);
 
     module::Select finalTerrain;
@@ -84,7 +84,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
                 height = MAX_HEIGHT - 1;
             
             for (int y = height; y > 0; y--) {
-
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 		}
@@ -126,12 +125,19 @@ void Map::FromBMP(std::string sfile) {
     width = myBmp.GetWidth();
     depth = myBmp.GetHeight();
 
-
+    std::thread threads[16];
+    int pdist = 4;
     for(int x = -8;x < 8;x++) {
-        for(int z = -8;z < 8;z++) {
-            Chunks[std::make_pair(x,z)].Generate(x, z, *this);
-        }
+        //threads[x+8] = std::thread([&]() {
+            for(int z = -8;z < 8;z++) {
+                Chunks[std::make_pair(x,z)].Generate(x, z, *this);
+            }
+        //});
     }
+
+/*    for(int i = 0;i < 16;i++)
+        threads[i].join();
+*/
 
 /*	for (int x = 0; x < width*2;x++) {
 		for (int z = 0; z < depth*2; z++) {
@@ -170,11 +176,11 @@ void Map::RebuildAll() {
 }
 
 void Map::BuildChunk(int chunkX, int chunkZ) {
+    std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
+
     Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].mesh;
 
-    if(!Chunks[std::make_pair(chunkX,chunkZ)].bGen) {
-        Chunks[std::make_pair(chunkX,chunkZ)].Generate(chunkX, chunkZ, *this);
-    }
+    Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
 
     mesh.Clean();
 
@@ -224,6 +230,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
 
+                float trans = BrickTransparencies[brickID-1];
+
                 float lv = 1;
                 if(lv > 1)
                     lv = 1;
@@ -231,7 +239,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     lv = fAmbient;
 
                 // Draw top
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
                 mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
@@ -241,7 +249,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
 
                 // Draw bottom
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
                 mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
@@ -252,7 +260,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 lv -= 0.2f;
                 // Draw left
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
                 mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
                 mesh.TexCoord2(len, 1);     mesh.Vert3(0.5, -0.5, len);
@@ -262,7 +270,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0);
 
                 // Draw right
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(len, 1);     mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
@@ -272,7 +280,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
                 // Draw back
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
                 mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0);
@@ -283,7 +291,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
 
                 // Draw front
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
@@ -294,6 +302,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
             }
         }
     }
+    
 }
 
 void Map::RebuildLights() {
@@ -302,7 +311,9 @@ void Map::RebuildLights() {
 }
 
 void Map::Draw() {
-    toDraw.clear();
+
+    int build_count = 0;
+
     glEnable(GL_CULL_FACE);
     
     int sX = ((int)camera.position.x / CHUNK_SIZE);
@@ -314,11 +325,10 @@ void Map::Draw() {
     else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
+    
     int viewDist = 3;
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
-
-
             glm::vec3 centre = {
                 (float)((x * Map::CHUNK_SIZE) + (Map::CHUNK_SIZE/2)),
                 (float)((32)),
@@ -327,16 +337,17 @@ void Map::Draw() {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
 
-            if(chunk.mesh.IsEmpty()) {
-                BuildChunk(x,z);
+            if(!chunk.bGen) {
+                chunk.Generate(x,z,*this);
             }
 
-            if(!camera.IsInfront(centre)) {
-                //std::cout << "skip" << std::endl;
+            if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
+                if(build_count < 1) {
+                    BuildChunk(x,z);
+                    build_count++;
+                }
                 continue;
             }
-            
-
             chunk.mesh.Draw(Mesh::MODE_TRIANGLES);            
         }
     }
@@ -344,11 +355,14 @@ void Map::Draw() {
 
 void Map::LoadBrickMetaData() {
     std::ifstream infile("bricks.txt");
+    float transparency = 0;
     while(!infile.eof()) {
         std::array<int,6>arr;
         for(int i = 0;i < 6;i++) {
             infile >> arr[i];
         }
+        infile >> transparency;
+        BrickTransparencies.push_back(transparency);
         BrickLookup.push_back(arr);
     }
 }

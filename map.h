@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <cmath>
 #include <limits>
-
+#include <thread>
 
 class Camera;
 class Map
@@ -25,7 +25,7 @@ public:
 
     int NUM_THREADS;
 
-    static constexpr int CHUNK_SIZE = 64;
+    static constexpr int CHUNK_SIZE = 32;
     static constexpr int MAX_HEIGHT = 64;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
@@ -33,6 +33,7 @@ public:
     struct chunk_t {
         chunk_t() {
             bGen = false;
+            bIniialBuild = false;
             for(int i = 0;i < CHUNK_SIZE;i++) {
                 for(int j = 0;j < CHUNK_SIZE;j++) {
                     for(int y = 0;y < MAX_HEIGHT;y++) {
@@ -41,9 +42,14 @@ public:
                 }
             }
         }
+
+        ~chunk_t() {
+        }
+
         Mesh mesh;
         int iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         bool bGen;
+        bool bIniialBuild;
 
         void Generate(int chunkx, int chunkz, Map &map);
     };
@@ -113,10 +119,12 @@ private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
 
 private:
+    std::vector<std::thread>BuilderThreads;
     Camera &camera;
     float fAmbient;
     TextureArray myTexArray;
     std::vector<std::array<int,6>>BrickLookup;
+    std::vector<float>BrickTransparencies;
 
     std::map <std::pair<int,int>, chunk_t>Chunks;
 

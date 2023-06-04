@@ -216,7 +216,7 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
         //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
-        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,1);
+        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,7);
         myMap.BuildChunk((int)targetted_brick.x / Map::CHUNK_SIZE, (int)targetted_brick.z / Map::CHUNK_SIZE);
     }
 }

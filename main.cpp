@@ -40,8 +40,8 @@ extern void Init();
 extern void Cleanup();
 extern void CompileArr();
 
-extern void DrawMiniMap();
-extern void DrawDebugUI();
+extern void DrawMiniMap(Camera &myCamera, Map &myMap);
+extern void DrawDebugUI(Camera &myCamera);
 extern void DrawCursor();
 
 bool bEnableVSync = true;
@@ -51,8 +51,6 @@ int lastAvgFps = 0;
 std::chrono::milliseconds MapDrawDuration, CameraUpdateDuration;
 bool bDebugMenuOpen = true;
 
-Camera myCamera;
-Map myMap(myCamera);
 Eternal::Sprite cursorTex;
 
 Shader myShader, myShader2D;
@@ -71,12 +69,20 @@ int main(int argc, char* args[]) {
     myShader2D.viewMatrix = glm::mat4(1);
 	Init();
 
+    Camera myCamera;
+    Map myMap(myCamera);
+
     myMap.FromBMP("textures/heightmap.bmp");
     
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
 	bool bDone = false;
+
+    static int counter = 0;
 	while (bDone == false) {
+        if(counter++ == 30) {
+            //exit(1);
+        }
 		fdelta += 0.01f;
 		while (SDL_PollEvent(&myEvent)) {
             ImGui_ImplSDL2_ProcessEvent(&myEvent);
@@ -119,7 +125,7 @@ int main(int argc, char* args[]) {
         myShader2D.Bind();
         DrawCursor();
 
-        DrawDebugUI();
+        DrawDebugUI(myCamera);
 //        DrawMiniMap();
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
@@ -240,7 +246,7 @@ void DrawCursor() {
     cursorTex.Draw(r,c);
 }
 
-void DrawMiniMap() {
+void DrawMiniMap(Camera &myCamera, Map &myMap) {
     Mesh myMesh;
 
     glDisable(GL_TEXTURE_2D);
@@ -272,7 +278,7 @@ void DrawMiniMap() {
     myMesh.Draw(Mesh::MODE_POINTS);
 }
 
-void DrawDebugUI() {
+void DrawDebugUI(Camera &myCamera) {
     glDisable(GL_DEPTH_TEST);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
