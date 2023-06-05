@@ -4,6 +4,6 @@
 
 extern int WIN_W;
 extern int WIN_H;
-
+extern int gblPolyCount;
 
 #endif

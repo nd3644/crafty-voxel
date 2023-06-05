@@ -25,7 +25,7 @@ public:
 
     int NUM_THREADS;
 
-    static constexpr int CHUNK_SIZE = 32;
+    static constexpr int CHUNK_SIZE = 64;
     static constexpr int MAX_HEIGHT = 64;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
@@ -66,9 +66,6 @@ public:
         if(z < 0)
             z += half_limit;
 
-/*        std::cout << "chunkx: " << floor(-64/CHUNK_SIZE) << std::endl;
-        std::cout << "chunkz: " << floor(-10/CHUNK_SIZE) << std::endl;
-        exit(0);*/
         int xchunk = x / CHUNK_SIZE;
         int zchunk = z / CHUNK_SIZE;
 
@@ -109,12 +106,18 @@ public:
 	void FromBMP(std::string sfile);
 	void Draw();
 
+    void RunBuilder();
+
     void LoadBrickMetaData();
 
     std::vector<vec3_t>lights;
 
     std::vector<std::tuple<float, float, RGB>>toDraw;
 
+    int int_pair(int x, int z) {
+        std::string str = std::to_string(x) + std::to_string(z);
+        return std::stoi(str);
+    }
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
 

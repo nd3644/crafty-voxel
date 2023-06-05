@@ -51,6 +51,9 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     using namespace noise;
 
+    module::Perlin normalPerlin;
+    normalPerlin.SetFrequency(0.1);
+
     module::Perlin baseFlatTerrain;
 
     module::ScaleBias flatTerrain;
@@ -76,7 +79,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
-            int height = (((finalTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
+            int height = 5;//(((normalPerlin.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
 
             if(height < 4)
                 height = 4;
@@ -176,12 +179,13 @@ void Map::RebuildAll() {
 }
 
 void Map::BuildChunk(int chunkX, int chunkZ) {
-    std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
+    //std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
 
     Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].mesh;
 
     Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
 
+    int cube_count = 0;
     mesh.Clean();
 
     int skipped = 0;
@@ -221,10 +225,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                         break;
                     }
                 }
-                if(zindex==0||zindex==CHUNK_SIZE-1){
-                    len=1;
-                }
-
                 z += len-1;
 
                 for(int i = 0;i < 6*6;i++)
@@ -299,10 +299,11 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
+                cube_count++;
             }
         }
     }
-    
+    //std::cout << "built " << cube_count << std::endl;
 }
 
 void Map::RebuildLights() {
@@ -311,9 +312,6 @@ void Map::RebuildLights() {
 }
 
 void Map::Draw() {
-
-    int build_count = 0;
-
     glEnable(GL_CULL_FACE);
     
     int sX = ((int)camera.position.x / CHUNK_SIZE);
@@ -325,15 +323,32 @@ void Map::Draw() {
     else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
+
+    int ChunksDrawn = 0;
     
+    std::vector<int64_t>times;
+    int viewDist = 1;
+    for(int x = sX - viewDist;x < sX+viewDist;x++) {
+        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+            auto index = std::make_pair(x,z);
+            auto &chunk = Chunks[index];
+            if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
+                continue;
+            }
+            Mesh &mesh = chunk.mesh;
+            mesh.Draw(Mesh::MODE_TRIANGLES);
+        }
+    }
+}
+
+void Map::RunBuilder() {
+    int sX = ((int)camera.position.x / CHUNK_SIZE);
+    int sZ = ((int)camera.position.z / CHUNK_SIZE);
+
+    int build_count = 0;
     int viewDist = 3;
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
-            glm::vec3 centre = {
-                (float)((x * Map::CHUNK_SIZE) + (Map::CHUNK_SIZE/2)),
-                (float)((32)),
-                (float)((z * Map::CHUNK_SIZE) + (Map::CHUNK_SIZE/2)) };
-
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
 
@@ -348,7 +363,6 @@ void Map::Draw() {
                 }
                 continue;
             }
-            chunk.mesh.Draw(Mesh::MODE_TRIANGLES);            
         }
     }
 }

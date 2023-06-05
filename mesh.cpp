@@ -2,6 +2,9 @@
 
 #include "mesh.h"
 #include <iostream>
+#include <chrono>
+
+#include "globals.h"
 
 Mesh::Mesh() {
     xTrans = yTrans = zTrans = 0.0f;
@@ -81,6 +84,9 @@ void Mesh::Draw(Mode mode) {
 
 	glBindVertexArray(vertArrObj);
 	glDrawArrays(mode, 0, vVertBuffer.size());
+
+
+    gblPolyCount += (vVertBuffer.size()/3);
 }
 
 void Mesh::Clean() {

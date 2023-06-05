@@ -48,7 +48,8 @@ bool bEnableVSync = true;
 int frameCounter = 0;
 int fpsTimer = SDL_GetTicks();
 int lastAvgFps = 0;
-std::chrono::milliseconds MapDrawDuration, CameraUpdateDuration;
+std::chrono::milliseconds CameraUpdateDuration;
+std::chrono::microseconds MapDrawDuration, MapBuildDuration;
 bool bDebugMenuOpen = true;
 
 Eternal::Sprite cursorTex;
@@ -105,9 +106,14 @@ int main(int argc, char* args[]) {
         CameraUpdateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
+        myMap.RunBuilder();
+        end = std::chrono::high_resolution_clock::now();
+        MapBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        start = std::chrono::high_resolution_clock::now();
         myMap.Draw();
         end = std::chrono::high_resolution_clock::now();
-        MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        MapDrawDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         Mesh m;
@@ -137,6 +143,7 @@ int main(int argc, char* args[]) {
 		SDL_GL_SwapWindow(myWindow);
 
         frameCounter++;
+        gblPolyCount = 0;
 	}
 
 	Cleanup();
@@ -293,9 +300,13 @@ void DrawDebugUI(Camera &myCamera) {
     ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
     std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
     ImGui::Text(str.c_str());
+    str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
+    ImGui::Text(str.c_str());
     str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
     ImGui::Text(str.c_str());
     str = "avg fps: " + std::to_string(lastAvgFps);
+    ImGui::Text(str.c_str());
+    str = "polycount: : " + std::to_string(gblPolyCount);
     ImGui::Text(str.c_str());
     str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.y) + " , " + std::to_string(myCamera.position.z) + ")";
     ImGui::Text(str.c_str());

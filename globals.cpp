@@ -2,3 +2,4 @@
 
 int WIN_W = 1366;
 int WIN_H = 768;
+int gblPolyCount = 0;
