@@ -4,3 +4,4 @@ textures/dirt.png
 textures/torch.png
 textures/sand.png
 textures/stone.png
+textures/water.png

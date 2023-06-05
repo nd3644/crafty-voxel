@@ -13,7 +13,7 @@ Camera::Camera() {
     direction = glm::vec3(0,0,1);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
-    position = glm::vec3(120,18,1000);
+    position = glm::vec3(120,32,120);
     bFocus = true;
 }
 
@@ -38,7 +38,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
 
     glm::vec3 moveDelta = glm::vec3(0,0,0);
     if (keys[SDL_SCANCODE_LSHIFT]) {
-        STRAFE_SPD = 5.4f;
+        STRAFE_SPD = 0.4f;
 	}
 	if (keys[SDL_SCANCODE_A]) {
         moveDelta -= right * STRAFE_SPD;

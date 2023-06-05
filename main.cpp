@@ -310,6 +310,8 @@ void DrawDebugUI(Camera &myCamera) {
     ImGui::Text(str.c_str());
     str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.y) + " , " + std::to_string(myCamera.position.z) + ")";
     ImGui::Text(str.c_str());
+    str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
+    ImGui::Text(str.c_str());
 
     ImGui::Separator();
     ImGui::Checkbox("V-Sync", &bEnableVSync);

@@ -39,13 +39,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen)
         return;
 
-    bool bMount = (rand()%5 == 1) ? true : false;
-
-    int brickType = 1;
-    if(bMount) {
-        brickType = 6;
-    }
-
     static int counter = 0;
     std::cout << "generating " << chunkx << " , " << chunkz << " c = " << (++counter) << std::endl;
 
@@ -79,7 +72,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
-            int height = 5;//(((normalPerlin.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
+            int height = (((finalTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
 
             if(height < 4)
                 height = 4;
@@ -129,10 +122,10 @@ void Map::FromBMP(std::string sfile) {
     depth = myBmp.GetHeight();
 
     std::thread threads[16];
-    int pdist = 4;
-    for(int x = -8;x < 8;x++) {
+    int pdist = 8;
+    for(int x = -pdist;x < pdist;x++) {
         //threads[x+8] = std::thread([&]() {
-            for(int z = -8;z < 8;z++) {
+            for(int z = -16;z < 16;z++) {
                 Chunks[std::make_pair(x,z)].Generate(x, z, *this);
             }
         //});
@@ -327,7 +320,7 @@ void Map::Draw() {
     int ChunksDrawn = 0;
     
     std::vector<int64_t>times;
-    int viewDist = 1;
+    int viewDist = 3;
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
             auto index = std::make_pair(x,z);
@@ -337,6 +330,14 @@ void Map::Draw() {
             }
             Mesh &mesh = chunk.mesh;
             mesh.Draw(Mesh::MODE_TRIANGLES);
+        }
+    }
+
+    if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
+        for(int x = sX - viewDist;x < sX+viewDist;x++) {
+            for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+                BuildChunk(x,z);
+            }
         }
     }
 }

@@ -72,14 +72,22 @@ public:
         int xindex = x % CHUNK_SIZE;
         int zindex = z % CHUNK_SIZE;
 
+        auto chunk_index = std::make_pair(xchunk,zchunk);
+
         Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex] = id;
 	}
 
 
+
+    /* This function makes a terrible amount of effort to prevent negative indices
+      because they were causing a lot of trouble. */
 	inline int GetBrick(int x, int z, int y) {
         if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= 60) {
             return 0;
         }
+
+        int origxchunk = x / CHUNK_SIZE;
+        int origzchunk = z / CHUNK_SIZE;
 
         if(x < 0)
             x += half_limit;
@@ -94,6 +102,11 @@ public:
         int zindex = z % CHUNK_SIZE;
 
         auto chunk_index = std::make_pair(xchunk,zchunk);
+
+        // It's important to make sure the chunk was generated at this point because
+        // adjacent chunks may be trying to access data here.
+        if(!Chunks[chunk_index].bGen)
+            Chunks[chunk_index].Generate(origxchunk,origzchunk,*this);
 
 		return Chunks[chunk_index].iBricks[xindex][y][zindex];
 	}
