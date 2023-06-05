@@ -39,6 +39,13 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen)
         return;
 
+    bool bMount = (rand()%5 == 1) ? true : false;
+
+    int brickType = 1;
+    if(bMount) {
+        brickType = 6;
+    }
+
     static int counter = 0;
     std::cout << "generating " << chunkx << " , " << chunkz << " c = " << (++counter) << std::endl;
 
