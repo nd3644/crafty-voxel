@@ -30,7 +30,7 @@ Map::Map(Camera &c) : camera(c) {
     }
     fAmbient = 0.8f;
 
-    viewDist = 6;
+    viewDist = 4;
 }
 
 Map::~Map() {
@@ -67,7 +67,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     mountainTerrain.SetOctaveCount(1);
 
     module::Perlin terrainType;
-    terrainType.SetFrequency(0.05);
+    terrainType.SetFrequency(0.2);
     terrainType.SetPersistence(0.25);
 
     module::Select finalTerrain;
@@ -129,42 +129,6 @@ void Map::FromBMP(std::string sfile) {
 
     width = myBmp.GetWidth();
     depth = myBmp.GetHeight();
-
-    std::thread threads[16];
-    int pdist = 8;
-    for(int x = -pdist;x < pdist;x++) {
-        //threads[x+8] = std::thread([&]() {
-            for(int z = -16;z < 16;z++) {
-                Chunks[std::make_pair(x,z)].Generate(x, z, *this);
-            }
-        //});
-    }
-
-/*    for(int i = 0;i < 16;i++)
-        threads[i].join();
-*/
-
-/*	for (int x = 0; x < width*2;x++) {
-		for (int z = 0; z < depth*2; z++) {
-			//int height = myBmp.GetPixelRGBA(x%width, z%depth).R;
-            int height = ((myModule.GetValue((float)x,(float)z,0.5) + 1) / 2) * 32;
-            if(height < 4)
-                height = 4;
-            for (int y = 0; y < height/4; y++) {
-				SetBrick(x, z, y, 1);
-                
-                // Set the mirror brick for negative X
-                SetBrick(-x, z, y, 1);
-
-                // Set the mirror brick for negative Z
-                SetBrick(x, -z, y, 1);
-
-                // Set the mirror brick for both negative X and Z
-                SetBrick(-x, -z, y, 1);
-			}
-		}
-	}
-*/
 
     std::vector<std::string>images = TextureNamesFromFile("brick_textures.txt");
     myTexArray.Load(images);
@@ -306,6 +270,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
         }
     }
     mesh.BindBufferData();
+    glFinish();
     std::cout << "built " << cube_count << std::endl;
 }
 

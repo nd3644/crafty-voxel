@@ -6,4 +6,6 @@ extern int WIN_W;
 extern int WIN_H;
 extern int gblPolyCount;
 
+extern bool bIsFullscreen;
+
 #endif

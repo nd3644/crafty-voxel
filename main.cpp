@@ -93,6 +93,11 @@ int main(int argc, char* args[]) {
 			if ((myEvent.type == SDL_WINDOWEVENT && myEvent.window.event == SDL_WINDOWEVENT_CLOSE) || SDL_GetKeyboardState(0)[SDL_SCANCODE_GRAVE]) {
 				bDone = true;
 			}
+            if(myEvent.type == SDL_KEYDOWN && myEvent.key.keysym.scancode == SDL_SCANCODE_F11) {
+                bIsFullscreen = !bIsFullscreen;
+                SDL_SetWindowFullscreen(myWindow, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+                SDL_GetWindowSize(myWindow, &WIN_W, &WIN_H);
+            }
 		}
         myInputHandle.PollInputs();
 
@@ -127,7 +132,7 @@ int main(int argc, char* args[]) {
         // 2D rendering
         myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
         myShader2D.Bind();
-        //DrawCursor();
+        DrawCursor();
 
         DrawDebugUI(myCamera);
 //        DrawMiniMap();
