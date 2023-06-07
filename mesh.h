@@ -31,7 +31,10 @@ class Mesh {
         bool IsEmpty() {
             return (vVertBuffer.size() == 0);
         }
+
+        void BindBufferData();
     private:
+        bool bDataIsBound;
         float xTrans, yTrans, zTrans;
         GLuint vertArrObj;
         GLuint arrayBuffers[4];

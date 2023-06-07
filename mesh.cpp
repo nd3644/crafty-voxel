@@ -27,6 +27,8 @@ Mesh::Mesh() {
     glEnableVertexAttribArray(3);
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
     glVertexAttribIPointer(3, 1, GL_INT, 0, 0);
+
+    bDataIsBound = false;
 }
 
 Mesh::~Mesh() {
@@ -69,7 +71,8 @@ void Mesh::Index1(int i) {
     Indices.push_back(i);
 }
 
-void Mesh::Draw(Mode mode) {
+void Mesh::BindBufferData() {
+    glBindVertexArray(vertArrObj);
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
 	glBufferData(GL_ARRAY_BUFFER, (vVertBuffer.size()*3) * sizeof(float), &vVertBuffer[0], GL_DYNAMIC_DRAW);
 
@@ -81,11 +84,15 @@ void Mesh::Draw(Mode mode) {
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
 	glBufferData(GL_ARRAY_BUFFER, (Indices.size()) * sizeof(int), &Indices[0], GL_DYNAMIC_DRAW);
+    bDataIsBound = true;
+}
 
+void Mesh::Draw(Mode mode) {
+    if(!bDataIsBound){
+        BindBufferData();
+    }
 	glBindVertexArray(vertArrObj);
 	glDrawArrays(mode, 0, vVertBuffer.size());
-
-
     gblPolyCount += (vVertBuffer.size()/3);
 }
 

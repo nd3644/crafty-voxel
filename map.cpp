@@ -29,6 +29,8 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = num_cores/2;
     }
     fAmbient = 0.8f;
+
+    viewDist = 6;
 }
 
 Map::~Map() {
@@ -303,7 +305,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
             }
         }
     }
-    //std::cout << "built " << cube_count << std::endl;
+    mesh.BindBufferData();
+    std::cout << "built " << cube_count << std::endl;
 }
 
 void Map::RebuildLights() {
@@ -326,8 +329,6 @@ void Map::Draw() {
 
     int ChunksDrawn = 0;
     
-    std::vector<int64_t>times;
-    int viewDist = 3;
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
             auto index = std::make_pair(x,z);
@@ -347,6 +348,8 @@ void Map::Draw() {
             }
         }
     }
+
+    glFinish();
 }
 
 void Map::RunBuilder() {
@@ -354,7 +357,6 @@ void Map::RunBuilder() {
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
     int build_count = 0;
-    int viewDist = 3;
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
             auto index = std::make_pair(x,z);

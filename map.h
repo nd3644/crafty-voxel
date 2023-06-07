@@ -135,6 +135,7 @@ private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
 
 private:
+    int viewDist;
     std::vector<std::thread>BuilderThreads;
     Camera &camera;
     float fAmbient;

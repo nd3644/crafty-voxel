@@ -43,13 +43,15 @@ extern void CompileArr();
 extern void DrawMiniMap(Camera &myCamera, Map &myMap);
 extern void DrawDebugUI(Camera &myCamera);
 extern void DrawCursor();
+extern void DrawBrickTarget(Camera &myCamera);
 
 bool bEnableVSync = true;
 int frameCounter = 0;
 int fpsTimer = SDL_GetTicks();
 int lastAvgFps = 0;
 std::chrono::milliseconds CameraUpdateDuration;
-std::chrono::microseconds MapDrawDuration, MapBuildDuration;
+std::chrono::milliseconds MapDrawDuration, MapBuildDuration, FrameTime;
+
 bool bDebugMenuOpen = true;
 
 Eternal::Sprite cursorTex;
@@ -81,6 +83,7 @@ int main(int argc, char* args[]) {
 
     static int counter = 0;
 	while (bDone == false) {
+        auto frameStartTime = std::chrono::high_resolution_clock::now();
         if(counter++ == 30) {
             //exit(1);
         }
@@ -100,36 +103,31 @@ int main(int argc, char* args[]) {
 
         myShader.Bind();
 
+        // Update the camera
         auto start = std::chrono::high_resolution_clock::now();
         myCamera.Update(myMap, myShader, myInputHandle);
         auto end = std::chrono::high_resolution_clock::now();
         CameraUpdateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
+
+        // Build the map
         start = std::chrono::high_resolution_clock::now();
         myMap.RunBuilder();
         end = std::chrono::high_resolution_clock::now();
-        MapBuildDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        MapBuildDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
+        // Draw the map
         start = std::chrono::high_resolution_clock::now();
         myMap.Draw();
         end = std::chrono::high_resolution_clock::now();
-        MapDrawDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        Mesh m;
-        m.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
-        for(int i = 0;i < vertList.size();i++) {
-            m.Index1(1); m.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
-            m.TexCoord2(uvList[i].x, uvList[i].y);
-            m.Color4(0,0,0,1);
-        }
-        m.Draw(Mesh::MODE_TRIANGLES);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        DrawBrickTarget(myCamera);
 
         // 2D rendering
         myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
         myShader2D.Bind();
-        DrawCursor();
+        //DrawCursor();
 
         DrawDebugUI(myCamera);
 //        DrawMiniMap();
@@ -140,10 +138,13 @@ int main(int argc, char* args[]) {
             frameCounter = 0;
         }
 
-		SDL_GL_SwapWindow(myWindow);
+        SDL_GL_SwapWindow(myWindow);
 
         frameCounter++;
         gblPolyCount = 0;
+
+        auto frameEndTime = std::chrono::high_resolution_clock::now();
+        FrameTime = std::chrono::duration_cast<std::chrono::milliseconds>(frameEndTime - frameStartTime);
 	}
 
 	Cleanup();
@@ -285,6 +286,19 @@ void DrawMiniMap(Camera &myCamera, Map &myMap) {
     myMesh.Draw(Mesh::MODE_POINTS);
 }
 
+void DrawBrickTarget(Camera &myCamera) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    Mesh m;
+    m.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
+    for(int i = 0;i < vertList.size();i++) {
+        m.Index1(1); m.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
+        m.TexCoord2(uvList[i].x, uvList[i].y);
+        m.Color4(0,0,0,1);
+    }
+    m.Draw(Mesh::MODE_TRIANGLES);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
 void DrawDebugUI(Camera &myCamera) {
     glDisable(GL_DEPTH_TEST);
     ImGui_ImplOpenGL3_NewFrame();
@@ -303,6 +317,8 @@ void DrawDebugUI(Camera &myCamera) {
     str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
     ImGui::Text(str.c_str());
     str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
+    ImGui::Text(str.c_str());
+    str = "FrameTime: " + std::to_string(FrameTime.count()) + "ms";
     ImGui::Text(str.c_str());
     str = "avg fps: " + std::to_string(lastAvgFps);
     ImGui::Text(str.c_str());
