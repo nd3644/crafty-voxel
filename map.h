@@ -46,7 +46,7 @@ public:
         ~chunk_t() {
         }
 
-        Mesh mesh;
+        Mesh mesh, transMesh;
         int iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         bool bGen;
         bool bIniialBuild;
@@ -103,15 +103,16 @@ public:
 
         auto chunk_index = std::make_pair(xchunk,zchunk);
 
-        // It's important to make sure the chunk was generated at this point because
+/*        // It's important to make sure the chunk was generated at this point because
         // adjacent chunks may be trying to access data here.
         if(!Chunks[chunk_index].bGen)
-            Chunks[chunk_index].Generate(origxchunk,origzchunk,*this);
+            Chunks[chunk_index].Generate(origxchunk,origzchunk,*this);*/
 
 		return Chunks[chunk_index].iBricks[xindex][y][zindex];
 	}
 
     void BuildChunk(int x, int z);
+    void BuildChunkTrans(int x, int z);
     void RebuildLights();
 
     void RebuildAll();
@@ -131,6 +132,7 @@ public:
         std::string str = std::to_string(x) + std::to_string(z);
         return std::stoi(str);
     }
+    void FillWater(int x, int z, int y);
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
 

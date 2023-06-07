@@ -143,7 +143,12 @@ int main(int argc, char* args[]) {
             frameCounter = 0;
         }
 
+        glFinish();
+
+        auto ss = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
+        auto ee = std::chrono::high_resolution_clock::now();
+        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(ee - ss).count() << std::endl;
 
         frameCounter++;
         gblPolyCount = 0;
@@ -201,7 +206,7 @@ void Init() {
 
     SetupImgui();
 
-	glClearColor(0.494, 0.752, 0.933f, 0);   
+	glClearColor(0.494, 0.752, 0.933f, 0);
 
     // Init shader
     myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");

@@ -15,6 +15,8 @@
 
 #include <libnoise/noise.h>
 
+#include <stack>
+
 Map::Map(Camera &c) : camera(c) {
     height = 32;
     width = 128;
@@ -30,11 +32,53 @@ Map::Map(Camera &c) : camera(c) {
     }
     fAmbient = 0.8f;
 
-    viewDist = 4;
+    viewDist = 2;
 }
 
 Map::~Map() {
 
+}
+
+void Map::FillWater(int fx, int fz, int fy) {
+    const int water = 7;
+
+    std::stack<vec3i_t>stack;
+    stack.push({ fx, fy, fz });
+
+    while(stack.size() > 0) {
+        vec3i_t cur = stack.top();
+        stack.pop();
+        int x = cur.x;
+        int y = cur.y;
+        int z = cur.z;
+
+        int initialPixel = GetBrick(x,z,y);
+        if(initialPixel == water) {
+            continue;
+        }
+
+        SetBrick(x,z,y,water);
+
+        vec3_t next;
+        if(GetBrick(x+1,z,y) == initialPixel) {
+            stack.push({x+1,y,z});
+        }
+
+        if(GetBrick(x-1,z,y) == initialPixel) {
+            stack.push({x-1,y,z});
+        }
+
+        if(GetBrick(x,z+1,y) == initialPixel) {
+            stack.push({x,y,z+1});
+        }
+
+        if(GetBrick(x,z-1,y) == initialPixel) {
+            stack.push({x,y,z-1});
+        }
+        if(GetBrick(x,z,y-1) == initialPixel) {
+            stack.push({x,y-1,z});
+        }
+    }
 }
 
 void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
@@ -77,6 +121,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     finalTerrain.SetBounds(0.0, 1000.0);
     finalTerrain.SetEdgeFalloff(0.125);
 
+    std::vector<vec3_t>toFill;
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
@@ -91,8 +136,15 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             for (int y = height; y > 0; y--) {
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
+
+            for(int y = 1;y < 8;y++) {
+                if(map.GetBrick(xindex,zindex,y) == 0) {
+                    map.SetBrick(xindex,zindex,y,7);
+                }
+            }
 		}
 	}
+
     bGen = true;
 }
 
@@ -147,11 +199,11 @@ void Map::RebuildAll() {
 void Map::BuildChunk(int chunkX, int chunkZ) {
     //std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
 
+    int cube_count = 0;
     Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].mesh;
 
     Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
 
-    int cube_count = 0;
     mesh.Clean();
 
     int skipped = 0;
@@ -160,31 +212,41 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
             for (int z = 0; z < CHUNK_SIZE;z++) {
                 int zindex = (chunkZ*CHUNK_SIZE)+z;
+
+                // Check the current brick is not empty
                 if (GetBrick(xindex, zindex, y) <= 0) {
                     continue;
                 }
-                if(GetBrick(xindex-1,zindex,y) != 0
-                && GetBrick(xindex+1,zindex,y) != 0
-                && GetBrick(xindex,zindex-1,y) != 0
-                && GetBrick(xindex,zindex+1,y) != 0
-                && GetBrick(xindex,zindex,y+1) != 0
-                && GetBrick(xindex,zindex,y-1) != 0) {
+
+                // Is the brick surrounding by non-transparent bricks?
+                if(GetBrick(xindex-1,zindex,y) != 0 && BrickTransparencies[GetBrick(xindex-1,zindex,y)] == 1
+                && GetBrick(xindex+1,zindex,y) != 0 && BrickTransparencies[GetBrick(xindex+1,zindex,y)] == 1
+                && GetBrick(xindex,zindex-1,y) != 0 && BrickTransparencies[GetBrick(xindex,zindex-1,y)] == 1
+                && GetBrick(xindex,zindex+1,y) != 0 && BrickTransparencies[GetBrick(xindex,zindex+1,y)] == 1
+                && GetBrick(xindex,zindex,y+1) != 0 && BrickTransparencies[GetBrick(xindex,zindex,y+1)] == 1
+                && GetBrick(xindex,zindex,y-1) != 0 && BrickTransparencies[GetBrick(xindex,zindex,y-1)] == 1) {
                     skipped++;
                     continue;
                 }
-                
+
                 float posX = (chunkX*CHUNK_SIZE)+x;
                 float posZ = (chunkZ*CHUNK_SIZE)+z;
                 mesh.SetTranslation(posX,y,posZ);
                 float c = 1.0f;
                 int brickID = GetBrick(xindex,zindex,y);
 
+                float trans = BrickTransparencies[brickID-1];
+
+                if(trans != 1) {
+                    continue;
+                }
                 int len = 1;
 
                 for(int i = 1;i < CHUNK_SIZE-1;i++) {
                     if(z < CHUNK_SIZE-1-i
                     && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)
                     ) { //&& GetLightLvl(xindex,zindex,y) == GetLightLvl(xindex,zindex+i,y)) {
+                        
                         len++;
                     }
                     else {
@@ -195,8 +257,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
-
-                float trans = BrickTransparencies[brickID-1];
 
                 float lv = 1;
                 if(lv > 1)
@@ -271,7 +331,130 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     }
     mesh.BindBufferData();
     glFinish();
+
+    // Transparent pass
+    BuildChunkTrans(chunkX,chunkZ);
+
     std::cout << "built " << cube_count << std::endl;
+}
+
+void Map::BuildChunkTrans(int chunkX, int chunkZ) {
+    Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].transMesh;
+
+    Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
+
+    mesh.Clean();
+
+    int skipped = 0;
+    for (int y = 0; y < MAX_HEIGHT; y++) {
+        for (int x = 0; x < CHUNK_SIZE;x++) {
+            int xindex = (chunkX*CHUNK_SIZE)+x;
+            for (int z = 0; z < CHUNK_SIZE;z++) {
+                int zindex = (chunkZ*CHUNK_SIZE)+z;
+
+                // Check the current brick is not empty
+                if (GetBrick(xindex, zindex, y) <= 0) {
+                    continue;
+                }
+                float posX = (chunkX*CHUNK_SIZE)+x;
+                float posZ = (chunkZ*CHUNK_SIZE)+z;
+                mesh.SetTranslation(posX,y,posZ);
+                float c = 1.0f;
+                int brickID = GetBrick(xindex,zindex,y);
+
+                float trans = BrickTransparencies[brickID-1];
+
+                if(trans == 1) {
+                    continue;
+                }
+                int len = 1;
+
+                for(int i = 0;i < 6*6;i++)
+                    mesh.Index1(BrickLookup[brickID-1][i/6]);
+
+                float lv = 1;
+                if(lv > 1)
+                    lv = 1;
+                if(lv < fAmbient)
+                    lv = fAmbient;
+
+                // Draw top
+                if(GetBrick(xindex,zindex,y+1) == 0) {
+                    mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
+                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
+                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
+
+                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
+                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);
+                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
+                }
+            
+                if(GetBrick(xindex,zindex,y-1) == 0) {
+                // Draw bottom
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
+                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+                mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
+
+                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+                }
+
+                lv -= 0.2f;
+                // Draw left
+                if(GetBrick(xindex+1,zindex,y) == 0) {
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
+                mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
+                mesh.TexCoord2(len, 1);     mesh.Vert3(0.5, -0.5, len);
+
+                mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
+                mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0);
+                }
+
+                if(GetBrick(xindex-1,zindex,y) == 0) {
+                // Draw right
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.TexCoord2(len, 1);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
+
+                mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
+                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                }
+
+                if(GetBrick(xindex,zindex-1,y) == 0) {
+                // Draw back
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
+                mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0);
+
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
+                }
+
+                if(GetBrick(xindex,zindex+1,y) == 0) {
+                // Draw front
+                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len);
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
+
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
+                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len);
+                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
+                }
+            }
+        }
+    }
+    mesh.BindBufferData();
+    glFinish();
 }
 
 void Map::RebuildLights() {
@@ -280,8 +463,6 @@ void Map::RebuildLights() {
 }
 
 void Map::Draw() {
-    glEnable(GL_CULL_FACE);
-    
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
@@ -293,7 +474,9 @@ void Map::Draw() {
     }
 
     int ChunksDrawn = 0;
-    
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
             auto index = std::make_pair(x,z);
@@ -305,6 +488,18 @@ void Map::Draw() {
             mesh.Draw(Mesh::MODE_TRIANGLES);
         }
     }
+
+    for(int x = sX - viewDist;x < sX+viewDist;x++) {
+        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+            auto index = std::make_pair(x,z);
+            auto &chunk = Chunks[index];
+            if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
+                continue;
+            }
+            chunk.transMesh.Draw(Mesh::MODE_TRIANGLES);
+        }
+    }
+
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         for(int x = sX - viewDist;x < sX+viewDist;x++) {

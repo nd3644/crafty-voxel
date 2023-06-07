@@ -5,6 +5,10 @@ struct vec2_t {
 	float x, y;
 };
 
+struct vec3i_t {
+    int x, y, z;
+};
+
 struct vec3_t {
 	float x, y, z;
 };
