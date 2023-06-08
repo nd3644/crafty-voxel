@@ -50,7 +50,7 @@ int frameCounter = 0;
 int fpsTimer = SDL_GetTicks();
 int lastAvgFps = 0;
 std::chrono::milliseconds CameraUpdateDuration;
-std::chrono::milliseconds MapDrawDuration, MapBuildDuration, FrameTime;
+std::chrono::milliseconds MapDrawDuration, MapBuildDuration, FrameTime, SwapTime, OrthoTime;
 
 bool bDebugMenuOpen = true;
 
@@ -127,14 +127,18 @@ int main(int argc, char* args[]) {
         end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
+        start = std::chrono::high_resolution_clock::now();
         DrawBrickTarget(myCamera);
+        
 
         // 2D rendering
         myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
         myShader2D.Bind();
-        DrawCursor();
+        //DrawCursor();
 
         DrawDebugUI(myCamera);
+        end = std::chrono::high_resolution_clock::now();
+        OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 //        DrawMiniMap();
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
@@ -143,12 +147,10 @@ int main(int argc, char* args[]) {
             frameCounter = 0;
         }
 
-        glFinish();
-
-        auto ss = std::chrono::high_resolution_clock::now();
+        start = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
-        auto ee = std::chrono::high_resolution_clock::now();
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(ee - ss).count() << std::endl;
+        end = std::chrono::high_resolution_clock::now();
+        SwapTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         frameCounter++;
         gblPolyCount = 0;
@@ -324,16 +326,30 @@ void DrawDebugUI(Camera &myCamera) {
     ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
     std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
     ImGui::Text(str.c_str());
+
     str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
     ImGui::Text(str.c_str());
+
     str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
     ImGui::Text(str.c_str());
+
     str = "FrameTime: " + std::to_string(FrameTime.count()) + "ms";
     ImGui::Text(str.c_str());
+    
+    str = "SwapTime: " + std::to_string(SwapTime.count()) + "ms";
+    ImGui::Text(str.c_str());
+
+    str = "OrthoTime: " + std::to_string(OrthoTime.count()) + "ms";
+    ImGui::Text(str.c_str());
+
     str = "avg fps: " + std::to_string(lastAvgFps);
     ImGui::Text(str.c_str());
-    str = "polycount: : " + std::to_string(gblPolyCount);
+
+    std::string polyNumber = std::to_string(gblPolyCount);
+    polyNumber.insert(polyNumber.begin()+3,',');
+    str = "polycount: : " + polyNumber;
     ImGui::Text(str.c_str());
+
     str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.y) + " , " + std::to_string(myCamera.position.z) + ")";
     ImGui::Text(str.c_str());
     str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
@@ -349,6 +365,6 @@ void DrawDebugUI(Camera &myCamera) {
 
     ImGui::Render();
     glViewport(0, 0, WIN_W, WIN_H);
-    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
+    glUseProgram(0);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

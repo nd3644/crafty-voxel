@@ -33,6 +33,7 @@ public:
     struct chunk_t {
         chunk_t() {
             bGen = false;
+            bIsCurrentlyGenerating = false;
             bIniialBuild = false;
             for(int i = 0;i < CHUNK_SIZE;i++) {
                 for(int j = 0;j < CHUNK_SIZE;j++) {
@@ -49,6 +50,8 @@ public:
         Mesh mesh, transMesh;
         int iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         bool bGen;
+        // This is for preventing Generate recursively calling itself. This can probably be done better
+        bool bIsCurrentlyGenerating;
         bool bIniialBuild;
 
         void Generate(int chunkx, int chunkz, Map &map);
@@ -103,10 +106,10 @@ public:
 
         auto chunk_index = std::make_pair(xchunk,zchunk);
 
-/*        // It's important to make sure the chunk was generated at this point because
+        // It's important to make sure the chunk was generated at this point because
         // adjacent chunks may be trying to access data here.
         if(!Chunks[chunk_index].bGen)
-            Chunks[chunk_index].Generate(origxchunk,origzchunk,*this);*/
+            Chunks[chunk_index].Generate(origxchunk,origzchunk,*this);
 
 		return Chunks[chunk_index].iBricks[xindex][y][zindex];
 	}

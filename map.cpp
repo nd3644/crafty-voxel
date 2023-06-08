@@ -82,9 +82,10 @@ void Map::FillWater(int fx, int fz, int fy) {
 }
 
 void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
-    if(bGen)
+    if(bGen || bIsCurrentlyGenerating)
         return;
 
+    bIsCurrentlyGenerating = true;
     bool bMount = (rand()%5 == 1) ? true : false;
 
     int brickType = 1;
