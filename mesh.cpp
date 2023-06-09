@@ -37,7 +37,7 @@ Mesh::~Mesh() {
     }
 
     if(glIsBuffer(arrayBuffers[0])) {
-        glDeleteBuffers(3, arrayBuffers);
+        glDeleteBuffers(4, arrayBuffers);
     }
 
     vVertBuffer.clear();

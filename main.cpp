@@ -15,13 +15,11 @@
 #include "shader.h"
 #include "cube.h"
 #include "camera.h"
+#include "brick_selector_widget.h"
 
 #include "mesh.h"
-
 #include "input.h"
-
 #include "sprite.h"
-
 #include "globals.h"
 
 #include <chrono>
@@ -43,7 +41,7 @@ extern void CompileArr();
 extern void DrawMiniMap(Camera &myCamera, Map &myMap);
 extern void DrawDebugUI(Camera &myCamera);
 extern void DrawCursor();
-extern void DrawBrickTarget(Camera &myCamera);
+extern void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh);
 
 bool bEnableVSync = true;
 int frameCounter = 0;
@@ -71,11 +69,14 @@ int main(int argc, char* args[]) {
     myShader2D.modelMatrix = glm::mat4(1);
     myShader2D.viewMatrix = glm::mat4(1);
 	Init();
+    Mesh brickTargetMesh;
 
     Camera myCamera;
     Map myMap(myCamera);
+    BrickSelectorWidget myBrickWidget;
 
     myMap.FromBMP("textures/heightmap.bmp");
+    myBrickWidget.Init(myMap);
     
 	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
@@ -128,18 +129,20 @@ int main(int argc, char* args[]) {
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
-        DrawBrickTarget(myCamera);
-        
+        glFinish(); // TODO: Remove this
+        DrawBrickTarget(myCamera, brickTargetMesh);
 
         // 2D rendering
         myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
         myShader2D.Bind();
-        //DrawCursor();
+        DrawCursor();
+        myBrickWidget.Draw();
 
         DrawDebugUI(myCamera);
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 //        DrawMiniMap();
+        std::cout << "ortho: " << OrthoTime.count() << std::endl;
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
             fpsTimer = SDL_GetTicks();
@@ -298,16 +301,17 @@ void DrawMiniMap(Camera &myCamera, Map &myMap) {
     myMesh.Draw(Mesh::MODE_POINTS);
 }
 
-void DrawBrickTarget(Camera &myCamera) {
+void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    Mesh m;
-    m.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
+    brickTargetMesh.Clean();
+    brickTargetMesh.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
     for(int i = 0;i < vertList.size();i++) {
-        m.Index1(1); m.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
-        m.TexCoord2(uvList[i].x, uvList[i].y);
-        m.Color4(0,0,0,1);
+        brickTargetMesh.Index1(1); brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
+        brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
+        brickTargetMesh.Color4(0,0,0,1);
     }
-    m.Draw(Mesh::MODE_TRIANGLES);
+    brickTargetMesh.BindBufferData();
+    brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
@@ -318,12 +322,12 @@ void DrawDebugUI(Camera &myCamera) {
     ImGui::NewFrame();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowBgAlpha(0.0f);
+    ImGui::SetNextWindowBgAlpha(0.5f);
     ImGui::SetNextWindowSize(ImVec2(-1, 256));
     // ImGui content goes here
 
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));  // Set text color to red
-    ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
+    ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
     std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
     ImGui::Text(str.c_str());
 
@@ -350,7 +354,7 @@ void DrawDebugUI(Camera &myCamera) {
     str = "polycount: : " + polyNumber;
     ImGui::Text(str.c_str());
 
-    str = "CamXYZ: (" + std::to_string(myCamera.position.x) + " , " + std::to_string(myCamera.position.y) + " , " + std::to_string(myCamera.position.z) + ")";
+    str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
     ImGui::Text(str.c_str());
     str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
     ImGui::Text(str.c_str());

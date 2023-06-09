@@ -48,7 +48,7 @@ public:
         }
 
         Mesh mesh, transMesh;
-        int iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
+        uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         bool bGen;
         // This is for preventing Generate recursively calling itself. This can probably be done better
         bool bIsCurrentlyGenerating;
@@ -79,8 +79,6 @@ public:
 
         Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex] = id;
 	}
-
-
 
     /* This function makes a terrible amount of effort to prevent negative indices
       because they were causing a lot of trouble. */
@@ -135,9 +133,14 @@ public:
         std::string str = std::to_string(x) + std::to_string(z);
         return std::stoi(str);
     }
+
+    std::vector<std::string> GetTextureFilenames() {
+        return BrickTextureFilenames;
+    }
     void FillWater(int x, int z, int y);
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
+    std::vector<std::string>BrickTextureFilenames;
 
 private:
     int viewDist;

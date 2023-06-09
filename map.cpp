@@ -138,7 +138,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 
-            for(int y = 1;y < 8;y++) {
+            for(int y = 1;y < 26;y++) {
                 if(map.GetBrick(xindex,zindex,y) == 0) {
                     map.SetBrick(xindex,zindex,y,7);
                 }
@@ -183,8 +183,8 @@ void Map::FromBMP(std::string sfile) {
     width = myBmp.GetWidth();
     depth = myBmp.GetHeight();
 
-    std::vector<std::string>images = TextureNamesFromFile("brick_textures.txt");
-    myTexArray.Load(images);
+    BrickTextureFilenames = TextureNamesFromFile("brick_textures.txt");
+    myTexArray.Load(BrickTextureFilenames);
     LoadBrickMetaData();
 }
 
