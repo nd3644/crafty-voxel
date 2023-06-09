@@ -6,6 +6,8 @@
 BrickSelectorWidget::BrickSelectorWidget() {
     BrickSprites = nullptr;
     iCount = 0;
+    iBrickStartIndex = 0;
+    SelectedIndex = 0;
 }
 
 BrickSelectorWidget::~BrickSelectorWidget() {
@@ -24,30 +26,44 @@ void BrickSelectorWidget::Init(Map &map) {
     }
 
     BlankSprite.Load("textures/blank.png");
+    SelectedBrick.Load("textures/selected_brick.png");
 }
 
 void BrickSelectorWidget::Draw() {
-    std::cout << "count: " << iCount << std::endl;
-
-
     const int ICON_SIZE = 48;
+    const int MAX_ICONS_SHOWN = 3;
+
+    SelectedIndex = (SelectedIndex + mouseWheelDelta) % iCount;
+
     Rect r, c;
     c.x = c.y = 0; c.w = c.h = 16;
     r.w = r.h = ICON_SIZE;
     r.y = WIN_H - (ICON_SIZE * 1.5);
 
-    r.x = (WIN_W / 2) - ((ICON_SIZE * iCount) / 2);
+    r.x = (WIN_W / 2) - ((ICON_SIZE * MAX_ICONS_SHOWN) / 2);
     
+
+    // Draw the backdrop
     Rect backDrop = r;
     backDrop.x -= 2;
-    backDrop.w = (ICON_SIZE+2) * iCount;
+    backDrop.w = (ICON_SIZE+2) * MAX_ICONS_SHOWN;
     backDrop.w += 2;
     backDrop.y -= 2;
     backDrop.h += 4;
     BlankSprite.Draw(backDrop, c);
-    
-    for(int x = 0;x < iCount;x++) {
+
+    // Draw the icons   
+    int EndIndex = (iBrickStartIndex + MAX_ICONS_SHOWN) > iCount ? iCount : (iBrickStartIndex + MAX_ICONS_SHOWN);
+    for(int x = iBrickStartIndex;x < EndIndex;x++) {
         BrickSprites[x].Draw(r,c);
         r.x += ICON_SIZE+2;
     }
+
+    // Draw the selected brick marker
+    r.w = r.h = ICON_SIZE;
+    r.y = WIN_H - (ICON_SIZE * 1.5);
+
+    r.x = (WIN_W / 2) - ((ICON_SIZE * MAX_ICONS_SHOWN) / 2);
+    r.x += SelectedIndex * ((ICON_SIZE == 0) ? ICON_SIZE : ICON_SIZE+2);
+    SelectedBrick.Draw(r,c);
 }

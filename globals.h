@@ -8,4 +8,6 @@ extern int gblPolyCount;
 
 extern bool bIsFullscreen;
 
+extern int mouseWheelDelta;
+
 #endif

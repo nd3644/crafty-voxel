@@ -32,7 +32,7 @@ Map::Map(Camera &c) : camera(c) {
     }
     fAmbient = 0.8f;
 
-    viewDist = 2;
+    viewDist = 8;
 }
 
 Map::~Map() {

@@ -89,16 +89,22 @@ int main(int argc, char* args[]) {
             //exit(1);
         }
 		fdelta += 0.01f;
+        mouseWheelDelta = 0; // Reset this every frame
 		while (SDL_PollEvent(&myEvent)) {
             ImGui_ImplSDL2_ProcessEvent(&myEvent);
-			if ((myEvent.type == SDL_WINDOWEVENT && myEvent.window.event == SDL_WINDOWEVENT_CLOSE) || SDL_GetKeyboardState(0)[SDL_SCANCODE_GRAVE]) {
-				bDone = true;
-			}
-            if(myEvent.type == SDL_KEYDOWN && myEvent.key.keysym.scancode == SDL_SCANCODE_F11) {
+            if(myEvent.type == SDL_MOUSEWHEEL) {
+                if(myEvent.wheel.y != 0) {
+                    mouseWheelDelta += myEvent.wheel.y;
+                }
+            }
+            else if(myEvent.type == SDL_KEYDOWN && myEvent.key.keysym.scancode == SDL_SCANCODE_F11) {
                 bIsFullscreen = !bIsFullscreen;
                 SDL_SetWindowFullscreen(myWindow, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
                 SDL_GetWindowSize(myWindow, &WIN_W, &WIN_H);
             }
+            else if ((myEvent.type == SDL_WINDOWEVENT && myEvent.window.event == SDL_WINDOWEVENT_CLOSE) || SDL_GetKeyboardState(0)[SDL_SCANCODE_GRAVE]) {
+				bDone = true;
+			}
 		}
         myInputHandle.PollInputs();
 
@@ -129,7 +135,6 @@ int main(int argc, char* args[]) {
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
-        glFinish(); // TODO: Remove this
         DrawBrickTarget(myCamera, brickTargetMesh);
 
         // 2D rendering
@@ -142,7 +147,6 @@ int main(int argc, char* args[]) {
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 //        DrawMiniMap();
-        std::cout << "ortho: " << OrthoTime.count() << std::endl;
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
             fpsTimer = SDL_GetTicks();

@@ -25,7 +25,7 @@ public:
 
     int NUM_THREADS;
 
-    static constexpr int CHUNK_SIZE = 128;
+    static constexpr int CHUNK_SIZE = 32;
     static constexpr int MAX_HEIGHT = 64;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;

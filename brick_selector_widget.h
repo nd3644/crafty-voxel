@@ -14,8 +14,10 @@ class BrickSelectorWidget {
         void Draw();
     private:
         Eternal::Sprite *BrickSprites;
-        Eternal::Sprite BlankSprite;
+        Eternal::Sprite BlankSprite, SelectedBrick;
         int iCount;
+        int iBrickStartIndex;
+        int SelectedIndex;
 };
 
 #endif
