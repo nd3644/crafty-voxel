@@ -57,6 +57,10 @@ public:
         void Generate(int chunkx, int chunkz, Map &map);
     };
 
+    int IdFromName(std::string str) {
+        return BrickNameMap[str];
+    }
+
 	inline void SetBrick(int x, int z, int y, int id) {
         using namespace std;
         if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
@@ -137,6 +141,8 @@ public:
     std::vector<std::string> GetTextureFilenames() {
         return BrickTextureFilenames;
     }
+
+    std::vector<std::array<int,6>>GetLookupArr() const;
     void FillWater(int x, int z, int y);
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
@@ -151,6 +157,7 @@ private:
     std::vector<std::array<int,6>>BrickLookup;
     std::vector<float>BrickTransparencies;
 
+    std::map<std::string, int>BrickNameMap;
     std::map <std::pair<int,int>, chunk_t>Chunks;
 
 };

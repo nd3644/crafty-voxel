@@ -7,13 +7,14 @@
 #include "input.h"
 #include "map.h"
 
+class BrickSelectorWidget;
 class Camera
 {
     public:
         Camera();
         ~Camera();
 
-        void Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input);
+        void Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
         glm::vec3 position, direction, up, right;
 
         glm::vec3 targetted_brick;
@@ -42,7 +43,7 @@ class Camera
         bool bFocus;
         bool bground;
         void CheckInput();
-        void FindTargettedBrick(Map &myMap, Eternal::InputHandle &input);
+        void FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
 };
 
 #endif

@@ -117,7 +117,7 @@ int main(int argc, char* args[]) {
 
         // Update the camera
         auto start = std::chrono::high_resolution_clock::now();
-        myCamera.Update(myMap, myShader, myInputHandle);
+        myCamera.Update(myMap, myShader, myInputHandle, myBrickWidget);
         auto end = std::chrono::high_resolution_clock::now();
         CameraUpdateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 

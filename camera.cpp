@@ -24,10 +24,10 @@ void Camera::CheckInput() {
 
 }
 
-void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
+void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
 	const Uint8 * keys = SDL_GetKeyboardState(0);
 
-    FindTargettedBrick(myMap, input);
+    FindTargettedBrick(myMap, input, selectWidget);
 
     float STRAFE_SPD = 0.05f;
     const float pi = 3.14159f;
@@ -172,7 +172,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input) {
    //std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
 }
 
-void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
+void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
     glm::vec3 p = position;
     glm::vec3 outter;
 
@@ -217,7 +217,8 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input) {
         //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
-        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,7);
+        int brickType = selectWidget.GetSelectedBrickID();
+        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
         myMap.BuildChunk(floor(targetted_brick.x / Map::CHUNK_SIZE), floor(targetted_brick.z / Map::CHUNK_SIZE));
     }
 }

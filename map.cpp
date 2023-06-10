@@ -90,7 +90,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     int brickType = 1;
     if(bMount) {
-        brickType = 6;
+        brickType = 1;
     }
 
     static int counter = 0;
@@ -140,7 +140,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
             for(int y = 1;y < 26;y++) {
                 if(map.GetBrick(xindex,zindex,y) == 0) {
-                    map.SetBrick(xindex,zindex,y,7);
+                    //map.SetBrick(xindex,zindex,y,6);
                 }
             }
 		}
@@ -542,6 +542,13 @@ void Map::LoadBrickMetaData() {
     std::ifstream infile("bricks.txt");
     float transparency = 0;
     while(!infile.eof()) {
+
+        // Load the string name
+        std::string brickName;
+        infile >> brickName;
+        BrickNameMap[brickName] = BrickNameMap.size();
+
+        // Face information
         std::array<int,6>arr;
         for(int i = 0;i < 6;i++) {
             infile >> arr[i];
@@ -550,4 +557,8 @@ void Map::LoadBrickMetaData() {
         BrickTransparencies.push_back(transparency);
         BrickLookup.push_back(arr);
     }
+}
+
+std::vector<std::array<int,6>> Map::GetLookupArr() const {
+    return BrickLookup;
 }

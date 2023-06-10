@@ -19,21 +19,27 @@ BrickSelectorWidget::~BrickSelectorWidget() {
 void BrickSelectorWidget::Init(Map &map) {    
     auto filenames = map.GetTextureFilenames();
 
-    iCount = filenames.size();
-    BrickSprites = new Eternal::Sprite[iCount];
-    for(int i = 0;i < iCount;i++) {
+    BrickSprites = new Eternal::Sprite[filenames.size()];
+    for(int i = 0;i < filenames.size();i++) {
         BrickSprites[i].Load(filenames[i]);
     }
 
     BlankSprite.Load("textures/blank.png");
     SelectedBrick.Load("textures/selected_brick.png");
+
+    BrickTextureIndices = map.GetLookupArr();
+    iCount = BrickTextureIndices.size() - 1;
 }
 
 void BrickSelectorWidget::Draw() {
     const int ICON_SIZE = 48;
-    const int MAX_ICONS_SHOWN = 3;
+    const int MAX_ICONS_SHOWN = iCount;
 
-    SelectedIndex = (SelectedIndex + mouseWheelDelta) % iCount;
+    SelectedIndex = (SelectedIndex - mouseWheelDelta);
+    if(SelectedIndex < 0)
+        SelectedIndex = 0;
+    if(SelectedIndex >= iCount)
+        SelectedIndex = iCount - 1;
 
     Rect r, c;
     c.x = c.y = 0; c.w = c.h = 16;
@@ -52,10 +58,12 @@ void BrickSelectorWidget::Draw() {
     backDrop.h += 4;
     BlankSprite.Draw(backDrop, c);
 
-    // Draw the icons   
-    int EndIndex = (iBrickStartIndex + MAX_ICONS_SHOWN) > iCount ? iCount : (iBrickStartIndex + MAX_ICONS_SHOWN);
+    // Draw the icons
+    iBrickStartIndex = (SelectedIndex > MAX_ICONS_SHOWN) ? (SelectedIndex - MAX_ICONS_SHOWN) : 0;
+    int EndIndex = (iBrickStartIndex + MAX_ICONS_SHOWN);
     for(int x = iBrickStartIndex;x < EndIndex;x++) {
-        BrickSprites[x].Draw(r,c);
+        // Use the front face of the cube
+        BrickSprites[BrickTextureIndices[x][3]].Draw(r,c);
         r.x += ICON_SIZE+2;
     }
 
@@ -66,4 +74,8 @@ void BrickSelectorWidget::Draw() {
     r.x = (WIN_W / 2) - ((ICON_SIZE * MAX_ICONS_SHOWN) / 2);
     r.x += SelectedIndex * ((ICON_SIZE == 0) ? ICON_SIZE : ICON_SIZE+2);
     SelectedBrick.Draw(r,c);
+}
+
+int BrickSelectorWidget::GetSelectedBrickID() const {
+    return SelectedIndex+1;
 }
