@@ -30,7 +30,7 @@ Map::Map(Camera &c) : camera(c) {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores/2;
     }
-    fAmbient = 0.2f;
+    fAmbient = 0.4f;
 
     viewDist = 3;
     bIsDay = true;
@@ -264,7 +264,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
-                fAmbient = 0.05f;
+
                 float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
                 if(lv > 1)
                     lv = 1;
@@ -485,10 +485,12 @@ void Map::Draw() {
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_J]) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        fAmbient = 1;
     }
     else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        fAmbient = 0;
     }
 
     int ChunksDrawn = 0;
@@ -530,6 +532,21 @@ void Map::Draw() {
     glFinish();
 }
 
+void Map::ScheduleMeshBuild(build_schedule_info_t info) {
+    // Check if the chunk is already scheduled
+    for(int i = 0;i < ScheduledBuilds.size();i++) {
+        build_schedule_info_t &s = ScheduledBuilds[i];
+        if(s.x == info.x && s.z == info.z) {
+            if(info.priorityLevel > s.priorityLevel) {
+                s.priorityLevel = info.priorityLevel;
+            }
+            return; // Already scheduled ...
+        }
+    }
+    // Otherwise add it
+    ScheduledBuilds.push_back(info);
+}
+
 void Map::RunBuilder() {
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
@@ -550,6 +567,27 @@ void Map::RunBuilder() {
                     build_count++;
                 }
                 continue;
+            }
+        }
+    }
+
+    // Ensure immediate priority chunks are built on the same frame
+    for(int i = 0;i < ScheduledBuilds.size();i++) {
+        if(ScheduledBuilds[i].priorityLevel == Priority::IMMEDIATE) {
+            BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
+        }
+    }
+
+    // Render one of the next chunks following the highest priority first
+    for(int priority = Priority::ONE;priority < Priority::NUM_PRIORITIES;priority++) {
+        for(int i = 0;i < ScheduledBuilds.size();i++) {
+            if(ScheduledBuilds[i].priorityLevel == priority) {
+                BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
+                ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
+
+                // break out of the loop
+                priority = Priority::NUM_PRIORITIES;
+                break;
             }
         }
     }

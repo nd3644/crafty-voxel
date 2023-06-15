@@ -28,9 +28,9 @@ public:
 
     int NUM_THREADS;
 
-    static constexpr int CHUNK_SIZE = 64;
+    static constexpr int CHUNK_SIZE = 16;
     static constexpr int MAX_HEIGHT = 64;
-    static constexpr int MAX_LIGHT_LEVEL = 16;
+    static constexpr int MAX_LIGHT_LEVEL = 32;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
 
@@ -40,7 +40,7 @@ public:
             bIsCurrentlyGenerating = false;
             bIniialBuild = false;
             for(int i = 0;i < CHUNK_SIZE;i++) {
-                for(int j = 0;j < CHUNK_SIZE;j++) {
+                for(int j = 0;j < CHUNK_SIZE;j++) {     
                     for(int y = 0;y < MAX_HEIGHT;y++) {
                         iBricks[i][y][j] = 0;
                         iLightLevels[i][y][j] = 0;
@@ -63,6 +63,18 @@ public:
         bool bIniialBuild;
 
         void Generate(int chunkx, int chunkz, Map &map);
+    };
+
+    enum Priority {
+        IMMEDIATE = 0,
+        ONE,
+        TWO,
+        THREE,
+        NUM_PRIORITIES            
+    };
+    struct build_schedule_info_t {
+        int x, z;
+        Priority priorityLevel;
     };
 
     int IdFromName(std::string str) {
@@ -183,19 +195,22 @@ public:
 
         auto chunk_index = std::make_pair(xchunk,zchunk);
 
+        if(lvl < 0)
+            lvl = 0;
+
         Chunks[std::make_pair(xchunk,zchunk)].iLightLevels[xindex][y][zindex] = lvl;
 	}
 
-    void AddLight(int x, int z, int y) {
+    void AddLight(int x, int z, int y, bool bRemove) {
         struct node { int x, y, z; float v; };
         std::vector<node>visited;
 
-        float start = 12;
+        float start = MAX_LIGHT_LEVEL;
         std::queue<node> positions;
         positions.push({x, y, z, start});
         int iter_count = 0;
 
-        int RECURSIVE_LIMIT = 40960;
+        int RECURSIVE_LIMIT = 80960;
 
         std::vector<glm::vec3> dirs = {
             {-1, 0, 0},
@@ -205,7 +220,9 @@ public:
             {0, -1, 0},
             {0, 1, 0},
         };
+
         
+        const float fallOff = 2;
         while (!positions.empty()) {
             if(iter_count > RECURSIVE_LIMIT) {
                 break;
@@ -230,7 +247,7 @@ public:
                 continue;
             }
 
-            if(GetBrick(posx,posz,posy) != 0) {
+            if(GetBrick(posx,posz,posy) != 0) { // If solid brick
                 if(posx != x && posz != z && posy != y) {
                     continue;
                 }
@@ -239,21 +256,28 @@ public:
             visited.push_back({posx, posy, posz});
 
             int lvl = GetLightLevel(posx,posz,y);
-            if(currentPos.v > 0) {
-                SetLightLevel(posx, posz, posy ,lvl+(int)currentPos.v);
+            if(bRemove) {
+                if(currentPos.v > 0) {
+                    SetLightLevel(posx, posz, posy ,lvl-(int)currentPos.v);
+                }
+            }
+            else {
+                if(currentPos.v > 0) {
+                    SetLightLevel(posx, posz, posy ,lvl+(int)currentPos.v);
+                }
             }
 
             for(int i = 0;i < dirs.size();i++) {
                 glm::vec3 &d = dirs[i];
 
                 if(GetBrick(posx + (int)d.x, posz + (int)d.z, posy + (int)d.y) == 0 && currentPos.v > 1)
-                    positions.push({posx + (int)d.x, posy + (int)d.y, posz + (int)d.z, currentPos.v-0.8f});
+                    positions.push({posx + (int)d.x, posy + (int)d.y, posz + (int)d.z, currentPos.v-fallOff});
             }
             
             iter_count++;
         }
-        visited.clear();        
-        std::cout << "iter_count: " << iter_count << std::endl;
+        visited.clear();
+        //std::cout << "iter_count: " << iter_count << std::endl;
     }
 
     void BuildChunk(int x, int z);
@@ -287,9 +311,12 @@ public:
 
     std::vector<std::array<int,6>>GetLookupArr() const;
     void FillWater(int x, int z, int y);
+
+    void ScheduleMeshBuild(build_schedule_info_t info);
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
+    std::vector<build_schedule_info_t>ScheduledBuilds;
 
 private:
     bool bIsDay;

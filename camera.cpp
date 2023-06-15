@@ -87,7 +87,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     if (keys[SDL_SCANCODE_R]) {
         if(lastpress == false) {
             myMap.SetBrick((int)position.x, (int)position.z, (int)position.y, 3);
-            myMap.AddLight((int)position.x, (int)position.z, (int)position.y);
+            myMap.AddLight((int)position.x, (int)position.z, (int)position.y, false);
             myMap.RebuildAll();
         }
         lastpress = true;
@@ -202,6 +202,10 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     targetted_brick.x = (int)p.x;
     targetted_brick.y = (int)p.y;
     targetted_brick.z = (int)p.z;
+
+    int chunkX = floor(targetted_brick.x / Map::CHUNK_SIZE);
+    int chunkZ = floor(targetted_brick.z / Map::CHUNK_SIZE);
+        
     int mx = 0, my = 0;
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
         std::cout << "deleting brick " << myMap.GetBrick(targetted_brick.x, targetted_brick.z, targetted_brick.y) << " at (" << targetted_brick.x << ", " << targetted_brick.y << ", " << targetted_brick.z << std::endl;
@@ -212,16 +216,36 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         std::cout << "xtrans: " << abs((int)targetted_brick.x%Map::CHUNK_SIZE) << std::endl;
         std::cout << "ztrans: " << abs((int)targetted_brick.z%Map::CHUNK_SIZE) << std::endl;
 */
+        int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);
         myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-        myMap.BuildChunk(floor(targetted_brick.x / Map::CHUNK_SIZE), floor(targetted_brick.z / Map::CHUNK_SIZE));
+        if(brickType == 3) { // torch
+            myMap.AddLight((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y, true);
+        }
+
+        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        for(int x = chunkX - 2;x < chunkX + 2;x++) {
+            for( int z = chunkZ - 2;z < chunkZ + 2;z++) {
+                myMap.ScheduleMeshBuild({x, z, Map::Priority::ONE});
+            }
+        }
         //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
         myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
         if(brickType == 3) {
-            myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y);
+            if(input.IsKeyDown((Eternal::InputHandle::Key)SDL_SCANCODE_Q)) {
+                myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, true);
+            }
+            else {
+                myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
+            }
         }
-        myMap.BuildChunk(floor(targetted_brick.x / Map::CHUNK_SIZE), floor(targetted_brick.z / Map::CHUNK_SIZE));
+        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        for(int x = chunkX - 2;x < chunkX + 2;x++) {
+            for( int z = chunkZ - 2;z < chunkZ + 2;z++) {
+                myMap.ScheduleMeshBuild({x, z, Map::Priority::ONE});
+            }
+        }
     }
 }
