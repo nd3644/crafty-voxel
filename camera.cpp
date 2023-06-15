@@ -87,7 +87,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     if (keys[SDL_SCANCODE_R]) {
         if(lastpress == false) {
             myMap.SetBrick((int)position.x, (int)position.z, (int)position.y, 3);
-//            myMap.AddLight((int)position.x, (int)position.z, (int)position.y);
+            myMap.AddLight((int)position.x, (int)position.z, (int)position.y);
             myMap.RebuildAll();
         }
         lastpress = true;
@@ -219,6 +219,9 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
         myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
+        if(brickType == 3) {
+            myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y);
+        }
         myMap.BuildChunk(floor(targetted_brick.x / Map::CHUNK_SIZE), floor(targetted_brick.z / Map::CHUNK_SIZE));
     }
 }

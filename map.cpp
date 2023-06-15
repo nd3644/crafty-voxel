@@ -30,9 +30,10 @@ Map::Map(Camera &c) : camera(c) {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores/2;
     }
-    fAmbient = 0.8f;
+    fAmbient = 0.2f;
 
-    viewDist = 8;
+    viewDist = 3;
+    bIsDay = true;
 }
 
 Map::~Map() {
@@ -40,12 +41,17 @@ Map::~Map() {
 }
 
 void Map::FillWater(int fx, int fz, int fy) {
-    const int water = 7;
+    const int water = IdFromName("water");
 
     std::stack<vec3i_t>stack;
     stack.push({ fx, fy, fz });
 
+    const auto RECURSIVE_LIMIT = 2048;
+
     while(stack.size() > 0) {
+        if(stack.size() > RECURSIVE_LIMIT) {
+            break;
+        }
         vec3i_t cur = stack.top();
         stack.pop();
         int x = cur.x;
@@ -138,9 +144,9 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 
-            for(int y = 1;y < 26;y++) {
+            for(int y = 1;y < 8;y++) {
                 if(map.GetBrick(xindex,zindex,y) == 0) {
-                    //map.SetBrick(xindex,zindex,y,6);
+                    map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
                 }
             }
 		}
@@ -201,7 +207,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     //std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
 
     int cube_count = 0;
-    Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].mesh;
+    chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
+    Mesh &mesh = chunk.mesh;
 
     Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
 
@@ -242,29 +249,25 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     continue;
                 }
                 int len = 1;
-
+/*
                 for(int i = 1;i < CHUNK_SIZE-1;i++) {
                     if(z < CHUNK_SIZE-1-i
                     && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)
-                    ) { //&& GetLightLvl(xindex,zindex,y) == GetLightLvl(xindex,zindex+i,y)) {
-                        
+                    && GetLightLevel(xindex,zindex,y) == GetLightLevel(xindex,zindex+i,y)) {
                         len++;
                     }
                     else {
                         break;
                     }
-                }
+                }*/
                 z += len-1;
 
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
-
-                float lv = 1;
+                fAmbient = 0.05f;
+                float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
                 if(lv > 1)
                     lv = 1;
-                if(lv < fAmbient)
-                    lv = fAmbient;
-
                 // Draw top
                 mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
@@ -275,6 +278,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
 
+                lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
+                if(lv > 1)
+                    lv = 1;
                 // Draw bottom
                 mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
@@ -285,7 +291,10 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
-                lv -= 0.2f;
+
+                lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+                if(lv > 1)
+                    lv = 1;
                 // Draw left
                 mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
@@ -296,6 +305,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
                 mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0);
 
+                lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+                if(lv > 1)
+                    lv = 1;
                 // Draw right
                 mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
@@ -306,6 +318,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
+                lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
+                if(lv > 1)
+                    lv = 1;
                 // Draw back
                 mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
@@ -316,7 +331,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
 
-
+                lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
+                if(lv > 1)
+                    lv = 1;
                 // Draw front
                 mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
                 mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
@@ -334,7 +351,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     glFinish();
 
     // Transparent pass
-    BuildChunkTrans(chunkX,chunkZ);
+//    BuildChunkTrans(chunkX,chunkZ);
 
     std::cout << "built " << cube_count << std::endl;
 }
@@ -373,7 +390,7 @@ void Map::BuildChunkTrans(int chunkX, int chunkZ) {
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
 
-                float lv = 1;
+                float lv = fAmbient;
                 if(lv > 1)
                     lv = 1;
                 if(lv < fAmbient)
@@ -546,7 +563,7 @@ void Map::LoadBrickMetaData() {
         // Load the string name
         std::string brickName;
         infile >> brickName;
-        BrickNameMap[brickName] = BrickNameMap.size();
+        BrickNameMap[brickName] = BrickNameMap.size() + 1;
 
         // Face information
         std::array<int,6>arr;
@@ -562,3 +579,12 @@ void Map::LoadBrickMetaData() {
 std::vector<std::array<int,6>> Map::GetLookupArr() const {
     return BrickLookup;
 }
+
+bool Map::IsDay() const {
+    return bIsDay;
+}
+
+void Map::SetDay(bool b) {
+    bIsDay = b;
+}
+
