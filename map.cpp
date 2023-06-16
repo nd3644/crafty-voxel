@@ -626,3 +626,16 @@ void Map::SetDay(bool b) {
     bIsDay = b;
 }
 
+void Map::ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level) {
+    for(int x = startx - 1;x < startx + 2;x++) {
+        for(int z = startz - 1;z < startz + 2;z++) {
+            build_schedule_info_t info;
+            info.priorityLevel = level;
+            info.x = x;
+            info.z = z;
+
+            ScheduleMeshBuild(info);
+        }
+    }
+}
+

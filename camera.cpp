@@ -221,7 +221,21 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         if(brickType == 3) { // torch
             myMap.AddLight((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y, true);
         }
-        myMap.BuildChunk(chunkX, chunkZ);
+        else {
+            for(int x = chunkX-4;x < chunkX+4;x++) {
+                for(int z = chunkZ-4;z < chunkZ+4;z++) {
+                    myMap.GetChunk(x,z)->PushLights(myMap);                    
+                }
+            }
+            myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
+            for(int x = chunkX-4;x < chunkX+4;x++) {
+                for(int z = chunkZ-4;z < chunkZ+4;z++) {
+                    myMap.GetChunk(x,z)->PopLights(myMap);                    
+                }
+            }
+        }
+        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
         //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
@@ -231,18 +245,19 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
             myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
         }
         else {
-            for(int x = chunkX-2;x < chunkX+2;x++) {
-                for(int z = chunkZ-2;z < chunkZ+2;z++) {
+            for(int x = chunkX-4;x < chunkX+4;x++) {
+                for(int z = chunkZ-4;z < chunkZ+4;z++) {
                     myMap.GetChunk(x,z)->PushLights(myMap);                    
                 }
             }
             myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
-            for(int x = chunkX-2;x < chunkX+2;x++) {
-                for(int z = chunkZ-2;z < chunkZ+2;z++) {
+            for(int x = chunkX-4;x < chunkX+4;x++) {
+                for(int z = chunkZ-4;z < chunkZ+4;z++) {
                     myMap.GetChunk(x,z)->PopLights(myMap);                    
                 }
             }
         }
-        myMap.BuildChunk(chunkX, chunkZ);
+        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
     }
 }

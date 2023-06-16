@@ -226,7 +226,7 @@ public:
     void AddLight(int x, int z, int y, bool bRemove) {
 
         int chunkx = floor(x / CHUNK_SIZE);
-        int chunkz = floor(x / CHUNK_SIZE);
+        int chunkz = floor(z / CHUNK_SIZE);
 
         if(!bRemove) {
             Chunks[std::make_pair(chunkx,chunkz)].lightList.push_back({x,y,z});
@@ -336,6 +336,9 @@ public:
     void RunBuilder();
 
     void LoadBrickMetaData();
+
+    // Take a chunk position and buiilds the 9 chunks within and around that point
+    void ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level);
 
     std::vector<vec3_t>lights;
 
