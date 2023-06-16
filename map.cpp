@@ -353,7 +353,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     // Transparent pass
 //    BuildChunkTrans(chunkX,chunkZ);
 
-    std::cout << "built " << cube_count << std::endl;
+//    std::cout << "built " << cube_count << std::endl;
 }
 
 void Map::BuildChunkTrans(int chunkX, int chunkZ) {

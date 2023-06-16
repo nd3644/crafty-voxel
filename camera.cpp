@@ -221,31 +221,28 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         if(brickType == 3) { // torch
             myMap.AddLight((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y, true);
         }
-
-        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
-        for(int x = chunkX - 2;x < chunkX + 2;x++) {
-            for( int z = chunkZ - 2;z < chunkZ + 2;z++) {
-                myMap.ScheduleMeshBuild({x, z, Map::Priority::ONE});
-            }
-        }
+        myMap.BuildChunk(chunkX, chunkZ);
         //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
-        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
         if(brickType == 3) {
-            if(input.IsKeyDown((Eternal::InputHandle::Key)SDL_SCANCODE_Q)) {
-                myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, true);
+            myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
+            myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
+        }
+        else {
+            for(int x = chunkX-2;x < chunkX+2;x++) {
+                for(int z = chunkZ-2;z < chunkZ+2;z++) {
+                    myMap.GetChunk(x,z)->PushLights(myMap);                    
+                }
             }
-            else {
-                myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
+            myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
+            for(int x = chunkX-2;x < chunkX+2;x++) {
+                for(int z = chunkZ-2;z < chunkZ+2;z++) {
+                    myMap.GetChunk(x,z)->PopLights(myMap);                    
+                }
             }
         }
-        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
-        for(int x = chunkX - 2;x < chunkX + 2;x++) {
-            for( int z = chunkZ - 2;z < chunkZ + 2;z++) {
-                myMap.ScheduleMeshBuild({x, z, Map::Priority::ONE});
-            }
-        }
+        myMap.BuildChunk(chunkX, chunkZ);
     }
 }

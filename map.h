@@ -34,6 +34,10 @@ public:
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
 
+    struct light_t {
+        int x, y, z;
+    };
+
     struct chunk_t {
         chunk_t() {
             bGen = false;
@@ -52,10 +56,26 @@ public:
         ~chunk_t() {
         }
 
+        void PushLights(Map &map) {
+            std::cout << "pushlen: " << lightList.size() << std::endl;
+            for(light_t &l: lightList) {
+                pushedLights.push_back(l);
+                map.AddLight(l.x, l.z, l.y, true);
+            }
+        }
+
+        void PopLights(Map &map) {
+            for(light_t &l: pushedLights) {
+                map.AddLight(l.x, l.z, l.y, false);
+            }
+            pushedLights.clear();
+        }
+
         Mesh mesh, transMesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
-        std::vector<vec3_t>lightList;
+        std::vector<light_t>lightList;
+        std::vector<light_t>pushedLights;
 
         bool bGen;
         // This is for preventing Generate recursively calling itself. This can probably be done better
@@ -139,10 +159,12 @@ public:
 
         auto chunk_index = std::make_pair(xchunk,zchunk);
 
-        if(!Chunks[chunk_index].bGen)
-            Chunks[chunk_index].Generate(origxchunk,origzchunk,*this);
+        auto &chunk = Chunks[chunk_index];
 
-        Chunks[std::make_pair(xchunk,zchunk)].iBricks[xindex][y][zindex] = id;
+        if(!chunk.bGen)
+            chunk.Generate(origxchunk,origzchunk,*this);
+
+        chunk.iBricks[xindex][y][zindex] = id;
 	}
 
     inline int GetLightLevel(int x, int z, int y) {
@@ -202,6 +224,23 @@ public:
 	}
 
     void AddLight(int x, int z, int y, bool bRemove) {
+
+        int chunkx = floor(x / CHUNK_SIZE);
+        int chunkz = floor(x / CHUNK_SIZE);
+
+        if(!bRemove) {
+            Chunks[std::make_pair(chunkx,chunkz)].lightList.push_back({x,y,z});
+        }
+        else {
+            auto &list = Chunks[std::make_pair(chunkx,chunkz)].lightList;
+            for(int i = 0;i < list.size();i++) {
+                if(list[i].x == x && list[i].y == y && list[i].z == z) {
+                    list.erase(list.begin()+i);
+                    break;
+                }
+            }
+        }
+
         struct node { int x, y, z; float v; };
         std::vector<node>visited;
 
@@ -220,7 +259,6 @@ public:
             {0, -1, 0},
             {0, 1, 0},
         };
-
         
         const float fallOff = 2;
         while (!positions.empty()) {
@@ -234,7 +272,6 @@ public:
             int posx = currentPos.x;
             int posy = currentPos.y;
             int posz = currentPos.z;
-
 
             bool bFound = false;
             for(auto &p: visited) {
@@ -277,7 +314,14 @@ public:
             iter_count++;
         }
         visited.clear();
-        //std::cout << "iter_count: " << iter_count << std::endl;
+        std::cout << "iter_count: " << iter_count << std::endl;
+
+        // Schedule mesh updates
+        for(int mx = chunkx - 2;mx < chunkx + 2;mx++){
+            for(int mz = chunkz - 2;mz < chunkz + 2;mz++){
+                ScheduleMeshBuild({mx,mz,Map::Priority::ONE});
+            }
+        }
     }
 
     void BuildChunk(int x, int z);
@@ -313,6 +357,10 @@ public:
     void FillWater(int x, int z, int y);
 
     void ScheduleMeshBuild(build_schedule_info_t info);
+
+    chunk_t *GetChunk(int x, int z) {
+        return &Chunks[std::make_pair(x,z)];
+    }
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
