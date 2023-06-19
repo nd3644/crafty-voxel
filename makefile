@@ -4,7 +4,7 @@ LDFLAGS=-lSDL2main -lSDL2 -lSDL2_image -lGL -lGLEW -L/usr/lib/imgui/ -limgui -ls
 SRCS=$(wildcard *.cpp)
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 
-TARGET = crafty
+TARGET = crafty.out
 
 all: $(TARGET)
 
