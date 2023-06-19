@@ -15,6 +15,8 @@
 #include <queue>
 #include <glm/glm.hpp>
 
+#include <SDL2/SDL.h>
+
 class Camera;
 class Map
 {
@@ -73,7 +75,7 @@ public:
 
         Mesh mesh, transMesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
-        uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
+        int iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         std::vector<light_t>lightList;
         std::vector<light_t>pushedLights;
 
@@ -224,14 +226,10 @@ public:
 	}
 
     void AddLight(int x, int z, int y, bool bRemove) {
-
         int chunkx = floor(x / CHUNK_SIZE);
         int chunkz = floor(z / CHUNK_SIZE);
 
-        if(!bRemove) {
-            Chunks[std::make_pair(chunkx,chunkz)].lightList.push_back({x,y,z});
-        }
-        else {
+        if(bRemove) {
             auto &list = Chunks[std::make_pair(chunkx,chunkz)].lightList;
             for(int i = 0;i < list.size();i++) {
                 if(list[i].x == x && list[i].y == y && list[i].z == z) {
@@ -239,6 +237,9 @@ public:
                     break;
                 }
             }
+        }
+        else {
+            Chunks[std::make_pair(chunkx,chunkz)].lightList.push_back({x,y,z});
         }
 
         struct node { int x, y, z; float v; };
@@ -260,7 +261,7 @@ public:
             {0, 1, 0},
         };
         
-        const float fallOff = 2;
+        const float fallOff = 3;
         while (!positions.empty()) {
             if(iter_count > RECURSIVE_LIMIT) {
                 break;
@@ -283,6 +284,9 @@ public:
             if(bFound) {
                 continue;
             }
+            if(currentPos.v <= 0) {
+                continue;
+            }
 
             if(GetBrick(posx,posz,posy) != 0) { // If solid brick
                 if(posx != x && posz != z && posy != y) {
@@ -290,25 +294,27 @@ public:
                 }
             }
 
+            if(GetBrick(posx,posz,posy) != 0 && GetBrick(posx,posz,posy) != 3) {
+                continue;
+            }
+
             visited.push_back({posx, posy, posz});
 
-            int lvl = GetLightLevel(posx,posz,y);
+            int lvl = GetLightLevel(posx,posz,posy);
             if(bRemove) {
                 if(currentPos.v > 0) {
                     SetLightLevel(posx, posz, posy ,lvl-(int)currentPos.v);
                 }
             }
             else {
-                if(currentPos.v > 0) {
-                    SetLightLevel(posx, posz, posy ,lvl+(int)currentPos.v);
-                }
+                SetLightLevel(posx, posz, posy ,lvl+(int)currentPos.v);
             }
 
             for(int i = 0;i < dirs.size();i++) {
                 glm::vec3 &d = dirs[i];
 
-                if(GetBrick(posx + (int)d.x, posz + (int)d.z, posy + (int)d.y) == 0 && currentPos.v > 1)
-                    positions.push({posx + (int)d.x, posy + (int)d.y, posz + (int)d.z, currentPos.v-fallOff});
+                auto brickId = GetBrick(posx + (int)d.x, posz + (int)d.z, posy + (int)d.y);
+                positions.push({posx + (int)d.x, posy + (int)d.y, posz + (int)d.z, currentPos.v-fallOff});
             }
             
             iter_count++;

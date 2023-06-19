@@ -6,6 +6,8 @@ OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 
 TARGET = crafty
 
+all: $(TARGET)
+
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 

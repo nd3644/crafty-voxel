@@ -32,7 +32,7 @@ Map::Map(Camera &c) : camera(c) {
     }
     fAmbient = 0.4f;
 
-    viewDist = 3;
+    viewDist = 6;
     bIsDay = true;
 }
 
@@ -135,8 +135,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
             int height = (((finalTerrain.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5) + 1) / 2) * MAX_HEIGHT);
 
-            if(height < 4)
-                height = 4;
             if(height >= MAX_HEIGHT)
                 height = MAX_HEIGHT - 1;
             
@@ -351,7 +349,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     glFinish();
 
     // Transparent pass
-//    BuildChunkTrans(chunkX,chunkZ);
+    BuildChunkTrans(chunkX,chunkZ);
 
 //    std::cout << "built " << cube_count << std::endl;
 }
@@ -562,10 +560,10 @@ void Map::RunBuilder() {
             }
 
             if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
-                if(build_count < 1) {
+                //if(build_count < 1) {
                     BuildChunk(x,z);
                     build_count++;
-                }
+                //}
                 continue;
             }
         }
@@ -575,6 +573,7 @@ void Map::RunBuilder() {
     for(int i = 0;i < ScheduledBuilds.size();i++) {
         if(ScheduledBuilds[i].priorityLevel == Priority::IMMEDIATE) {
             BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
+            ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
         }
     }
 

@@ -62,23 +62,23 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     bool zMoveAccepted = true;
 
     float distf = 0.6f;
-    for(float z = -distf;z < distf;z += 0.1f) {
+/*    for(float z = -distf;z < distf;z += 0.1f) {
         for(float x = -distf;x < distf;x += 0.1f) {
             if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+0.5f+z), (int)position.y-1) != 0) {
                 xMoveAccepted = false;
             }
         }
-    }
+    }*/
     if(xMoveAccepted) {
         position.x += moveDelta.x;
     }
-    for(float z = -distf-0.2f;z < distf+0.2f;z += 0.1f) {
+/*    for(float z = -distf-0.2f;z < distf+0.2f;z += 0.1f) {
         for(float x = -distf;x < distf;x += 0.1f) {
             if(myMap.GetBrick((int)((position.x+x+0.5f)), (int)((position.z+0.5f+moveDelta.z)+z), (int)position.y-1) != 0) {
                 zMoveAccepted = false;
             }
         }
-    }
+    }*/
     if(zMoveAccepted) {
         position.z += moveDelta.z;
     }
@@ -142,12 +142,15 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
 
     float d = 0.1f;
     bool bground = false;
-    for(float x = -0.20f;x < 1.1f;x += 0.1) {
+/*    for(float x = -0.20f;x < 1.1f;x += 0.1) {
         for(float z = -0.20f;z < 1.1f;z += 0.1f) {
             if( myMap.GetBrick((int)(position.x+x), (int)(position.z+z), (int)(position.y-1.5f)) != 0) {
                 bground = true;
             }
         }
+    }*/
+    if( myMap.GetBrick((int)(position.x + 0.25), (int)(position.z + 0.25), (int)(position.y-1.5f)) != 0) {
+        bground = true;
     }
     if(!bground) {
         fJumpVel += 0.005f;
@@ -222,18 +225,19 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
             myMap.AddLight((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y, true);
         }
         else {
-            for(int x = chunkX-4;x < chunkX+4;x++) {
-                for(int z = chunkZ-4;z < chunkZ+4;z++) {
+            for(int x = chunkX-2;x < chunkX+2;x++) {
+                for(int z = chunkZ-2;z < chunkZ+2;z++) {
                     myMap.GetChunk(x,z)->PushLights(myMap);                    
                 }
             }
             myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-            for(int x = chunkX-4;x < chunkX+4;x++) {
-                for(int z = chunkZ-4;z < chunkZ+4;z++) {
+            for(int x = chunkX-2;x < chunkX+2;x++) {
+                for(int z = chunkZ-2;z < chunkZ+2;z++) {
                     myMap.GetChunk(x,z)->PopLights(myMap);                    
                 }
             }
         }
+        std::cout << "BRICKTYPE: " << brickType << std::endl;
         myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
         myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
         //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
@@ -245,14 +249,14 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
             myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
         }
         else {
-            for(int x = chunkX-4;x < chunkX+4;x++) {
-                for(int z = chunkZ-4;z < chunkZ+4;z++) {
+            for(int x = chunkX-2;x < chunkX+2;x++) {
+                for(int z = chunkZ-2;z < chunkZ+2;z++) {
                     myMap.GetChunk(x,z)->PushLights(myMap);                    
                 }
             }
             myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
-            for(int x = chunkX-4;x < chunkX+4;x++) {
-                for(int z = chunkZ-4;z < chunkZ+4;z++) {
+            for(int x = chunkX-2;x < chunkX+2;x++) {
+                for(int z = chunkZ-2;z < chunkZ+2;z++) {
                     myMap.GetChunk(x,z)->PopLights(myMap);                    
                 }
             }
@@ -260,4 +264,6 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
         myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
     }
+
+//    std::cout << "brick: " << myMap.GetLightLevel((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y+1) << std::endl;
 }

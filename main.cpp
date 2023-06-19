@@ -146,7 +146,7 @@ int main(int argc, char* args[]) {
         DrawDebugUI(myCamera);
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-//        DrawMiniMap();
+        DrawMiniMap(myCamera, myMap);
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
             fpsTimer = SDL_GetTicks();
