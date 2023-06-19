@@ -1,2 +1,5 @@
 *.out
 *.o
+.vscode/
+imgui.ini
+.VSCodeCounter/
