@@ -32,7 +32,7 @@ public:
 
     static constexpr int CHUNK_SIZE = 16;
     static constexpr int MAX_HEIGHT = 64;
-    static constexpr int MAX_LIGHT_LEVEL = 32;
+    static constexpr int MAX_LIGHT_LEVEL = 16;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
 
@@ -261,7 +261,7 @@ public:
             {0, 1, 0},
         };
         
-        const float fallOff = 3;
+        const float fallOff = 1;
         while (!positions.empty()) {
             if(iter_count > RECURSIVE_LIMIT) {
                 break;

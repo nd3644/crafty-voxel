@@ -38,6 +38,45 @@ class Camera
             }
             return false;            
         }
+
+        bool CheckCollision(Map &map) {
+            float size = 16;
+            Rect r(0,0,size,size);
+            Rect c(0,0,16,16);
+
+            int camX = position.x;
+            int camY = position.y;
+            int camZ = position.z;
+
+            // Draw cur level
+            for(int x = camX-8;x < camX+8;x++) {
+                r.x = x * size;
+                for(int z = camZ-8;z < camZ+8;z++) {
+                    r.y = z * size;
+                    int y = camY;
+
+                    // ground
+                    if(map.GetBrick(x,z,y-2) != 0) {
+                        
+                    }
+
+                    // shin level
+                    if(map.GetBrick(x,z,y-1) != 0) {
+                        Rect p;
+                        p.x = position.x * size;
+                        p.y = position.z * size;
+                        p.y -= (size/2);
+                        p.w = p.h = 14;
+                        p.x += 1;
+                        p.y += 1;
+                        if(p.IsColliding(r)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     private:
         float fJumpVel;
         bool bFocus;

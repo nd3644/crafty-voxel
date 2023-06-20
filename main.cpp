@@ -142,11 +142,11 @@ int main(int argc, char* args[]) {
         myShader2D.Bind();
         DrawCursor();
         myBrickWidget.Draw();
+        DrawMiniMap(myCamera, myMap);
 
         DrawDebugUI(myCamera);
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        DrawMiniMap(myCamera, myMap);
 
         if(SDL_GetTicks() - fpsTimer > 1000) {
             fpsTimer = SDL_GetTicks();
@@ -274,35 +274,51 @@ void DrawCursor() {
 }
 
 void DrawMiniMap(Camera &myCamera, Map &myMap) {
-    Mesh myMesh;
+    return;
+    Eternal::Sprite square, grey;
+    square.Load("textures/square.png");
+    grey.Load("textures/grey.png");
 
-    glDisable(GL_TEXTURE_2D);
+    int size = 16;
+    Rect r(0,0,size,size);
+    Rect c(0,0,16,16);
 
-    int level = (int)myCamera.position.y-1;
+    int camX = myCamera.position.x;
+    int camY = myCamera.position.y;
+    int camZ = myCamera.position.z;
 
-    glPointSize(4);
-    for(int x = 0;x < 256;x++) {
-        for(int z = 0;z < 256;z++) {
-            for(int i = 0;i < 3;i++) { // lol
-            myMesh.SetTranslation(-200,-200,0);
-                if(x == (int)myCamera.position.x && z == (int)myCamera.position.z) {
-                    myMesh.Color4(1,0.2,0.2,1);
-                    myMesh.Index1(1);
-                    myMesh.Vert3(x*4,z*4,0);
-                    myMesh.TexCoord2(0,0);
-                }
-                else {
-                    if(myMap.GetBrick(x,z,level) != 0) {
-                        myMesh.Color4(0.2f,0.2f,0.2f,1);
-                        myMesh.Index1(1);
-                        myMesh.Vert3(x*4,z*4,0);
-                        myMesh.TexCoord2(0,0);
-                    }
-                }
+    // Draw cur level
+    for(int x = 0;x < 32;x++) {
+        r.x = x * size;
+        for(int z = 0;z < 32;z++) {
+            r.y = z * size;
+            int y = camY;
+
+            // ground
+            if(myMap.GetBrick(x,z,y-2) != 0) {
+                grey.Bind();
+                grey.Draw(r,c);
+            }
+
+            // shin level
+            if(myMap.GetBrick(x,z,y-1) != 0) {
+                square.Bind();
+                square.Draw(r,c);
             }
         }
     }
-    myMesh.Draw(Mesh::MODE_POINTS);
+
+    // Draw player
+    Eternal::Sprite player;
+    player.Load("textures/red.png");
+
+    r.x = myCamera.position.x * size;
+    r.y = myCamera.position.z * size;
+    r.y -= (size/2);
+    r.w = r.h = 16;
+    
+    player.Bind();
+    player.Draw(r,c);
 }
 
 void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {

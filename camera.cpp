@@ -14,7 +14,8 @@ Camera::Camera() {
     direction = glm::vec3(0,0,1);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
-    position = glm::vec3(120,32,120);
+//    position = glm::vec3(120,32,120);
+    position = glm::vec3(8,8,0);
     bFocus = true;
 }
 
@@ -69,18 +70,14 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
             }
         }
     }*/
-    if(xMoveAccepted) {
-        position.x += moveDelta.x;
+    position.x += moveDelta.x;
+    if(CheckCollision(myMap)) {
+        position.x -= moveDelta.x;
     }
-/*    for(float z = -distf-0.2f;z < distf+0.2f;z += 0.1f) {
-        for(float x = -distf;x < distf;x += 0.1f) {
-            if(myMap.GetBrick((int)((position.x+x+0.5f)), (int)((position.z+0.5f+moveDelta.z)+z), (int)position.y-1) != 0) {
-                zMoveAccepted = false;
-            }
-        }
-    }*/
-    if(zMoveAccepted) {
-        position.z += moveDelta.z;
+
+    position.z += moveDelta.z;
+    if(CheckCollision(myMap)) {
+        position.z -= moveDelta.z;
     }
 
     static bool lastpress = 0;
@@ -142,15 +139,15 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
 
     float d = 0.1f;
     bool bground = false;
-/*    for(float x = -0.20f;x < 1.1f;x += 0.1) {
-        for(float z = -0.20f;z < 1.1f;z += 0.1f) {
-            if( myMap.GetBrick((int)(position.x+x), (int)(position.z+z), (int)(position.y-1.5f)) != 0) {
+
+    
+    for(float x = -0.1f;x < 0.1f;x += 0.1f) {
+        for(float z = -0.1f;z < 0.1f;z += 0.1f) {
+            if( myMap.GetBrick((int)(position.x + 0.5f + x), (int)(position.z + z), (int)(position.y-1.5f)) != 0) {
                 bground = true;
+                break;
             }
         }
-    }*/
-    if( myMap.GetBrick((int)(position.x + 0.25), (int)(position.z + 0.25), (int)(position.y-1.5f)) != 0) {
-        bground = true;
     }
     if(!bground) {
         fJumpVel += 0.005f;

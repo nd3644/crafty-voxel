@@ -17,6 +17,21 @@ struct Rect {
     Rect() {
         x = y = w = h = 0;
     }
+    Rect(float x, float y, float w, float h) {
+        this->x = x;
+        this->y = y;
+        this->w = w;
+        this->h = h;
+    }
+    bool IsColliding(Rect &b) {
+        if (x > b.x + b.w
+            || x + w < b.x
+            || y > b.y + b.h
+            || y + h < b.y) {
+            return false;
+        }
+        return true;
+    }
     float x, y, w, h;
 };
 

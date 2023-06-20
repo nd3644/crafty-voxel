@@ -30,7 +30,7 @@ Map::Map(Camera &c) : camera(c) {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores/2;
     }
-    fAmbient = 0.4f;
+    fAmbient = 0.3f;
 
     viewDist = 6;
     bIsDay = true;
