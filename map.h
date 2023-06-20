@@ -370,6 +370,10 @@ public:
     chunk_t *GetChunk(int x, int z) {
         return &Chunks[std::make_pair(x,z)];
     }
+
+    // Makes all chunks within the view distance rebuild their meshes.
+    // This is more for debugging than anything.
+    void RebuildAllVisible();
 private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
@@ -380,7 +384,6 @@ private:
     int viewDist;
     std::vector<std::thread>BuilderThreads;
     Camera &camera;
-    float fAmbient;
     TextureArray myTexArray;
     std::vector<std::array<int,6>>BrickLookup;
     std::vector<float>BrickTransparencies;

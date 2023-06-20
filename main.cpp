@@ -39,7 +39,7 @@ extern void Cleanup();
 extern void CompileArr();
 
 extern void DrawMiniMap(Camera &myCamera, Map &myMap);
-extern void DrawDebugUI(Camera &myCamera);
+extern void DrawDebugUI(Camera &myCamera, Map &myMap);
 extern void DrawCursor();
 extern void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh);
 
@@ -109,6 +109,7 @@ int main(int argc, char* args[]) {
         myInputHandle.PollInputs();
 
         glEnable(GL_DEPTH_TEST);
+        glClearColor(0.494 * fAmbient, 0.752 * fAmbient, 0.933f * fAmbient, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
@@ -144,7 +145,7 @@ int main(int argc, char* args[]) {
         myBrickWidget.Draw();
         DrawMiniMap(myCamera, myMap);
 
-        DrawDebugUI(myCamera);
+        DrawDebugUI(myCamera, myMap);
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
@@ -214,8 +215,6 @@ void Init() {
 	SDL_GL_SetSwapInterval(1);
 
     SetupImgui();
-
-	glClearColor(0.494, 0.752, 0.933f, 0);
 
     // Init shader
     myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");
@@ -335,7 +334,7 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void DrawDebugUI(Camera &myCamera) {
+void DrawDebugUI(Camera &myCamera, Map &map) {
     glDisable(GL_DEPTH_TEST);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -383,6 +382,11 @@ void DrawDebugUI(Camera &myCamera) {
     ImGui::Checkbox("V-Sync", &bEnableVSync);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
+    }
+
+
+    if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
+        map.RebuildAllVisible();
     }
     ImGui::End();
     ImGui::PopStyleColor(1);

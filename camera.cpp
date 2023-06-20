@@ -42,6 +42,9 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     if (keys[SDL_SCANCODE_LSHIFT]) {
         STRAFE_SPD = 0.4f;
 	}
+    else if (keys[SDL_SCANCODE_Q]) {
+        STRAFE_SPD = 0.01f;
+	}
 	if (keys[SDL_SCANCODE_A]) {
         moveDelta -= right * STRAFE_SPD;
 	}
@@ -114,12 +117,19 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         float LookSens = 0.05f;
 
         float yDelta = (300 - mouseY) * LookSens;
-        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians((yDelta)), right); // The rotation matrix
-        direction = glm::vec3(rotationMatrix * glm::vec4(direction, 1.0f)); 
-    
         float xDelta = (400 - mouseX) * LookSens;
-        rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians((xDelta)), glm::vec3(0.0f, 1.0f, 0.0f)); // The rotation matrix
-        direction = glm::vec3(rotationMatrix * glm::vec4(direction, 1.0f)); 
+
+        float currentPitch = glm::degrees(std::asin(direction.y));
+        float newPitch = currentPitch + yDelta;
+
+        float clampedPitch = glm::clamp(newPitch, -89.0f, 89.0f);
+        float pitchDelta = clampedPitch - currentPitch;
+
+        glm::mat4 pitchRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(pitchDelta), right);
+        direction = glm::vec3(pitchRotationMatrix * glm::vec4(direction, 1.0f));
+
+        glm::mat4 yawRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(xDelta), glm::vec3(0.0f, 1.0f, 0.0f));
+        direction = glm::vec3(yawRotationMatrix * glm::vec4(direction, 1.0f));
 
         lastX = mouseX;
         lastY = mouseY;
@@ -141,8 +151,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     bool bground = false;
 
     
-    for(float x = -0.1f;x < 0.1f;x += 0.1f) {
-        for(float z = -0.1f;z < 0.1f;z += 0.1f) {
+    for(float x = -0.4f;x < 0.4f;x += 0.1f) {
+        for(float z = -0.4f;z < 0.4f;z += 0.1f) {
             if( myMap.GetBrick((int)(position.x + 0.5f + x), (int)(position.z + z), (int)(position.y-1.5f)) != 0) {
                 bground = true;
                 break;

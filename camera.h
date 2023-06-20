@@ -48,17 +48,13 @@ class Camera
             int camY = position.y;
             int camZ = position.z;
 
+            bground = false;
             // Draw cur level
             for(int x = camX-8;x < camX+8;x++) {
                 r.x = x * size;
                 for(int z = camZ-8;z < camZ+8;z++) {
                     r.y = z * size;
                     int y = camY;
-
-                    // ground
-                    if(map.GetBrick(x,z,y-2) != 0) {
-                        
-                    }
 
                     // shin level
                     if(map.GetBrick(x,z,y-1) != 0) {
@@ -78,6 +74,7 @@ class Camera
             return false;
         }
     private:
+        float AngleX, AngleY;
         float fJumpVel;
         bool bFocus;
         bool bground;

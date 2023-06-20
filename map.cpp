@@ -7,6 +7,7 @@
 #include "shader.h"
 #include "cube.h"
 #include "camera.h"
+#include "globals.h"
 #include <GL/glew.h>
 
 #include <glm/glm.hpp>
@@ -30,7 +31,6 @@ Map::Map(Camera &c) : camera(c) {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores/2;
     }
-    fAmbient = 0.3f;
 
     viewDist = 6;
     bIsDay = true;
@@ -520,14 +520,21 @@ void Map::Draw() {
 
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
-        for(int x = sX - viewDist;x < sX+viewDist;x++) {
-            for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
-                BuildChunk(x,z);
-            }
-        }
+        RebuildAllVisible();
     }
 
     glFinish();
+}
+
+void Map::RebuildAllVisible() {
+    int sX = ((int)camera.position.x / CHUNK_SIZE);
+    int sZ = ((int)camera.position.z / CHUNK_SIZE);
+
+    for(int x = sX - viewDist;x < sX+viewDist;x++) {
+        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+            BuildChunk(x,z);
+        }
+    }
 }
 
 void Map::ScheduleMeshBuild(build_schedule_info_t info) {

@@ -10,4 +10,6 @@ extern bool bIsFullscreen;
 
 extern int mouseWheelDelta;
 
+extern float fAmbient;
+
 #endif
