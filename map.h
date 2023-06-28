@@ -31,7 +31,7 @@ public:
     int NUM_THREADS;
 
     static constexpr int CHUNK_SIZE = 16;
-    static constexpr int MAX_HEIGHT = 64;
+    static constexpr int MAX_HEIGHT = 256;
     static constexpr int MAX_LIGHT_LEVEL = 16;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
@@ -50,6 +50,13 @@ public:
                     for(int y = 0;y < MAX_HEIGHT;y++) {
                         iBricks[i][y][j] = 0;
                         iLightLevels[i][y][j] = 0;
+
+
+                        for(int f = 0;f < 6;f++) {
+                            for(int v = 0;v < 4;v++) {
+                                ambientVecs[i][y][j][f][v] = 1;
+                            }
+                        }
                     }
                 }
             }
@@ -59,7 +66,7 @@ public:
         }
 
         void PushLights(Map &map) {
-            std::cout << "pushlen: " << lightList.size() << std::endl;
+//            std::cout << "pushlen: " << lightList.size() << std::endl;
             for(light_t &l: lightList) {
                 pushedLights.push_back(l);
                 map.AddLight(l.x, l.z, l.y, true);
@@ -76,6 +83,7 @@ public:
         Mesh mesh, transMesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         int iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
+        float ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
         std::vector<light_t>lightList;
         std::vector<light_t>pushedLights;
 
@@ -106,7 +114,7 @@ public:
     /* This function makes a terrible amount of effort to prevent negative indices
       because they were causing a lot of trouble. */
 	inline int GetBrick(int x, int z, int y) {
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= 60) {
+        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
             return 0;
         }
 
@@ -128,12 +136,6 @@ public:
         auto chunk_index = std::make_pair(xchunk,zchunk);
 
         auto &chunk = Chunks[chunk_index];
-
-        // It's important to make sure the chunk was generated at this point because
-        // adjacent chunks may be trying to access data here.
-        if(!chunk.bGen) {
-            chunk.Generate(origxchunk,origzchunk,*this);
-        }
 
 		return chunk.iBricks[xindex][y][zindex];
 	}
@@ -163,19 +165,16 @@ public:
 
         auto &chunk = Chunks[chunk_index];
 
-        if(!chunk.bGen)
-            chunk.Generate(origxchunk,origzchunk,*this);
-
         chunk.iBricks[xindex][y][zindex] = id;
 	}
 
     inline int GetLightLevel(int x, int z, int y) {
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= 60) {
+        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
             return -1;
         }
 
-        int origxchunk = x / CHUNK_SIZE;
-        int origzchunk = z / CHUNK_SIZE;
+//        int origxchunk = x / CHUNK_SIZE;
+//        int origzchunk = z / CHUNK_SIZE;
 
         if(x < 0)
             x += half_limit;
@@ -202,8 +201,8 @@ public:
             return;
         }
 
-        int origxchunk = x / CHUNK_SIZE;
-        int origzchunk = z / CHUNK_SIZE;
+//        int origxchunk = x / CHUNK_SIZE;
+//        int origzchunk = z / CHUNK_SIZE;
 
         if(x < 0)
             x += half_limit;
@@ -217,7 +216,7 @@ public:
         int xindex = x % CHUNK_SIZE;
         int zindex = z % CHUNK_SIZE;
 
-        auto chunk_index = std::make_pair(xchunk,zchunk);
+//        auto chunk_index = std::make_pair(xchunk,zchunk);
 
         if(lvl < 0)
             lvl = 0;
@@ -231,7 +230,7 @@ public:
 
         if(bRemove) {
             auto &list = Chunks[std::make_pair(chunkx,chunkz)].lightList;
-            for(int i = 0;i < list.size();i++) {
+            for(size_t i = 0;i < list.size();i++) {
                 if(list[i].x == x && list[i].y == y && list[i].z == z) {
                     list.erase(list.begin()+i);
                     break;
@@ -310,10 +309,9 @@ public:
                 SetLightLevel(posx, posz, posy ,lvl+(int)currentPos.v);
             }
 
-            for(int i = 0;i < dirs.size();i++) {
+            for(size_t i = 0;i < dirs.size();i++) {
                 glm::vec3 &d = dirs[i];
 
-                auto brickId = GetBrick(posx + (int)d.x, posz + (int)d.z, posy + (int)d.y);
                 positions.push({posx + (int)d.x, posy + (int)d.y, posz + (int)d.z, currentPos.v-fallOff});
             }
             
@@ -371,10 +369,53 @@ public:
         return &Chunks[std::make_pair(x,z)];
     }
 
+    float GetBrickTransparency(int id) {
+        if(id < 0 || id >= BrickTransparencies.size())
+            return 1;
+        return BrickTransparencies[id];
+    }
+
     // Makes all chunks within the view distance rebuild their meshes.
     // This is more for debugging than anything.
     void RebuildAllVisible();
+
+
+    bool IsBrickSurroundedByOpaque(int x, int z, int y) {
+        if(GetBrick(x-1,z,y) > 0 && GetBrickTransparency(GetBrick(x-1,z,y)) == 1
+        && GetBrick(x+1,z,y) > 0 && GetBrickTransparency(GetBrick(x+1,z,y)) == 1
+        && GetBrick(x,z-1,y) > 0 && GetBrickTransparency(GetBrick(x,z-1,y)) == 1
+        && GetBrick(x,z+1,y) > 0 && GetBrickTransparency(GetBrick(x,z+1,y)) == 1
+        && GetBrick(x,z,y+1) > 0 && GetBrickTransparency(GetBrick(x,z,y+1)) == 1
+        && GetBrick(x,z,y-1) > 0 && GetBrickTransparency(GetBrick(x,z,y-1)) == 1) {
+            return true;
+        }
+        return false;
+    }
 private:
+    bool BrickAOIsEqual(int x1, int y1, int z1, int x2, int y2, int z2) {
+        int xchunk1 = floor(x1 / CHUNK_SIZE);
+        int zchunk1 = floor(z1 / CHUNK_SIZE);
+
+        int xindex1 = x1 % CHUNK_SIZE;
+        int zindex1 = z1 % CHUNK_SIZE;
+
+        int xchunk2 = floor(x2 / CHUNK_SIZE);
+        int zchunk2 = floor(z2 / CHUNK_SIZE);
+
+        int xindex2 = x2 % CHUNK_SIZE;
+        int zindex2 = z2 % CHUNK_SIZE;
+
+        chunk_t &chunk1 = Chunks[std::make_pair(xchunk1, zchunk1)];
+        chunk_t &chunk2 = Chunks[std::make_pair(xchunk2, zchunk2)];
+
+        for(int f = 0;f < 6;f++) {
+            for(int v = 0;v < 4;v++) {
+                if(chunk1.ambientVecs[xindex1][y1][zindex1][f][v] != chunk2.ambientVecs[xindex2][y2][zindex2][f][v])
+                    return false;
+            }
+        }
+        return true;
+    }
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
     std::vector<build_schedule_info_t>ScheduledBuilds;

@@ -26,7 +26,7 @@ void TextureArray::Load(std::vector<std::string> files) {
     // TODO: Remove hardcodes
     glTexStorage3D(GL_TEXTURE_2D_ARRAY, 4, GL_RGB8, 16, 16, files.size());
 
-    for(int i = 0;i < files.size();i++) {
+    for(size_t i = 0;i < files.size();i++) {
         SDL_Surface *curSurf = IMG_Load(files[i].c_str());
         if(curSurf == nullptr) {
             std::cerr << "bad surface: " << files[i] << std::endl;

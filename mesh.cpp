@@ -47,18 +47,15 @@ Mesh::~Mesh() {
 }
 
 void Mesh::Vert3(float x, float y,float z) {
-    vec3_t v = { x + xTrans, y + yTrans, z + zTrans };
-    vVertBuffer.push_back(v);
+    vVertBuffer.emplace_back(x + xTrans, y + yTrans, z + zTrans);
 }
 
 void Mesh::TexCoord2(float x, float y) {
-    vec2_t v = { x, y };
-    vTexCoords.push_back(v);
+    vTexCoords.emplace_back(x,y);
 }
 
-void Mesh::Color4(float r, float g, float b, float a) {
-    RGBA col(r,g,b,a);
-    ColorBuffer.push_back(col);
+void Mesh::Color4(float r, float g, float b, float a) {    
+    ColorBuffer.emplace_back(r,g,b,a);
 }
 
 void Mesh::SetTranslation(float x, float y, float z) {
@@ -68,7 +65,7 @@ void Mesh::SetTranslation(float x, float y, float z) {
 }
 
 void Mesh::Index1(int i) {
-    Indices.push_back(i);
+    Indices.emplace_back(i);
 }
 
 void Mesh::BindBufferData() {

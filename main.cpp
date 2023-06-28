@@ -78,7 +78,6 @@ int main(int argc, char* args[]) {
     myMap.FromBMP("textures/heightmap.bmp");
     myBrickWidget.Init(myMap);
     
-	int iTicks = SDL_GetTicks();
 	float fdelta = 0.0f;
 	bool bDone = false;
 
@@ -112,7 +111,7 @@ int main(int argc, char* args[]) {
         glClearColor(0.494 * fAmbient, 0.752 * fAmbient, 0.933f * fAmbient, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        myShader.projMatrix = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+        myShader.projMatrix = glm::perspective(glm::radians(75.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
 
         myShader.Bind();
 
@@ -273,7 +272,7 @@ void DrawCursor() {
 }
 
 void DrawMiniMap(Camera &myCamera, Map &myMap) {
-    return;
+
     Eternal::Sprite square, grey;
     square.Load("textures/square.png");
     grey.Load("textures/grey.png");
@@ -282,9 +281,7 @@ void DrawMiniMap(Camera &myCamera, Map &myMap) {
     Rect r(0,0,size,size);
     Rect c(0,0,16,16);
 
-    int camX = myCamera.position.x;
     int camY = myCamera.position.y;
-    int camZ = myCamera.position.z;
 
     // Draw cur level
     for(int x = 0;x < 32;x++) {
@@ -314,7 +311,9 @@ void DrawMiniMap(Camera &myCamera, Map &myMap) {
     r.x = myCamera.position.x * size;
     r.y = myCamera.position.z * size;
     r.y -= (size/2);
-    r.w = r.h = 16;
+    r.w = r.h = 8;
+    r.x += 4;
+    r.y += 4;
     
     player.Bind();
     player.Draw(r,c);
@@ -324,13 +323,27 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     brickTargetMesh.Clean();
     brickTargetMesh.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
-    for(int i = 0;i < vertList.size();i++) {
+    for(size_t i = 0;i < vertList.size();i++) {
         brickTargetMesh.Index1(1); brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
         brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
-        brickTargetMesh.Color4(0,0,0,1);
+        brickTargetMesh.Color4(1,0,0,1);
     }
     brickTargetMesh.BindBufferData();
-    brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
+//    brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
+
+
+    for(auto &vec: bricklist) {
+        brickTargetMesh.Clean();
+        brickTargetMesh.SetTranslation((int)vec.x,(int)vec.y,(int)vec.z);
+        for(size_t i = 0;i < vertList.size();i++) {
+            brickTargetMesh.Index1(1); brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
+            brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
+            brickTargetMesh.Color4(1,0,0,1);
+        }
+        brickTargetMesh.BindBufferData();
+        brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
+    }
+    bricklist.clear();
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
@@ -348,35 +361,35 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
     ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
     std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     str = "FrameTime: " + std::to_string(FrameTime.count()) + "ms";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
     
     str = "SwapTime: " + std::to_string(SwapTime.count()) + "ms";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     str = "OrthoTime: " + std::to_string(OrthoTime.count()) + "ms";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     str = "avg fps: " + std::to_string(lastAvgFps);
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     std::string polyNumber = std::to_string(gblPolyCount);
     polyNumber.insert(polyNumber.begin()+3,',');
     str = "polycount: : " + polyNumber;
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
     str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
-    ImGui::Text(str.c_str());
+    ImGui::Text("%s", str.c_str());
 
     ImGui::Separator();
     ImGui::Checkbox("V-Sync", &bEnableVSync);

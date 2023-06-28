@@ -20,7 +20,7 @@ void BrickSelectorWidget::Init(Map &map) {
     auto filenames = map.GetTextureFilenames();
 
     BrickSprites = new Eternal::Sprite[filenames.size()];
-    for(int i = 0;i < filenames.size();i++) {
+    for(size_t i = 0;i < filenames.size();i++) {
         BrickSprites[i].Load(filenames[i]);
     }
 

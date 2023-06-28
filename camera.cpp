@@ -31,7 +31,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     FindTargettedBrick(myMap, input, selectWidget);
 
     float STRAFE_SPD = 0.05f;
-    const float pi = 3.14159f;
+//    const float pi = 3.14159f;
 
     myShader.viewMatrix = glm::lookAt(position, position + direction, up);
 
@@ -62,10 +62,6 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         moveDelta -= forward * STRAFE_SPD;
 	}
 
-    bool xMoveAccepted = true;
-    bool zMoveAccepted = true;
-
-    float distf = 0.6f;
 /*    for(float z = -distf;z < distf;z += 0.1f) {
         for(float x = -distf;x < distf;x += 0.1f) {
             if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+0.5f+z), (int)position.y-1) != 0) {
@@ -106,7 +102,6 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     if(keys[SDL_SCANCODE_ESCAPE]) {
         bFocus = false;
     }
-    static int lastX = mouseX, lastY = mouseY;
 
 //    std::cout << direction.x << " , " << direction.y << " , " << direction.z << std::endl;
     if(bFocus) {
@@ -131,9 +126,6 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         glm::mat4 yawRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(xDelta), glm::vec3(0.0f, 1.0f, 0.0f));
         direction = glm::vec3(yawRotationMatrix * glm::vec4(direction, 1.0f));
 
-        lastX = mouseX;
-        lastY = mouseY;
-
         SDL_WarpMouseInWindow(myWindow,400,300);
     }
     else {
@@ -147,18 +139,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     GLuint view = glGetUniformLocation(myShader.myProgram, "View");
     glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
 
-    float d = 0.1f;
-    bool bground = false;
-
-    
-    for(float x = -0.4f;x < 0.4f;x += 0.1f) {
-        for(float z = -0.4f;z < 0.4f;z += 0.1f) {
-            if( myMap.GetBrick((int)(position.x + 0.5f + x), (int)(position.z + z), (int)(position.y-1.5f)) != 0) {
-                bground = true;
-                break;
-            }
-        }
-    }
+    CheckGround(myMap);
     if(!bground) {
         fJumpVel += 0.005f;
     }
@@ -166,8 +147,11 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         fJumpVel = 0;
     }
 
+    if(keys[SDL_SCANCODE_1]) {
+        fJumpVel = 0;
+        position.y += 0.25f;
+    }
 
-    static int cooldown = 60;
     if (keys[SDL_SCANCODE_SPACE] && bground) {
         fJumpVel = -0.1f;
         position.y += 0.25f;
@@ -176,6 +160,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         position -= up * 0.25f;
 	}
 
+    
     position.y -= fJumpVel;
     
 //    std::cout << position.y << std::endl;
@@ -216,7 +201,6 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     int chunkX = floor(targetted_brick.x / Map::CHUNK_SIZE);
     int chunkZ = floor(targetted_brick.z / Map::CHUNK_SIZE);
         
-    int mx = 0, my = 0;
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
         std::cout << "deleting brick " << myMap.GetBrick(targetted_brick.x, targetted_brick.z, targetted_brick.y) << " at (" << targetted_brick.x << ", " << targetted_brick.y << ", " << targetted_brick.z << std::endl;
 /*

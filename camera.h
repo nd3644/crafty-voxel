@@ -6,6 +6,7 @@
 #include "shader.h"
 #include "input.h"
 #include "map.h"
+#include "globals.h"
 
 class BrickSelectorWidget;
 class Camera
@@ -39,6 +40,14 @@ class Camera
             return false;            
         }
 
+        void CheckGround(Map &map) {
+            bground = false;
+            if(map.GetBrick((int)position.x, (int)position.z, (int)position.y-2) > 0) {
+                bground = true;
+                bricklist.emplace_back((int)position.x, (int)position.y-2, (int)position.z);
+            }
+        }
+
         bool CheckCollision(Map &map) {
             float size = 16;
             Rect r(0,0,size,size);
@@ -48,7 +57,6 @@ class Camera
             int camY = position.y;
             int camZ = position.z;
 
-            bground = false;
             // Draw cur level
             for(int x = camX-8;x < camX+8;x++) {
                 r.x = x * size;
@@ -62,9 +70,9 @@ class Camera
                         p.x = position.x * size;
                         p.y = position.z * size;
                         p.y -= (size/2);
-                        p.w = p.h = 14;
-                        p.x += 1;
-                        p.y += 1;
+                        p.w = p.h = 8;
+                        p.x += 4;
+                        p.y += 4;
                         if(p.IsColliding(r)) {
                             return true;
                         }

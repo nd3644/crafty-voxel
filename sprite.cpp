@@ -159,12 +159,12 @@ void Eternal::Sprite::Draw_NoBind(Rect &pos, Rect &clip) {
     vVertexBuffer[5].x = pos.x;             vVertexBuffer[5].y = pos.y + pos.h;
 
 
-    const float cy = 0;//clip.y / h;
+/*    const float cy = 0;//clip.y / h;
     const float cx = 0;//clip.x / w;
 
     const float ch = 1;//(clip.y / h) + clip.h / h;
     const float cw = 1;//(clip.x / w) + clip.w / w;
-
+*/
     vTexCoords[0].x = 0;        vTexCoords[0].y = 0;
     vTexCoords[1].x = 1;        vTexCoords[1].y = 0;
     vTexCoords[2].x = 0;        vTexCoords[2].y = 1;
