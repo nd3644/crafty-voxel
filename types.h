@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <glm/glm.hpp>
+
 struct vec2_t {
     vec2_t() : x(0), y(0) { }
     vec2_t(float xpos, float ypos) : x(xpos), y(ypos) { }
@@ -34,6 +36,62 @@ struct Rect {
             || y + h < b.y) {
             return false;
         }
+        return true;
+    }
+
+    bool IsColliding(Rect &b, glm::vec2 &normal) {
+        if (x > b.x + b.w
+            || x + w < b.x
+            || y > b.y + b.h
+            || y + h < b.y) {
+            return false;
+        }
+
+
+        // temporary translate to center origin
+        x += w / 2;
+        y += h / 2;
+        
+        b.x += b.w / 2;
+        b.y += b.h / 2;
+
+        normal.x = 0;
+        normal.y = 0;
+
+        glm::vec2 Distance;
+        glm::vec2 absDistance;
+
+        float XMagnitute;
+        float YMagnitute;
+
+        Distance.x = b.x - x;
+        Distance.y = b.y - y;
+
+        float XAdd = (b.w + w) / 2.0f;
+        float YAdd = (b.h + h) / 2.0f;
+
+
+        absDistance.x = (Distance.x < 0.0f) ? -Distance.x : Distance.x;
+        absDistance.y = (Distance.y < 0.0f) ? -Distance.y : Distance.y;
+
+        XMagnitute = XAdd - absDistance.x;
+        YMagnitute = YAdd - absDistance.y;
+
+        // check most significant overlap
+        if (XMagnitute < YMagnitute) {
+            normal.x = (Distance.x > 0) ? -XMagnitute : XMagnitute;
+        }
+        else {
+            normal.y = (Distance.y > 0) ? -YMagnitute : YMagnitute;
+        }
+
+        // put back origin
+        x -= w / 2;
+        y -= h / 2;
+        
+        b.x -= b.w / 2;
+        b.y -= b.h / 2;
+
         return true;
     }
     float x, y, w, h;

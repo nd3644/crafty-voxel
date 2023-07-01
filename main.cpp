@@ -331,7 +331,6 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     brickTargetMesh.BindBufferData();
 //    brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
 
-
     for(auto &vec: bricklist) {
         brickTargetMesh.Clean();
         brickTargetMesh.SetTranslation((int)vec.x,(int)vec.y,(int)vec.z);

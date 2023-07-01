@@ -42,16 +42,33 @@ class Camera
 
         void CheckGround(Map &map) {
             bground = false;
-            if(map.GetBrick((int)position.x, (int)position.z, (int)position.y-2) > 0) {
+            float d = 0.25f;
+            if(map.GetBrick((int)(position.x+0.5f - d), (int)(position.z - d), (int)position.y-2) > 0
+            || map.GetBrick((int)(position.x+0.5f + d), (int)(position.z - d), (int)position.y-2) > 0
+            || map.GetBrick((int)(position.x+0.5f + d), (int)(position.z + d), (int)position.y-2) > 0
+            || map.GetBrick((int)(position.x+0.5f - d), (int)(position.z + d), (int)position.y-2) > 0) {
                 bground = true;
-                bricklist.emplace_back((int)position.x, (int)position.y-2, (int)position.z);
+                bricklist.emplace_back((int)(position.x+0.5f), (int)position.y-2, (int)(position.z));
             }
+/*            else {
+                Rect p;
+                p.x = position.x;
+                p.y = position.z;
+                p.y -= (1.0f/2.0f);
+                p.w = p.h = 0.5f;
+                p.x += 0.25f;
+                p.y += 0.25f;
+                glm::vec2 n;
+                if(p.IsColliding(collidingBrick,n)) {
+                    position.x += n.x;
+                    position.z += n.y;
+                }
+            }*/
         }
 
         bool CheckCollision(Map &map) {
-            float size = 16;
+            float size = 1;
             Rect r(0,0,size,size);
-            Rect c(0,0,16,16);
 
             int camX = position.x;
             int camY = position.y;
@@ -70,10 +87,12 @@ class Camera
                         p.x = position.x * size;
                         p.y = position.z * size;
                         p.y -= (size/2);
-                        p.w = p.h = 8;
-                        p.x += 4;
-                        p.y += 4;
-                        if(p.IsColliding(r)) {
+                        p.w = p.h = 0.5f;
+                        p.x += 0.25f;
+                        p.y += 0.25f;
+                        glm::vec2 n;
+                        if(p.IsColliding(r, n)) {
+                            collidingBrick = r;
                             return true;
                         }
                     }
@@ -82,6 +101,8 @@ class Camera
             return false;
         }
     private:
+
+        Rect collidingBrick;
         float AngleX, AngleY;
         float fJumpVel;
         bool bFocus;

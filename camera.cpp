@@ -76,7 +76,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
 
     position.z += moveDelta.z;
     if(CheckCollision(myMap)) {
-        position.z -= moveDelta.z;
+        position.z -= moveDelta.z;   
     }
 
     static bool lastpress = 0;
