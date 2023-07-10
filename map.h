@@ -31,7 +31,7 @@ public:
     int NUM_THREADS;
 
     static constexpr int CHUNK_SIZE = 16;
-    static constexpr int MAX_HEIGHT = 256;
+    static constexpr int MAX_HEIGHT = 128;
     static constexpr int MAX_LIGHT_LEVEL = 16;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
@@ -88,7 +88,7 @@ public:
         Mesh mesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
-        float ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
+        uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
         std::vector<light_t>lightList;
         std::vector<light_t>pushedLights;
 
@@ -408,7 +408,8 @@ public:
 
 
     bool IsBrickSurroundedByOpaque(int x, int z, int y) {
-        if(GetBrick(x,z,y+1) <= 0
+        // These are checked in a funny order because they are in order of most-to-least likely
+        if(GetBrick(x,z,y+1) <= 0 
         || GetBrick(x-1,z,y) <= 0
         || GetBrick(x+1,z,y) <= 0
         || GetBrick(x,z-1,y) <= 0
@@ -419,6 +420,7 @@ public:
         return true;
     }
 private:
+
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
     std::vector<build_schedule_info_t>ScheduledBuilds;

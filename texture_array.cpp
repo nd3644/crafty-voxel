@@ -33,8 +33,9 @@ void TextureArray::Load(std::vector<std::string> files) {
             exit(1);
         }
 
+         GLuint format = (curSurf->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, curSurf->w, curSurf->h,
-                             1, GL_RGB, GL_UNSIGNED_BYTE, curSurf->pixels);
+                             1, format, GL_UNSIGNED_BYTE, curSurf->pixels);
         
         SDL_FreeSurface(curSurf);
     }

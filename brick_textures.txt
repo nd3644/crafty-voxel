@@ -5,3 +5,6 @@ textures/torch.png
 textures/sand.png
 textures/stone.png
 textures/water.png
+textures/trunk_top.png
+textures/trunk_side.png
+textures/leaves.png

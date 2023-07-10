@@ -36,7 +36,7 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = num_cores/2;
     }
 
-    viewDist = 18;
+    viewDist = 16;
     bIsDay = true;
 }
 
@@ -192,6 +192,50 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 		}
 	}
 
+
+    // Plant some trees
+
+    if(rand() % 6 == 0) {
+        int lX = rand() % 16;
+        int lZ = rand() % 16;
+        lX += chunkx * CHUNK_SIZE;
+        lZ += chunkz * CHUNK_SIZE;
+        int height = (rand() % 6) + 5;
+
+        bool bCanPlant = false;
+
+        int groundLvl = 1;
+        for(groundLvl = 1;groundLvl < MAX_HEIGHT;groundLvl++) {
+            if(map.GetBrick(lX,lZ,groundLvl) == 0) {
+                if(map.GetBrick(lX,lZ,groundLvl-1) == map.IdFromName("grass_top")) { // Only grow ontop of grass
+                    bCanPlant = true;
+                }
+                break;
+            }
+        }
+
+        if(bCanPlant) {
+            for(int y = 0;y < groundLvl+height;y++) {
+                map.SetBrick(lX,lZ,y,map.IdFromName("tree"));
+            }
+
+            for(int y = 0;y < 4;y++) {
+                int length = 4 - y;
+                for(int x = lX - length;x <= lX + length;x++) {
+                    for(int z = lZ - length;z <= lZ + length;z++) {
+                        map.SetBrick(x,z,(groundLvl+height)+y,map.IdFromName("leaves"));
+                    }
+                }
+            }
+            for(int x = lX - 3;x <= lX + 3;x++) {
+                for(int z = lZ - 3;z <= lZ + 3;z++) {
+                    map.SetBrick(x,z,(groundLvl+height)-1,map.IdFromName("leaves"));
+                }
+            }
+        }
+        
+    }
+
     bGen = true;
 }
 
@@ -264,13 +308,13 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
                 // Set default AO values to 1.0f (no AO at all)
                 for(int f = 0;f < 6;f++)
                     for(int v = 0;v < 4;v++)
-                        chunk.ambientVecs[x][y][z][f][v] = 1.0f;
+                        chunk.ambientVecs[x][y][z][f][v] = 100;
 
-                float ambShade = 0.85f;
+                uint8_t ambShade = 85;
 
 
                 // Top
-                float (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
+                uint8_t (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
                 if(GetBrick(xindex-1,zindex,y+1) != 0 || GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0) {
                     topamb[0] = ambShade;
                 }
@@ -286,7 +330,7 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
 
                 // Left
 
-                float (&leftamb)[4] = chunk.ambientVecs[x][y][z][2];
+                uint8_t (&leftamb)[4] = chunk.ambientVecs[x][y][z][2];
                 //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
                 if(GetBrick(xindex-1,zindex-1,y) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex,y+1) != 0) {
                     leftamb[0] = ambShade;
@@ -303,7 +347,7 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
 
                 // ...
                 // Right
-                float (&rightamb)[4] = chunk.ambientVecs[x][y][z][3];
+                uint8_t (&rightamb)[4] = chunk.ambientVecs[x][y][z][3];
                 //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
                 if(GetBrick(xindex+1,zindex-1,y) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex,y+1) != 0) {
                     rightamb[0] = ambShade;
@@ -319,7 +363,7 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
                 }
 
                 // back
-                float (&backamb)[4] = chunk.ambientVecs[x][y][z][4];
+                uint8_t (&backamb)[4] = chunk.ambientVecs[x][y][z][4];
                 //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
                 if(GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y) != 0) {
                     backamb[0] = ambShade;
@@ -335,7 +379,7 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
                 }
 
                 // Front
-                float (&frontamb)[4] = chunk.ambientVecs[x][y][z][5];
+                uint8_t (&frontamb)[4] = chunk.ambientVecs[x][y][z][5];
                 if(GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y) != 0) {
                     frontamb[0] = ambShade;
                 }
@@ -387,7 +431,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.SetTranslation(posX,y,posZ);
 
                 int len = 1;
-                for(int i = 1;i < CHUNK_SIZE-1;i++) {
+                for(int i = 1;i < CHUNK_SIZE;i++) {
                     if(z < CHUNK_SIZE-i
                     && brickID == GetBrick(xindex,zindex+i,y)
                     && brickLightLevel == GetLightLevel(xindex,zindex+i,y)) {
@@ -413,29 +457,38 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
                 // Draw top
 
-                float (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
                 
-                if(topamb[0] + topamb[3] > topamb[1] + topamb[2]) {
-                    mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
-                    mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
-                    mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, 0.5, 0);   // right back 1 
-                    mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
-                    mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
-                    mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left 3
+                uint8_t (&topamb_a)[4] = chunk.ambientVecs[x][y][z][0];
+                float amb[4];
+                for(int k = 0;k < 4;k++) {
+                    amb[k] = ((float)topamb_a[k] / 100.0f) * lv;
+                }
+                
+                if(amb[0] + amb[3] > amb[1] + amb[2]) {
+                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
+                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
+                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, 0.5, 0);   // right back 1 
+                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
+                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
+                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left 3
                 }
                 else {
-                    mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len); // front left
-                    mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right
-                    mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // right back
-                    mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left
-                    mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);   // right back
-                    mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // left back
+                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len); // front left
+                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right
+                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // right back
+                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left
+                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);   // right back
+                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // left back
                 }
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
 
 
-                float (&botamb)[4] = chunk.ambientVecs[x][y][z][1];
+                uint8_t (&botamb_a)[4] = chunk.ambientVecs[x][y][z][1];
+                for(int k = 0;k < 4;k++) {
+                    amb[k] = (float)botamb_a[k] / 100.0f;
+                }
+
 
                 // TODO: add a/o here
                 // Draw bottom
@@ -448,58 +501,69 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
+                lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+
+                uint8_t (&leftamb_a)[4] = chunk.ambientVecs[x][y][z][2];
+                for(int k = 0;k < 4;k++) {
+                    amb[k] = ((float)leftamb_a[k] / 100.0f) * lv;
+                }
+
+                // Draw left
+                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.Color4(amb[2], amb[2], amb[2], 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(-0.5, -0.5, len); // br
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
+
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tl
+                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
                 lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
 
-                float (&leftamb)[4] = chunk.ambientVecs[x][y][z][2];
-                
-                lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
-
-                // Draw left
-                mesh.Color4(leftamb[3] * lv, leftamb[3] * lv, leftamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-                mesh.Color4(leftamb[2] * lv, leftamb[2] * lv, leftamb[2] * lv, 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(-0.5, -0.5, len); // br
-                mesh.Color4(leftamb[1] * lv, leftamb[1] * lv, leftamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
-                mesh.Color4(leftamb[1] * lv, leftamb[1] * lv, leftamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
-                mesh.Color4(leftamb[0] * lv, leftamb[0] * lv, leftamb[0] * lv, 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tl
-                mesh.Color4(leftamb[3] * lv, leftamb[3] * lv, leftamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-
-                float (&rightamb)[4] = chunk.ambientVecs[x][y][z][3];
+                uint8_t (&rightamb_a)[4] = chunk.ambientVecs[x][y][z][3];
+                for(int k = 0;k < 4;k++) {
+                    amb[k] = ((float)rightamb_a[k] / 100.0f * lv);
+                }
                 
                 // Draw right
-                mesh.Color4(rightamb[1] * lv, rightamb[1] * lv, rightamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr
-                mesh.Color4(rightamb[2] * lv, rightamb[2] * lv, rightamb[2] * lv, 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(0.5, -0.5, len); // br
-                mesh.Color4(rightamb[3] * lv, rightamb[3] * lv, rightamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
-                
-                
-                mesh.Color4(rightamb[1] * lv, rightamb[1] * lv, rightamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr   
-                mesh.Color4(rightamb[3] * lv, rightamb[3] * lv, rightamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);                             
-                mesh.Color4(rightamb[0] * lv, rightamb[0] * lv, rightamb[0] * lv, 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr
+                mesh.Color4(amb[2], amb[2], amb[2], 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(0.5, -0.5, len); // br
+                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
+        
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr   
+                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);                             
+                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
 
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
 
-                float (&backamb)[4] = chunk.ambientVecs[x][y][z][4];
+                uint8_t (&backamb_a)[4] = chunk.ambientVecs[x][y][z][4];
+                for(int k = 0;k < 4;k++) {
+                    amb[k] = ((float)backamb_a[k] / 100.0f) * lv;
+                }
                                 
                 // Draw back
-                mesh.Color4(backamb[3] * lv, backamb[3] * lv, backamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
-                mesh.Color4(backamb[0] * lv, backamb[0] * lv, backamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
-                mesh.Color4(backamb[2] * lv, backamb[2] * lv, backamb[2] * lv, 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0); // bl
+                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
+                mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0); // bl
 
-                mesh.Color4(backamb[0] * lv, backamb[0] * lv, backamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);// tl
-                mesh.Color4(backamb[3] * lv, backamb[3] * lv, backamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
-                mesh.Color4(backamb[1] * lv, backamb[1] * lv, backamb[1] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tr
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);// tl
+                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
+                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tr
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
 
                 // Draw front
-                float (&frontamb)[4] = chunk.ambientVecs[x][y][z][5];
+                uint8_t (&frontamb_a)[4] = chunk.ambientVecs[x][y][z][5];
+                for(int k = 0;k < 4;k++) {
+                    amb[k] = ((float)frontamb_a[k] / 100.0f) * lv;
+                }
                             
-                mesh.Color4(frontamb[0] * lv, frontamb[0] * lv, frontamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len); // tl
-                mesh.Color4(frontamb[3] * lv, frontamb[3] * lv, frontamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
-                mesh.Color4(frontamb[2] * lv, frontamb[2] * lv, frontamb[2] * lv, 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len); // bl
-                mesh.Color4(frontamb[0] * lv, frontamb[0] * lv, frontamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);// tl
-                mesh.Color4(frontamb[1] * lv, frontamb[1] * lv, frontamb[1] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len); // tr
-                mesh.Color4(frontamb[3] * lv, frontamb[3] * lv, frontamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len); // tl
+                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
+                mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len); // bl
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);// tl
+                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
                 cube_count++;
             }
         }

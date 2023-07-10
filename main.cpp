@@ -233,8 +233,8 @@ void Init() {
 
         if (glDebugMessageCallback && glDebugMessageControl) {
             // Enable debug output and set up the callback function
-            glDebugMessageCallback(DebugCallback, nullptr);
-            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
+/*            glDebugMessageCallback(DebugCallback, nullptr);
+            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);*/
         }
         else {
             std::cout << "ahh";
