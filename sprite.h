@@ -13,16 +13,12 @@ namespace Eternal {
             ~Sprite();
 
             void Load(std::string sfilename);
-            void FromData(uint8_t *pixels, int width, int height, int bpp);
-            
+
             void Bind(int unit = 0);
             void Draw(Rect &pos, Rect &clip);
 
             void Draw_NoBind(Rect &pos, Rect &clip);
             void ForceResize(int width, int height);
-
-            void AmendToMesh(Rect &pos, Rect &clip, Eternal::Mesh &mesh);
-            void AmendToMesh(Rect &pos, Rect &clip, Eternal::Mesh &mesh, RGBA cols[6]);
 
             int GetWidth() const { return w; }
             int GetHeight() const { return h; }
@@ -48,6 +44,7 @@ namespace Eternal {
             vec2_t vVertexBuffer[6];
             vec2_t vTexCoords[6];
             RGBA ColorBuffer[6];
+            int Indices[6];
 
             std::string sName;
     };

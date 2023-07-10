@@ -15,8 +15,11 @@ class Camera
         Camera();
         ~Camera();
 
+        static constexpr float DEFAULT_STRAFE_SPD = 0.05f;
+        float STRAFE_SPD = DEFAULT_STRAFE_SPD;
+
         void Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
-        glm::vec3 position, direction, up, right;
+        glm::vec3 position, formerPosition, direction, up, right;
 
         glm::vec3 targetted_brick;
 
@@ -43,27 +46,25 @@ class Camera
         void CheckGround(Map &map) {
             bground = false;
             float d = 0.25f;
-            if(map.GetBrick((int)(position.x+0.5f - d), (int)(position.z - d), (int)position.y-2) > 0
-            || map.GetBrick((int)(position.x+0.5f + d), (int)(position.z - d), (int)position.y-2) > 0
-            || map.GetBrick((int)(position.x+0.5f + d), (int)(position.z + d), (int)position.y-2) > 0
-            || map.GetBrick((int)(position.x+0.5f - d), (int)(position.z + d), (int)position.y-2) > 0) {
+            if(map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z - d)), (int)position.y-1) > 0
+            || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z - d)), (int)position.y-1) > 0
+            || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z + d)), (int)position.y-1) > 0
+            || map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z + d)), (int)position.y-1) > 0) {
                 bground = true;
-                bricklist.emplace_back((int)(position.x+0.5f), (int)position.y-2, (int)(position.z));
+                float standingPos = ((int)position.y-1)+2.0f;
+                if(position.y < standingPos)
+                    position.y = standingPos;
+                bricklist.emplace_back((int)(position.x+0.5f), (int)position.y-1, (int)(position.z));
             }
-/*            else {
-                Rect p;
-                p.x = position.x;
-                p.y = position.z;
-                p.y -= (1.0f/2.0f);
-                p.w = p.h = 0.5f;
-                p.x += 0.25f;
-                p.y += 0.25f;
-                glm::vec2 n;
-                if(p.IsColliding(collidingBrick,n)) {
-                    position.x += n.x;
-                    position.z += n.y;
-                }
-            }*/
+
+            // Check the roof just for fun
+            if(map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
+            || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
+            || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z + d)), (int)position.y+1) > 0
+            || map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z + d)), (int)position.y+1) > 0) {
+                if(fJumpVel < 0)
+                    fJumpVel = 0;
+            }
         }
 
         bool CheckCollision(Map &map) {
@@ -82,7 +83,8 @@ class Camera
                     int y = camY;
 
                     // shin level
-                    if(map.GetBrick(x,z,y-1) != 0) {
+                    if(map.GetBrick(x,z,y) != 0
+                    || map.GetBrick(x,z,y-1)) {
                         Rect p;
                         p.x = position.x * size;
                         p.y = position.z * size;
@@ -93,17 +95,33 @@ class Camera
                         glm::vec2 n;
                         if(p.IsColliding(r, n)) {
                             collidingBrick = r;
+
+
+                            tmp.x = p.x - r.x;
+                            tmp.z = p.y - r.y;
+                            
                             return true;
                         }
                     }
                 }
             }
-            return false;
+            return false; 
         }
+
+        glm::vec3 tmp;
+
+        bool IsThirdPerson() const;
+
     private:
+        void CheckInput(Eternal::InputHandle &input);
+        void RunMouseLogic();
+        
+    private:
+        bool bThirdPerson;
+        int jumpCooldown;
 
         Rect collidingBrick;
-        float AngleX, AngleY;
+        glm::vec3 moveDelta;
         float fJumpVel;
         bool bFocus;
         bool bground;

@@ -44,8 +44,9 @@ extern void DrawCursor();
 extern void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh);
 
 bool bEnableVSync = true;
+bool bDrawColliders = false;
 int frameCounter = 0;
-int fpsTimer = SDL_GetTicks();
+int fpsTimer = 0;
 int lastAvgFps = 0;
 std::chrono::milliseconds CameraUpdateDuration;
 std::chrono::milliseconds MapDrawDuration, MapBuildDuration, FrameTime, SwapTime, OrthoTime;
@@ -59,8 +60,6 @@ Shader myShader, myShader2D;
 int main(int argc, char* args[]) {
 	CompileArr();
 
-    Eternal::InputHandle myInputHandle;
-
 	myShader.projMatrix = glm::mat4(1);
 	myShader.viewMatrix = glm::mat4(1);
 	myShader.modelMatrix = glm::mat4(1);
@@ -69,6 +68,7 @@ int main(int argc, char* args[]) {
     myShader2D.modelMatrix = glm::mat4(1);
     myShader2D.viewMatrix = glm::mat4(1);
 	Init();
+    Eternal::InputHandle myInputHandle;
     Mesh brickTargetMesh;
 
     Camera myCamera;
@@ -139,10 +139,14 @@ int main(int argc, char* args[]) {
 
         // 2D rendering
         myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
+        myShader2D.modelMatrix = glm::mat4(1);
+        myShader2D.viewMatrix = glm::mat4(1);
+
         myShader2D.Bind();
+
         DrawCursor();
         myBrickWidget.Draw();
-        DrawMiniMap(myCamera, myMap);
+//        DrawMiniMap(myCamera, myMap);
 
         DrawDebugUI(myCamera, myMap);
         end = std::chrono::high_resolution_clock::now();
@@ -183,6 +187,14 @@ void SetupImgui() {
     ImGui_ImplOpenGL3_Init();
 }
 
+void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+    // Handle the debug message as needed
+    // You can print the message or perform other actions based on severity, type, etc.
+    // For example, you can use printf to print the message:
+    printf("OpenGL Debug Message: %s\n", message);
+}
+
+
 void Init() {
 	std::cout << "trying init---\n";
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -190,6 +202,9 @@ void Init() {
 		std::cout << "\t *" << SDL_GetError() << std::endl;
 		exit(0);
 	}
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+
 
 	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_W, WIN_H, SDL_WINDOW_OPENGL);
 	if (myWindow == NULL) {
@@ -210,6 +225,24 @@ void Init() {
 	if (glewInit() != GLEW_OK) {
 		std::cout << "Couldn't init GLEW" << std::endl;
 	}
+
+    if (GLEW_ARB_debug_output) {
+        // Retrieve function pointers for debug output functions
+        PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = (PFNGLDEBUGMESSAGECALLBACKPROC)SDL_GL_GetProcAddress("glDebugMessageCallback");
+        PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = (PFNGLDEBUGMESSAGECONTROLPROC)SDL_GL_GetProcAddress("glDebugMessageControl");
+
+        if (glDebugMessageCallback && glDebugMessageControl) {
+            // Enable debug output and set up the callback function
+            glDebugMessageCallback(DebugCallback, nullptr);
+            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, true);
+        }
+        else {
+            std::cout << "ahh";
+        }
+    }
+    else {
+        std::cout << "ahhhh" << std::endl;
+    }
 
 	SDL_GL_SetSwapInterval(1);
 
@@ -250,17 +283,6 @@ void Cleanup() {
 void DrawCursor() {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
-    Mesh myMesh;
-    glPointSize(6);
-    for(int i = 0;i < 3;i++) {
-        myMesh.SetTranslation(i*16,i*16,0);
-        myMesh.Color4(1,1,1,1);
-        myMesh.Index1(1);
-        myMesh.Vert3(400,600,0);
-        myMesh.TexCoord2(0,0);
-    }
-//    myMesh.Draw(Mesh::MODE_POINTS);
-    
     Rect c;
     c.x = c.y = 0; c.w = c.h = 16;
     Rect r;
@@ -324,13 +346,22 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     brickTargetMesh.Clean();
     brickTargetMesh.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
     for(size_t i = 0;i < vertList.size();i++) {
-        brickTargetMesh.Index1(1); brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
+        brickTargetMesh.Index1(1);
+        brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
         brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
-        brickTargetMesh.Color4(1,0,0,1);
+        brickTargetMesh.Color4(0,0,0,1);
     }
     brickTargetMesh.BindBufferData();
-//    brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
 
+//    std::cout << glGetError() << std::endl;
+    brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
+
+    if(!bDrawColliders) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        return;
+    }
+
+    // Draw colliders
     for(auto &vec: bricklist) {
         brickTargetMesh.Clean();
         brickTargetMesh.SetTranslation((int)vec.x,(int)vec.y,(int)vec.z);
@@ -342,8 +373,28 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
         brickTargetMesh.BindBufferData();
         brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
     }
+
     bricklist.clear();
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+
+    if(myCamera.IsThirdPerson()) {
+        glDisable(GL_TEXTURE_2D);
+        // Draw camera box
+        for(auto &vec: cameralist) {
+            brickTargetMesh.Clean();
+            brickTargetMesh.SetTranslation(vec.x,vec.y,vec.z);
+            for(size_t i = 0;i < vertList.size();i++) {
+                brickTargetMesh.Index1(1); brickTargetMesh.Vert3(vertList[i].x * 0.75f, vertList[i].y * 0.75f, (vertList[i].z+0.5f) * 0.75f);
+                brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
+                brickTargetMesh.Color4(1,0,0,1);
+            }
+            brickTargetMesh.BindBufferData();
+            brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
+        }
+    }
+
+    cameralist.clear();
 }
 
 void DrawDebugUI(Camera &myCamera, Map &map) {
@@ -354,7 +405,7 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::SetNextWindowSize(ImVec2(-1, 256));
+    ImGui::SetNextWindowSize(ImVec2(-1, 280));
     // ImGui content goes here
 
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
@@ -380,10 +431,10 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
     str = "avg fps: " + std::to_string(lastAvgFps);
     ImGui::Text("%s", str.c_str());
 
-    std::string polyNumber = std::to_string(gblPolyCount);
+/*    std::string polyNumber = std::to_string(gblPolyCount);
     polyNumber.insert(polyNumber.begin()+3,',');
     str = "polycount: : " + polyNumber;
-    ImGui::Text("%s", str.c_str());
+    ImGui::Text("%s", str.c_str());*/
 
     str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
     ImGui::Text("%s", str.c_str());
@@ -395,8 +446,7 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
     }
-
-
+    ImGui::Checkbox("Colliders", &bDrawColliders);
     if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
         map.RebuildAllVisible();
     }

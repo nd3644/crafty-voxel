@@ -41,7 +41,12 @@ public:
     };
 
     struct chunk_t {
+        int pipleline_stage;
+        int build_count;
+
         chunk_t() {
+            pipleline_stage = 0;
+            build_count = 0;
             bGen = false;
             bIsCurrentlyGenerating = false;
             bIniialBuild = false;
@@ -80,9 +85,9 @@ public:
             pushedLights.clear();
         }
 
-        Mesh mesh, transMesh;
+        Mesh mesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
-        int iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
+        uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         float ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
         std::vector<light_t>lightList;
         std::vector<light_t>pushedLights;
@@ -93,6 +98,10 @@ public:
         bool bIniialBuild;
 
         void Generate(int chunkx, int chunkz, Map &map);
+        void DummyFunc() {
+//            mesh.Clean();
+            //transMesh.Clean();
+        }
     };
 
     enum Priority {
@@ -169,6 +178,7 @@ public:
 	}
 
     inline int GetLightLevel(int x, int z, int y) {
+        return 0;
         if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
             return -1;
         }
@@ -196,6 +206,7 @@ public:
 	}
 
     inline void SetLightLevel(int x, int z, int y, int lvl) {
+        return;
         using namespace std;
         if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
             return;
@@ -328,7 +339,9 @@ public:
         }
     }
 
-    void BuildChunk(int x, int z);
+    void BuildChunk(int chunkX, int chunkZ);
+    void BuildChunkAO(int chunkX, int chunkZ);
+
     void BuildChunkTrans(int x, int z);
     void RebuildLights();
 
@@ -366,7 +379,21 @@ public:
     void ScheduleMeshBuild(build_schedule_info_t info);
 
     chunk_t *GetChunk(int x, int z) {
-        return &Chunks[std::make_pair(x,z)];
+        x *= CHUNK_SIZE;
+        z *= CHUNK_SIZE;
+
+/*        if(x < 0)
+            x += half_limit;
+
+        if(z < 0)
+            z += half_limit;*/
+
+        int xchunk = x / CHUNK_SIZE;
+        int zchunk = z / CHUNK_SIZE;
+
+        auto chunk_index = std::make_pair(xchunk,zchunk);
+
+        return &Chunks[chunk_index];
     }
 
     float GetBrickTransparency(int id) {
@@ -381,41 +408,17 @@ public:
 
 
     bool IsBrickSurroundedByOpaque(int x, int z, int y) {
-        if(GetBrick(x-1,z,y) > 0 && GetBrickTransparency(GetBrick(x-1,z,y)) == 1
-        && GetBrick(x+1,z,y) > 0 && GetBrickTransparency(GetBrick(x+1,z,y)) == 1
-        && GetBrick(x,z-1,y) > 0 && GetBrickTransparency(GetBrick(x,z-1,y)) == 1
-        && GetBrick(x,z+1,y) > 0 && GetBrickTransparency(GetBrick(x,z+1,y)) == 1
-        && GetBrick(x,z,y+1) > 0 && GetBrickTransparency(GetBrick(x,z,y+1)) == 1
-        && GetBrick(x,z,y-1) > 0 && GetBrickTransparency(GetBrick(x,z,y-1)) == 1) {
-            return true;
-        }
-        return false;
-    }
-private:
-    bool BrickAOIsEqual(int x1, int y1, int z1, int x2, int y2, int z2) {
-        int xchunk1 = floor(x1 / CHUNK_SIZE);
-        int zchunk1 = floor(z1 / CHUNK_SIZE);
-
-        int xindex1 = x1 % CHUNK_SIZE;
-        int zindex1 = z1 % CHUNK_SIZE;
-
-        int xchunk2 = floor(x2 / CHUNK_SIZE);
-        int zchunk2 = floor(z2 / CHUNK_SIZE);
-
-        int xindex2 = x2 % CHUNK_SIZE;
-        int zindex2 = z2 % CHUNK_SIZE;
-
-        chunk_t &chunk1 = Chunks[std::make_pair(xchunk1, zchunk1)];
-        chunk_t &chunk2 = Chunks[std::make_pair(xchunk2, zchunk2)];
-
-        for(int f = 0;f < 6;f++) {
-            for(int v = 0;v < 4;v++) {
-                if(chunk1.ambientVecs[xindex1][y1][zindex1][f][v] != chunk2.ambientVecs[xindex2][y2][zindex2][f][v])
-                    return false;
-            }
+        if(GetBrick(x,z,y+1) <= 0
+        || GetBrick(x-1,z,y) <= 0
+        || GetBrick(x+1,z,y) <= 0
+        || GetBrick(x,z-1,y) <= 0
+        || GetBrick(x,z+1,y) <= 0
+        || GetBrick(x,z,y-1) <= 0){
+            return false;
         }
         return true;
     }
+private:
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
     std::vector<build_schedule_info_t>ScheduledBuilds;

@@ -46,41 +46,23 @@ Mesh::~Mesh() {
     Indices.clear();
 }
 
-void Mesh::Vert3(float x, float y,float z) {
-    vVertBuffer.emplace_back(x + xTrans, y + yTrans, z + zTrans);
-}
-
-void Mesh::TexCoord2(float x, float y) {
-    vTexCoords.emplace_back(x,y);
-}
-
-void Mesh::Color4(float r, float g, float b, float a) {    
-    ColorBuffer.emplace_back(r,g,b,a);
-}
-
-void Mesh::SetTranslation(float x, float y, float z) {
-    xTrans = x;
-    yTrans = y;
-    zTrans = z;
-}
-
-void Mesh::Index1(int i) {
-    Indices.emplace_back(i);
-}
-
 void Mesh::BindBufferData() {
     glBindVertexArray(vertArrObj);
+
+    CheckErr();
+
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
-	glBufferData(GL_ARRAY_BUFFER, (vVertBuffer.size()*3) * sizeof(float), &vVertBuffer[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (vVertBuffer.size()*3) * sizeof(float), &vVertBuffer[0], GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[1]);
-	glBufferData(GL_ARRAY_BUFFER, (vTexCoords.size()*2) * sizeof(float), &vTexCoords[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (vTexCoords.size()*2) * sizeof(float), &vTexCoords[0], GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
-	glBufferData(GL_ARRAY_BUFFER, (ColorBuffer.size()*4) * sizeof(float), &ColorBuffer[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (ColorBuffer.size()*4) * sizeof(float), &ColorBuffer[0], GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
-	glBufferData(GL_ARRAY_BUFFER, (Indices.size()) * sizeof(int), &Indices[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (Indices.size()) * sizeof(int), &Indices[0], GL_STATIC_DRAW);
+
     bDataIsBound = true;
 }
 
@@ -88,6 +70,8 @@ void Mesh::Draw(Mode mode) {
     if(!bDataIsBound){
         BindBufferData();
     }
+    CheckErr();
+
 	glBindVertexArray(vertArrObj);
 	glDrawArrays(mode, 0, vVertBuffer.size());
     gblPolyCount += (vVertBuffer.size()/3);

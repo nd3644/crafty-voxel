@@ -15,8 +15,10 @@ Camera::Camera() {
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
 //    position = glm::vec3(120,32,120);
-    position = glm::vec3(8,8,0);
+    position = formerPosition = glm::vec3(8,120,0);
     bFocus = true;
+    bThirdPerson = false;
+    bground = false;
 }
 
 Camera::~Camera() { }
@@ -26,19 +28,89 @@ void Camera::CheckInput() {
 }
 
 void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
-	const Uint8 * keys = SDL_GetKeyboardState(0);
+	const Uint8 *keys = SDL_GetKeyboardState(0);
 
     FindTargettedBrick(myMap, input, selectWidget);
-
-    float STRAFE_SPD = 0.05f;
 //    const float pi = 3.14159f;
 
-    myShader.viewMatrix = glm::lookAt(position, position + direction, up);
 
-    // todo
+    // The "position" of the camera depends on the 3rd or first person state
+    if(bThirdPerson) {
+        glm::vec3 newPosition = position;
+        newPosition -= (direction*5.0f);
+        myShader.viewMatrix = glm::lookAt(newPosition, position + direction, up);
+    }
+    else {
+        myShader.viewMatrix = glm::lookAt(position, position + direction, up);        
+    }
+
+    // Update the uniform
+    GLuint view = glGetUniformLocation(myShader.myProgram, "View");
+    glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
+
+    moveDelta = glm::vec3(0,0,0);
+    CheckInput(input);
+
+    position.x += moveDelta.x;
+    if(CheckCollision(myMap)) {
+        position.x -= moveDelta.x;
+    }
+
+    position.z += moveDelta.z;
+    if(CheckCollision(myMap)) {
+        position.z -= moveDelta.z;   
+    }
+
+    RunMouseLogic();
+
+    CheckGround(myMap);
+    if(!bground) {
+        fJumpVel += 0.001f;
+    }
+    else {
+        fJumpVel = 0;
+    }
+
+    if (keys[SDL_SCANCODE_SPACE] && bground) {
+        fJumpVel = -0.05f;
+        position.y += 0.05f;
+	}
+	else if (keys[SDL_SCANCODE_LCTRL]) {
+        position -= up * 0.25f;
+	}
+
+    position.y -= fJumpVel;
+    
+    // Push the position for drawing the collider in debug modes
+    cameralist.emplace_back(position.x,position.y,position.z - 0.5f);
+
+
+/*    for(int i = 0;i < 100;i++) {
+        if(CheckCollision(myMap)) {
+            if(tmp.x < tmp.z) {
+                position.x += tmp.x;
+            }
+            else {
+                position.z += tmp.z;
+            }
+        }
+        else {
+            break;
+        }
+    }*/
+
+    // This is just a debug "go up" button
+    if(keys[SDL_SCANCODE_1]) {
+        fJumpVel = 0;
+        position.y += 0.25f;
+    }
+}
+
+void Camera::CheckInput(Eternal::InputHandle &input) {
     right = glm::normalize(glm::cross(direction, up));
+    const Uint8 * keys = SDL_GetKeyboardState(0);
 
-    glm::vec3 moveDelta = glm::vec3(0,0,0);
+    STRAFE_SPD = DEFAULT_STRAFE_SPD;
     if (keys[SDL_SCANCODE_LSHIFT]) {
         STRAFE_SPD = 0.4f;
 	}
@@ -52,6 +124,13 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         moveDelta += right * STRAFE_SPD;
 	}
 
+    if (keys[SDL_SCANCODE_F5]) {
+        bThirdPerson = false;
+	}
+    if (keys[SDL_SCANCODE_F6]) {
+        bThirdPerson = true;
+	}
+
 	if (keys[SDL_SCANCODE_W]) {
         glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
         moveDelta += forward * STRAFE_SPD;
@@ -61,36 +140,10 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         forward.y = 0;
         moveDelta -= forward * STRAFE_SPD;
 	}
+}
 
-/*    for(float z = -distf;z < distf;z += 0.1f) {
-        for(float x = -distf;x < distf;x += 0.1f) {
-            if(myMap.GetBrick((int)((position.x+x+0.5f) + moveDelta.x), (int)(position.z+0.5f+z), (int)position.y-1) != 0) {
-                xMoveAccepted = false;
-            }
-        }
-    }*/
-    position.x += moveDelta.x;
-    if(CheckCollision(myMap)) {
-        position.x -= moveDelta.x;
-    }
-
-    position.z += moveDelta.z;
-    if(CheckCollision(myMap)) {
-        position.z -= moveDelta.z;   
-    }
-
-    static bool lastpress = 0;
-    if (keys[SDL_SCANCODE_R]) {
-        if(lastpress == false) {
-            myMap.SetBrick((int)position.x, (int)position.z, (int)position.y, 3);
-            myMap.AddLight((int)position.x, (int)position.z, (int)position.y, false);
-            myMap.RebuildAll();
-        }
-        lastpress = true;
-	}
-    else {
-        lastpress = false;
-    }
+void Camera::RunMouseLogic() {
+    const Uint8 *keys = SDL_GetKeyboardState(0);
 
     int mouseX = 0, mouseY = 0;
     if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
@@ -103,7 +156,6 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         bFocus = false;
     }
 
-//    std::cout << direction.x << " , " << direction.y << " , " << direction.z << std::endl;
     if(bFocus) {
         if(!SDL_GetWindowGrab(myWindow)) {
             SDL_SetWindowGrab(myWindow,SDL_TRUE);
@@ -135,36 +187,6 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         }
     }
     direction = glm::normalize(direction);
-
-    GLuint view = glGetUniformLocation(myShader.myProgram, "View");
-    glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
-
-    CheckGround(myMap);
-    if(!bground) {
-        fJumpVel += 0.005f;
-    }
-    else {
-        fJumpVel = 0;
-    }
-
-    if(keys[SDL_SCANCODE_1]) {
-        fJumpVel = 0;
-        position.y += 0.25f;
-    }
-
-    if (keys[SDL_SCANCODE_SPACE] && bground) {
-        fJumpVel = -0.1f;
-        position.y += 0.25f;
-	}
-	else if (keys[SDL_SCANCODE_LCTRL]) {
-        position -= up * 0.25f;
-	}
-
-    
-    position.y -= fJumpVel;
-    
-//    std::cout << position.y << std::endl;
-   //std::cout << position.x << " , " << position.y << " , " << position.z << std::endl;
 }
 
 void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
@@ -174,9 +196,9 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     p.x += 0.5f;
     p.y += 0.5f;
 
-    if(position.x < 0)
+    if((int)position.x <= 0)
         p.x -= 1;
-    if(position.z < 0)
+    if((int)position.z <= 0)
         p.z -= 1;
 
     bool bFound = false;
@@ -198,18 +220,11 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     targetted_brick.y = (int)p.y;
     targetted_brick.z = (int)p.z;
 
-    int chunkX = floor(targetted_brick.x / Map::CHUNK_SIZE);
-    int chunkZ = floor(targetted_brick.z / Map::CHUNK_SIZE);
+    int chunkX = std::floor(targetted_brick.x / Map::CHUNK_SIZE);
+    int chunkZ = std::floor(targetted_brick.z / Map::CHUNK_SIZE);
         
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
-        std::cout << "deleting brick " << myMap.GetBrick(targetted_brick.x, targetted_brick.z, targetted_brick.y) << " at (" << targetted_brick.x << ", " << targetted_brick.y << ", " << targetted_brick.z << std::endl;
-/*
-        std::cout << "xchunk: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
-        std::cout << "zchunk: " << floor(targetted_brick.z / Map::CHUNK_SIZE) << std::endl;
-
-        std::cout << "xtrans: " << abs((int)targetted_brick.x%Map::CHUNK_SIZE) << std::endl;
-        std::cout << "ztrans: " << abs((int)targetted_brick.z%Map::CHUNK_SIZE) << std::endl;
-*/
+//        std::cout << "deleting brick " << myMap.GetBrick(targetted_brick.x, targetted_brick.z, targetted_brick.y) << " at (" << targetted_brick.x << ", " << targetted_brick.y << ", " << targetted_brick.z << std::endl;
         int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);
         myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
         if(brickType == 3) { // torch
@@ -218,43 +233,49 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         else {
             for(int x = chunkX-2;x < chunkX+2;x++) {
                 for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    myMap.GetChunk(x,z)->PushLights(myMap);                    
+                    //myMap.GetChunk(x,z)->PushLights(myMap);                    
                 }
             }
             myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
             for(int x = chunkX-2;x < chunkX+2;x++) {
                 for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    myMap.GetChunk(x,z)->PopLights(myMap);                    
+                    //myMap.GetChunk(x,z)->PopLights(myMap);                    
                 }
             }
         }
         std::cout << "BRICKTYPE: " << brickType << std::endl;
+        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        //myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
         myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
-        myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
-        //std::cout << "build: " << floor(targetted_brick.x / Map::CHUNK_SIZE) << std::endl;
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
         if(brickType == 3) {
-            myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
-            myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
+            //myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
+            //myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
         }
         else {
             for(int x = chunkX-2;x < chunkX+2;x++) {
                 for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    myMap.GetChunk(x,z)->PushLights(myMap);                    
+                    //myMap.GetChunk(x,z)->PushLights(myMap);                    
                 }
             }
             myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
             for(int x = chunkX-2;x < chunkX+2;x++) {
                 for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    myMap.GetChunk(x,z)->PopLights(myMap);                    
+                    //myMap.GetChunk(x,z)->PopLights(myMap);                    
                 }
             }
         }
+        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        //myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
+
         myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
-        myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
     }
 
-//    std::cout << "brick: " << myMap.GetLightLevel((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y+1) << std::endl;
+    formerPosition = position;
+}
+
+bool Camera::IsThirdPerson() const {
+    return bThirdPerson;
 }

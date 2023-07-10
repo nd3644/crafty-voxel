@@ -4,25 +4,21 @@
 #include "globals.h"
 
 BrickSelectorWidget::BrickSelectorWidget() {
-    BrickSprites = nullptr;
     iCount = 0;
     iBrickStartIndex = 0;
     SelectedIndex = 0;
 }
 
 BrickSelectorWidget::~BrickSelectorWidget() {
-    if(BrickSprites != nullptr) {
-        delete[] BrickSprites;
-    }
 }
 
 void BrickSelectorWidget::Init(Map &map) {    
     auto filenames = map.GetTextureFilenames();
 
-    BrickSprites = new Eternal::Sprite[filenames.size()];
     for(size_t i = 0;i < filenames.size();i++) {
         BrickSprites[i].Load(filenames[i]);
     }
+    std::cout << "loaded " << filenames.size() << " sprites into BrickSelectorWidget" << std::endl;
 
     BlankSprite.Load("textures/blank.png");
     SelectedBrick.Load("textures/selected_brick.png");
@@ -61,9 +57,13 @@ void BrickSelectorWidget::Draw() {
     // Draw the icons
     iBrickStartIndex = (SelectedIndex > MAX_ICONS_SHOWN) ? (SelectedIndex - MAX_ICONS_SHOWN) : 0;
     int EndIndex = (iBrickStartIndex + MAX_ICONS_SHOWN);
+    if(EndIndex > iCount)
+        EndIndex = iCount;
+
     for(int x = iBrickStartIndex;x < EndIndex;x++) {
         // Use the front face of the cube
-        BrickSprites[BrickTextureIndices[x][3]].Draw(r,c);
+        int index = BrickTextureIndices[x][2];
+        BrickSprites[index].Draw(r,c);
         r.x += ICON_SIZE+2;
     }
 

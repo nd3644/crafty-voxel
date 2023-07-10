@@ -14,7 +14,7 @@ extern int mouseWheelDelta;
 
 extern float fAmbient;
 
-
 extern std::vector<vec3_t>bricklist;
+extern std::vector<vec3_t>cameralist;
 
 #endif

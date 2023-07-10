@@ -16,7 +16,7 @@ class BrickSelectorWidget {
 
         int GetSelectedBrickID() const;
     private:
-        Eternal::Sprite *BrickSprites;
+        Eternal::Sprite BrickSprites[16];
         Eternal::Sprite BlankSprite, SelectedBrick;
         int iCount;
         int iBrickStartIndex;

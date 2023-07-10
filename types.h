@@ -114,6 +114,76 @@ struct AABB {
         }
         return true;
     }
+
+
+    bool IsColliding(AABB b, glm::vec3 &normal) {
+        if (x > b.x + b.w
+            || x + w < b.x
+            || y > b.y + b.h
+            || y + h < b.y
+            || z > b.z + b.d
+            || z < b.z) {
+            return false;
+        }
+
+        // temporary translate to center origin
+        x += w / 2.0f;
+        y += h / 2.0f;
+        z += d / 2.0f;
+        
+        b.x += b.w / 2.0f;
+        b.y += b.h / 2.0f;
+        b.z += b.d / 2.0f;
+
+        normal.x = 0.0f;
+        normal.y = 0.0f;
+        normal.z = 0.0f;
+
+        glm::vec3 Distance;
+        glm::vec3 absDistance;
+
+        float XMagnitute;
+        float YMagnitute;
+        float ZMagnitude;
+
+        Distance.x = b.x - x;
+        Distance.y = b.y - y;
+        Distance.z = b.z - z;
+
+        float XAdd = (b.w + w) / 2.0f;
+        float YAdd = (b.h + h) / 2.0f;
+        float ZAdd = (b.d + d) / 2.0f;
+
+        absDistance.x = (Distance.x < 0.0f) ? -Distance.x : Distance.x;
+        absDistance.y = (Distance.y < 0.0f) ? -Distance.y : Distance.y;
+        absDistance.z = (Distance.z < 0.0f) ? -Distance.z : Distance.z;
+
+        XMagnitute = XAdd - absDistance.x;
+        YMagnitute = YAdd - absDistance.y;
+        ZMagnitude = ZAdd - absDistance.z;
+
+        // check most significant overlap
+        if (XMagnitute < YMagnitute && XMagnitute < ZMagnitude) {
+            normal.x = (Distance.x > 0) ? -XMagnitute : XMagnitute;
+        }
+        else if(YMagnitute < XMagnitute && YMagnitute < ZMagnitude) {
+            normal.y = (Distance.y > 0) ? -YMagnitute : YMagnitute;
+        }
+        else {
+            normal.z = (Distance.z > 0) ? -ZMagnitude : ZMagnitude;
+        }
+
+        // put back origin
+        x -= w / 2.0f;
+        y -= h / 2.0f;
+        z -= d / 2.0f;
+        
+        b.x -= b.w / 2.0f;
+        b.y -= b.h / 2.0f;
+        b.z -= b.d / 2.0f;
+
+        return true;
+    }
 };
 
 struct RGBA {

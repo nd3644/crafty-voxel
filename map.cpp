@@ -18,6 +18,8 @@
 #include <libnoise/noise.h>
 #include <gsl/gsl_spline.h>
 
+#include <immintrin.h>
+
 #include <stack>
 
 Map::Map(Camera &c) : camera(c) {
@@ -34,7 +36,7 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = num_cores/2;
     }
 
-    viewDist = 4;
+    viewDist = 18;
     bIsDay = true;
 }
 
@@ -115,9 +117,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen || bIsCurrentlyGenerating)
         return;
 
-    if(abs(chunkx) > 16 || abs(chunkz) > 16) {
-        return;
-    }
     const int SEA_LEVEL = 63;
 
     bIsCurrentlyGenerating = true;
@@ -221,12 +220,6 @@ void Map::FromBMP(std::string sfile) {
 		exit(-1);
 	}
 
-    noise::module::Perlin myModule; 
-    myModule.SetSeed(123);
-    myModule.SetFrequency(0.02);
-    myModule.SetPersistence(0.1);
-    myModule.SetOctaveCount(3);
-
     width = myBmp.GetWidth();
     depth = myBmp.GetHeight();
 
@@ -234,37 +227,14 @@ void Map::FromBMP(std::string sfile) {
     myTexArray.Load(BrickTextureFilenames);
     LoadBrickMetaData();
 
-    for(int x = 8;x < 8;x++) {
-        for(int z = -8;z < 8;z++) {
-            GetChunk(x,z)->Generate(x,z,*this);
+
+    for(int x = -viewDist;x < viewDist;x++) {
+        for(int z = -viewDist;z < viewDist;z++) {
+            Chunks[std::make_pair(x,z)].Generate(x,z,*this);
         }
     }
 
-/*    std::thread threads[4];
-
-        for (int x = 0; x < 16; x++) {
-            for (int z = -16; z < 16; z++) {
-                int threadIndex = (x * 16 + z) % 4;
-
-                threads[threadIndex] = std::thread([this, x, z]() {
-                    GetChunk(x, z)->Generate(x, z, *this);
-                });
-            }
-        }
-
-        // Join all the threads
-        for (int i = 0; i < 4; i++) {
-            if (threads[i].joinable()) {
-                threads[i].join();
-            }
-        }*/
-
-
-    for(int x = -8;x < 8;x++) {
-        for(int z = -8;z < 8;z++) {
-            BuildChunk(x,z);
-        }
-    }
+    RebuildAllVisible();
 }
 
 void Map::RebuildAll() {
@@ -276,19 +246,8 @@ void Map::RebuildAll() {
     }
 }
 
-void Map::BuildChunk(int chunkX, int chunkZ) {
-    //std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
-    if(abs(chunkX) > 16 || abs(chunkZ) > 16) {
-        return;
-    }
-
-    int cube_count = 0;
+void Map::BuildChunkAO(int chunkX, int chunkZ) {
     chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
-    Mesh &mesh = chunk.mesh;
-
-    Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
-
-    mesh.Clean();
     for (int y = 0; y < MAX_HEIGHT; y++) {
         for (int x = 0; x < CHUNK_SIZE;x++) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
@@ -297,8 +256,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 int brickID = GetBrick(xindex,zindex,y);
                 if (GetBrick(xindex, zindex, y) <= 0                // Is the brick air
-                || IsBrickSurroundedByOpaque(xindex,zindex,y)       // Is it visible or occluded by bricks?
-                || GetBrickTransparency(brickID) != 1) {           // Is it opaque? Transparencies are handled in a seperate pass
+                || IsBrickSurroundedByOpaque(xindex,zindex,y)              // Is it visible or occluded by bricks?
+                ) {            // Is it opaque? Transparencies are handled in a seperate pass
                     continue;
                 }
 
@@ -392,160 +351,181 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
             }
         }
     }
+}
 
-//    for(int p = 0;p < 2;p++) {
-        for (int y = 0; y < MAX_HEIGHT; y++) {
-            for (int x = 0; x < CHUNK_SIZE;x++) {
-                int xindex = (chunkX*CHUNK_SIZE)+x;
-                for (int z = 0; z < CHUNK_SIZE;z++) {
-                    int zindex = (chunkZ*CHUNK_SIZE)+z;
+void Map::BuildChunk(int chunkX, int chunkZ) {
+    //std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
 
-                    int brickID = GetBrick(xindex,zindex,y);
-                    if (GetBrick(xindex, zindex, y) <= 0                // Is the brick air
-                    || IsBrickSurroundedByOpaque(xindex,zindex,y)       // Is it visible or occluded by bricks?
-                    || GetBrickTransparency(brickID) != 1) {           // Is it opaque? Transparencies are handled in a seperate pass
-                        continue;
-                    }
+//    std::cout << "building " << chunkX << ", " << chunkZ << std::endl;
 
-                    float posX = (chunkX*CHUNK_SIZE)+x;
-                    float posZ = (chunkZ*CHUNK_SIZE)+z;
-                    mesh.SetTranslation(posX,y,posZ);
+//    BuildChunkAO(chunkX,chunkZ);
 
-                    int len = 1;
-                    for(int i = 1;i < CHUNK_SIZE-1;i++) {
-                        if(z < CHUNK_SIZE-1-i
-                        && GetBrick(xindex,zindex,y) == GetBrick(xindex,zindex+i,y)
-                        && GetLightLevel(xindex,zindex,y) == GetLightLevel(xindex,zindex+i,y)) {
-                            for(int f = 0;f < 6;f++) {
-                                for(int v = 0;v < 4;v++) {
-                                    if(chunk.ambientVecs[x][y][z+i][f][v] != chunk.ambientVecs[x][y][z][f][v]) {
-                                        goto skip;
-                                    }
+    int cube_count = 0;
+    chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
+    Mesh &mesh = chunk.mesh;
+
+    chunk.bIniialBuild = true;
+
+    mesh.Clean();
+    for (int y = 0; y < MAX_HEIGHT; y++) {
+        for (int x = 0; x < CHUNK_SIZE;x++) {
+            int xindex = (chunkX*CHUNK_SIZE)+x;
+            for (int z = 0; z < CHUNK_SIZE;z++) {
+                int zindex = (chunkZ*CHUNK_SIZE)+z;
+
+                int brickID = GetBrick(xindex,zindex,y);
+                if (brickID <= 0                                    // Is the brick air
+                || IsBrickSurroundedByOpaque(xindex,zindex,y)                       // Is it visible or occluded by bricks?
+                ) {            // Is it opaque? Transparencies are handled in a seperate pass
+                    continue;
+                }
+
+                int brickLightLevel = GetLightLevel(xindex,zindex,y);
+
+                float posX = (chunkX*CHUNK_SIZE)+x;
+                float posZ = (chunkZ*CHUNK_SIZE)+z;
+                mesh.SetTranslation(posX,y,posZ);
+
+                int len = 1;
+                for(int i = 1;i < CHUNK_SIZE-1;i++) {
+                    if(z < CHUNK_SIZE-i
+                    && brickID == GetBrick(xindex,zindex+i,y)
+                    && brickLightLevel == GetLightLevel(xindex,zindex+i,y)) {
+                        for(int f = 0;f < 6;f++) {
+                            for(int v = 0;v < 4;v++) {
+                                if(chunk.ambientVecs[x][y][z+i][f][v] != chunk.ambientVecs[x][y][z][f][v]) {
+                                    goto skip;  // This is just a crude way to break out of the loops
                                 }
                             }
-                            len++;
                         }
-                        else {
-                            break;
-                        }
-                    }
-                    skip:
-                    z += len-1;
-
-                    for(int i = 0;i < 6*6;i++)
-                        mesh.Index1(BrickLookup[brickID-1][i/6]);
-
-                    float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
-                    // Draw top
-
-                    float (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
-                    
-                    if(topamb[0] + topamb[3] > topamb[1] + topamb[2]) {
-                        mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
-                        mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
-                        mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, 0.5, 0);   // right back 1 
-                        mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
-                        mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
-                        mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left 3
+                        len++;
                     }
                     else {
-                        mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len); // front left
-                        mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right
-                        mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // right back
-                        mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left
-                        mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);   // right back
-                        mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // left back
+                        break;
                     }
-
-                    lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
-
-
-                    float (&botamb)[4] = chunk.ambientVecs[x][y][z][1];
-
-                    // TODO: add a/o here
-                    // Draw bottom
-                    mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
-                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
-                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
-
-                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
-
-
-                    lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
-
-                    float (&leftamb)[4] = chunk.ambientVecs[x][y][z][2];
-                    
-                    lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
-
-                    // Draw left
-                    mesh.Color4(leftamb[3] * lv, leftamb[3] * lv, leftamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-                    mesh.Color4(leftamb[2] * lv, leftamb[2] * lv, leftamb[2] * lv, 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(-0.5, -0.5, len); // br
-                    mesh.Color4(leftamb[1] * lv, leftamb[1] * lv, leftamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
-                    mesh.Color4(leftamb[1] * lv, leftamb[1] * lv, leftamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
-                    mesh.Color4(leftamb[0] * lv, leftamb[0] * lv, leftamb[0] * lv, 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tl
-                    mesh.Color4(leftamb[3] * lv, leftamb[3] * lv, leftamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-
-                    float (&rightamb)[4] = chunk.ambientVecs[x][y][z][3];
-                    
-                    // Draw right
-                    mesh.Color4(rightamb[1] * lv, rightamb[1] * lv, rightamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr
-                    mesh.Color4(rightamb[2] * lv, rightamb[2] * lv, rightamb[2] * lv, 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(0.5, -0.5, len); // br
-                    mesh.Color4(rightamb[3] * lv, rightamb[3] * lv, rightamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
-                    
-                    
-                    mesh.Color4(rightamb[1] * lv, rightamb[1] * lv, rightamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr   
-                    mesh.Color4(rightamb[3] * lv, rightamb[3] * lv, rightamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);                             
-                    mesh.Color4(rightamb[0] * lv, rightamb[0] * lv, rightamb[0] * lv, 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
-
-
-                    lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
-
-                    float (&backamb)[4] = chunk.ambientVecs[x][y][z][4];
-                                    
-                    // Draw back
-                    mesh.Color4(backamb[3] * lv, backamb[3] * lv, backamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
-                    mesh.Color4(backamb[0] * lv, backamb[0] * lv, backamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
-                    mesh.Color4(backamb[2] * lv, backamb[2] * lv, backamb[2] * lv, 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0); // bl
-
-                    mesh.Color4(backamb[0] * lv, backamb[0] * lv, backamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);// tl
-                    mesh.Color4(backamb[3] * lv, backamb[3] * lv, backamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
-                    mesh.Color4(backamb[1] * lv, backamb[1] * lv, backamb[1] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tr
-
-                    lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
-
-                    // Draw front
-                    float (&frontamb)[4] = chunk.ambientVecs[x][y][z][5];
-                                
-                    mesh.Color4(frontamb[0] * lv, frontamb[0] * lv, frontamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len); // tl
-                    mesh.Color4(frontamb[3] * lv, frontamb[3] * lv, frontamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
-                    mesh.Color4(frontamb[2] * lv, frontamb[2] * lv, frontamb[2] * lv, 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len); // bl
-                    mesh.Color4(frontamb[0] * lv, frontamb[0] * lv, frontamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);// tl
-                    mesh.Color4(frontamb[1] * lv, frontamb[1] * lv, frontamb[1] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len); // tr
-                    mesh.Color4(frontamb[3] * lv, frontamb[3] * lv, frontamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
-                    cube_count++;
                 }
+                skip:
+                z += len-1;
+
+                for(int i = 0;i < 6*6;i++)
+                    mesh.Index1(BrickLookup[brickID-1][i/6]);
+
+                float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
+                // Draw top
+
+                float (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
+                
+                if(topamb[0] + topamb[3] > topamb[1] + topamb[2]) {
+                    mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
+                    mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
+                    mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, 0.5, 0);   // right back 1 
+                    mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
+                    mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
+                    mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left 3
+                }
+                else {
+                    mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len); // front left
+                    mesh.Color4(topamb[1] * lv, topamb[1] * lv, topamb[1] * lv, 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right
+                    mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // right back
+                    mesh.Color4(topamb[0] * lv, topamb[0] * lv, topamb[0] * lv, 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left
+                    mesh.Color4(topamb[3] * lv, topamb[3] * lv, topamb[3] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);   // right back
+                    mesh.Color4(topamb[2] * lv, topamb[2] * lv, topamb[2] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // left back
+                }
+
+                lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
+
+
+                float (&botamb)[4] = chunk.ambientVecs[x][y][z][1];
+
+                // TODO: add a/o here
+                // Draw bottom
+                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+                mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
+
+                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
+
+
+                lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+
+                float (&leftamb)[4] = chunk.ambientVecs[x][y][z][2];
+                
+                lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+
+                // Draw left
+                mesh.Color4(leftamb[3] * lv, leftamb[3] * lv, leftamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+                mesh.Color4(leftamb[2] * lv, leftamb[2] * lv, leftamb[2] * lv, 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(-0.5, -0.5, len); // br
+                mesh.Color4(leftamb[1] * lv, leftamb[1] * lv, leftamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(leftamb[1] * lv, leftamb[1] * lv, leftamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(leftamb[0] * lv, leftamb[0] * lv, leftamb[0] * lv, 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tl
+                mesh.Color4(leftamb[3] * lv, leftamb[3] * lv, leftamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
+
+                float (&rightamb)[4] = chunk.ambientVecs[x][y][z][3];
+                
+                // Draw right
+                mesh.Color4(rightamb[1] * lv, rightamb[1] * lv, rightamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr
+                mesh.Color4(rightamb[2] * lv, rightamb[2] * lv, rightamb[2] * lv, 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(0.5, -0.5, len); // br
+                mesh.Color4(rightamb[3] * lv, rightamb[3] * lv, rightamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
+                
+                
+                mesh.Color4(rightamb[1] * lv, rightamb[1] * lv, rightamb[1] * lv, 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr   
+                mesh.Color4(rightamb[3] * lv, rightamb[3] * lv, rightamb[3] * lv, 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);                             
+                mesh.Color4(rightamb[0] * lv, rightamb[0] * lv, rightamb[0] * lv, 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
+
+
+                lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
+
+                float (&backamb)[4] = chunk.ambientVecs[x][y][z][4];
+                                
+                // Draw back
+                mesh.Color4(backamb[3] * lv, backamb[3] * lv, backamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
+                mesh.Color4(backamb[0] * lv, backamb[0] * lv, backamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
+                mesh.Color4(backamb[2] * lv, backamb[2] * lv, backamb[2] * lv, 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0); // bl
+
+                mesh.Color4(backamb[0] * lv, backamb[0] * lv, backamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);// tl
+                mesh.Color4(backamb[3] * lv, backamb[3] * lv, backamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
+                mesh.Color4(backamb[1] * lv, backamb[1] * lv, backamb[1] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tr
+
+                lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
+
+                // Draw front
+                float (&frontamb)[4] = chunk.ambientVecs[x][y][z][5];
+                            
+                mesh.Color4(frontamb[0] * lv, frontamb[0] * lv, frontamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len); // tl
+                mesh.Color4(frontamb[3] * lv, frontamb[3] * lv, frontamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
+                mesh.Color4(frontamb[2] * lv, frontamb[2] * lv, frontamb[2] * lv, 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len); // bl
+                mesh.Color4(frontamb[0] * lv, frontamb[0] * lv, frontamb[0] * lv, 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);// tl
+                mesh.Color4(frontamb[1] * lv, frontamb[1] * lv, frontamb[1] * lv, 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(frontamb[3] * lv, frontamb[3] * lv, frontamb[3] * lv, 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
+                cube_count++;
             }
         }
-//    }
+    }
     mesh.BindBufferData();
 
     // Transparent pass
-    BuildChunkTrans(chunkX,chunkZ);
-    glFinish();
+//    BuildChunkTrans(chunkX,chunkZ);
 
 //    std::cout << "built " << cube_count << std::endl;
+
+/*    std::string str = std::to_string(dbgIterCount);
+    if(str.length() > 3) {
+        str.insert(str.begin()+3, ',');
+    }
+    std::cout << "iter_count: " << str << std::endl;*/
 }
 
 void Map::BuildChunkTrans(int chunkX, int chunkZ) {
-    Mesh &mesh = Chunks[std::make_pair(chunkX,chunkZ)].transMesh;
+    return;
+    chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
+    Mesh &mesh = chunk.mesh;
 
-    Chunks[std::make_pair(chunkX,chunkZ)].bIniialBuild = true;
+    chunk.bIniialBuild = true;
 
     mesh.Clean();
-
     for (int y = 0; y < MAX_HEIGHT; y++) {
         for (int x = 0; x < CHUNK_SIZE;x++) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
@@ -653,7 +633,6 @@ void Map::BuildChunkTrans(int chunkX, int chunkZ) {
         }
     }
     mesh.BindBufferData();
-    glFinish();
 }
 
 void Map::RebuildLights() {
@@ -686,7 +665,7 @@ void Map::Draw() {
         }
     }
 
-    for(int x = sX - viewDist;x < sX+viewDist;x++) {
+/*    for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
@@ -696,13 +675,11 @@ void Map::Draw() {
             chunk.transMesh.Draw(Mesh::MODE_TRIANGLES);
         }
     }
-
+*/
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();
     }
-
-    glFinish();
 }
 
 void Map::RebuildAllVisible() {
@@ -711,6 +688,7 @@ void Map::RebuildAllVisible() {
 
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
         for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+            BuildChunkAO(x,z);
             BuildChunk(x,z);
         }
     }
@@ -736,32 +714,31 @@ void Map::RunBuilder() {
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
     int build_count = 0;
+
+    int endX = sX+viewDist;
+    int endZ = sZ+viewDist;
+/*    // First ensure every chunk within viewdist is both generated and built
     for(int x = sX - viewDist;x < sX+viewDist;x++) {
-        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+        for(int z = sZ-viewDist;z < endZ;z++) {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
 
             if(!chunk.bGen) {
                 chunk.Generate(x,z,*this);
+                goto exitLoop;
             }
 
             if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
                 //if(build_count < 1) {
                     BuildChunk(x,z);
                     build_count++;
+                    goto exitLoop;
                 //}
-                continue;
             }
         }
     }
-
-    // Ensure immediate priority chunks are built on the same frame
-    for(size_t i = 0;i < ScheduledBuilds.size();i++) {
-        if(ScheduledBuilds[i].priorityLevel == Priority::IMMEDIATE) {
-            BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
-            ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
-        }
-    }
+    exitLoop:
+````
 
     // Render one of the next chunks following the highest priority first
     for(int priority = Priority::ONE;priority < Priority::NUM_PRIORITIES;priority++) {
@@ -769,13 +746,64 @@ void Map::RunBuilder() {
             if(ScheduledBuilds[i].priorityLevel == priority) {
                 BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
                 ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
+                build_count++;
 
                 // break out of the loop
                 priority = Priority::NUM_PRIORITIES;
                 break;
             }
         }
+    }*/
+
+    // Use the time to build a random one
+    // TODO: Actually make a system for this
+    int minX = sX - viewDist;
+    int maxX = sX + viewDist;
+
+    int minZ = sZ - viewDist;
+    int maxZ = sZ + viewDist;
+
+    int randX = (rand() % (maxX - minX) + 1) + minX;
+    int randZ = (rand() % (maxZ - minZ) + 1) + minZ;
+
+    static int rebuildX = randX;
+    static int rebuildZ = randZ;
+
+    chunk_t &rndChunk = *GetChunk(rebuildX, rebuildZ);
+    if(rndChunk.pipleline_stage == 0) {
+        BuildChunkAO(floor(camera.position.x / CHUNK_SIZE), floor(camera.position.z / CHUNK_SIZE));
+        rndChunk.pipleline_stage++;
     }
+    else {
+        BuildChunk(floor(camera.position.x / CHUNK_SIZE), floor(camera.position.z / CHUNK_SIZE));
+        rndChunk.pipleline_stage = 0;
+
+        rebuildX = randX;
+        rebuildZ = randZ;
+    }
+
+   static bool b = false;
+
+   // Ensure immediate priority chunks are built on the same frame
+    for(size_t i = 0;i < ScheduledBuilds.size();i++) {
+        if(ScheduledBuilds[i].priorityLevel == Priority::IMMEDIATE) {
+
+            auto &chunk = *GetChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
+            if(chunk.pipleline_stage == 0) {
+                BuildChunkAO(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
+                chunk.pipleline_stage++;
+            }
+            else {
+                BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
+                chunk.pipleline_stage = 0;
+                ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
+            }
+            build_count++;
+        }
+    }
+    b = !b;
+
+//    std::cout << "built: " << build_count << std::endl;
 }
 
 void Map::LoadBrickMetaData() {

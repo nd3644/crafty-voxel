@@ -4,6 +4,7 @@
 #include "types.h"
 #include <GL/glew.h>
 #include <vector>
+#include <iostream>
 
 struct special_t {
     float f[16];
@@ -20,16 +21,47 @@ class Mesh {
         };
 
         void Clean();
-        void Vert3(float x, float y,float z);
-        void TexCoord2(float x, float y);
-        void Color4(float r, float g, float b, float a);
-        void Index1(int i);
+        inline void Vert3(float x, float y,float z) {
+            vVertBuffer.emplace_back(x + xTrans, y + yTrans, z + zTrans);
+        }
+
+        inline void TexCoord2(float x, float y) {
+            vTexCoords.emplace_back(x,y);
+        }
+
+        inline void Color4(float r, float g, float b, float a) {    
+            ColorBuffer.emplace_back(r,g,b,a);
+        }
+        inline void Index1(int i) {
+            Indices.emplace_back(i);
+        }
+
         void Draw(Mode mode);
 
-        void SetTranslation(float x, float y, float z);
+        void SetTranslation(float x, float y, float z) {
+            xTrans = x;
+            yTrans = y;
+            zTrans = z;
+        }
 
         bool IsEmpty() {
             return (vVertBuffer.size() == 0);
+        }
+
+        void CheckErr() {
+            return;
+            if (vVertBuffer.empty() || vTexCoords.empty() || ColorBuffer.empty() || Indices.empty())
+            {
+                std::cout << "There is a serious problem" << std::endl;
+                exit(-1);
+                return;
+            }
+            if(vVertBuffer.size() == vTexCoords.size() && vTexCoords.size() == ColorBuffer.size() && ColorBuffer.size() == Indices.size()) {
+            }
+            else {
+                std::cout << "a serious problem" << std::endl;
+                exit(-1);
+            }
         }
 
         void BindBufferData();
