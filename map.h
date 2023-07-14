@@ -42,11 +42,9 @@ public:
 
     struct chunk_t {
         int pipleline_stage;
-        int build_count;
 
         chunk_t() {
             pipleline_stage = 0;
-            build_count = 0;
             bGen = false;
             bIsCurrentlyGenerating = false;
             bIniialBuild = false;
@@ -427,7 +425,6 @@ private:
 
 private:
     bool bIsDay;
-    int viewDist;
     std::vector<std::thread>BuilderThreads;
     Camera &camera;
     TextureArray myTexArray;

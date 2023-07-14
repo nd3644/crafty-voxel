@@ -47,6 +47,11 @@ Mesh::~Mesh() {
 }
 
 void Mesh::BindBufferData() {
+
+    vVertBuffer.shrink_to_fit();
+    vTexCoords.shrink_to_fit();
+    ColorBuffer.shrink_to_fit();
+    Indices.shrink_to_fit();
     glBindVertexArray(vertArrObj);
 
     CheckErr();

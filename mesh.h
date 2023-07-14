@@ -75,8 +75,6 @@ class Mesh {
         std::vector<vec2_t>vTexCoords;
         std::vector<RGBA>ColorBuffer;
         std::vector<int>Indices;
-
-        std::vector<int64_t>times;
 };
 
 #endif

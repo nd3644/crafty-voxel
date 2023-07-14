@@ -21,6 +21,7 @@
 #include "input.h"
 #include "sprite.h"
 #include "globals.h"
+#include "cloud_system.h"
 
 #include <chrono>
 
@@ -55,7 +56,7 @@ bool bDebugMenuOpen = true;
 
 Eternal::Sprite cursorTex;
 
-Shader myShader, myShader2D;
+Shader myShader, myShader2D, myCloudShader;
 
 int main(int argc, char* args[]) {
 	CompileArr();
@@ -73,6 +74,7 @@ int main(int argc, char* args[]) {
 
     Camera myCamera;
     Map myMap(myCamera);
+    CloudSystem myCloudSys;
     BrickSelectorWidget myBrickWidget;
 
     myMap.FromBMP("textures/heightmap.bmp");
@@ -131,11 +133,26 @@ int main(int argc, char* args[]) {
         // Draw the map
         start = std::chrono::high_resolution_clock::now();
         myMap.Draw();
+
         end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
         DrawBrickTarget(myCamera, brickTargetMesh);
+
+        // Draw the clouds
+        myCloudShader.projMatrix = myShader.projMatrix;
+        myCloudShader.viewMatrix = myShader.viewMatrix;
+        myCloudShader.modelMatrix = myShader.modelMatrix;
+        myCloudShader.Bind();
+        myCloudSys.Update(myCamera);
+        myCloudSys.Draw();
+
+        if(SDL_GetTicks() - fpsTimer > 1000) {
+            fpsTimer = SDL_GetTicks();
+            lastAvgFps = frameCounter;
+            frameCounter = 0;
+        }
 
         // 2D rendering
         myShader2D.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
@@ -151,12 +168,6 @@ int main(int argc, char* args[]) {
         DrawDebugUI(myCamera, myMap);
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        if(SDL_GetTicks() - fpsTimer > 1000) {
-            fpsTimer = SDL_GetTicks();
-            lastAvgFps = frameCounter;
-            frameCounter = 0;
-        }
 
         start = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
@@ -253,6 +264,8 @@ void Init() {
 
     // Init 2D shader
     myShader2D.Initialize("shaders/default.vs", "shaders/default.fs");
+
+    myCloudShader.Initialize("shaders/cloud.vs", "shaders/cloud.fs");
 
     cursorTex.Load("textures/cursor.png");
 
@@ -391,6 +404,16 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
             }
             brickTargetMesh.BindBufferData();
             brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
+
+            brickTargetMesh.Clean();
+            brickTargetMesh.SetTranslation(vec.x,vec.y-0.75f,vec.z);
+            for(size_t i = 0;i < vertList.size();i++) {
+                brickTargetMesh.Index1(1); brickTargetMesh.Vert3(vertList[i].x * 0.75f, vertList[i].y * 0.75f, (vertList[i].z+0.5f) * 0.75f);
+                brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
+                brickTargetMesh.Color4(1,0,0,1);
+            }
+            brickTargetMesh.BindBufferData();
+            brickTargetMesh.Draw(Mesh::MODE_TRIANGLES);
         }
     }
 
@@ -447,9 +470,12 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
         SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
     }
     ImGui::Checkbox("Colliders", &bDrawColliders);
+    ImGui::Checkbox("Enable AO", &gEnableAO);
     if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
-        map.RebuildAllVisible();
+//        map.RebuildAllVisible();
     }
+    ImGui::SliderInt("AO Level", &gAOLevel, 0, 100);
+    ImGui::SliderInt("View dist", &gViewDist, 8, 32);
     ImGui::End();
     ImGui::PopStyleColor(1);
 

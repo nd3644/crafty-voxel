@@ -36,7 +36,6 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = num_cores/2;
     }
 
-    viewDist = 16;
     bIsDay = true;
 }
 
@@ -90,9 +89,9 @@ void Map::FillWater(int fx, int fz, int fy) {
     }
 }
 
-const int numPoints = 5;
-double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 1.0 };
-double ay[numPoints] = { 50, 30, 100, 100, 150 };
+const int numPoints = 6;
+double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
+double ay[numPoints] = { 30, 10, 100, 100, 110, 128 };
 
 double interpolateY(double x)
 {
@@ -192,7 +191,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 		}
 	}
 
-
     // Plant some trees
 
     if(rand() % 6 == 0) {
@@ -272,8 +270,8 @@ void Map::FromBMP(std::string sfile) {
     LoadBrickMetaData();
 
 
-    for(int x = -viewDist;x < viewDist;x++) {
-        for(int z = -viewDist;z < viewDist;z++) {
+    for(int x = -gViewDist;x < gViewDist;x++) {
+        for(int z = -gViewDist;z < gViewDist;z++) {
             Chunks[std::make_pair(x,z)].Generate(x,z,*this);
         }
     }
@@ -310,7 +308,11 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
                     for(int v = 0;v < 4;v++)
                         chunk.ambientVecs[x][y][z][f][v] = 100;
 
-                uint8_t ambShade = 85;
+                if(!gEnableAO) {
+                    continue;
+                }
+
+                uint8_t ambShade = gAOLevel;
 
 
                 // Top
@@ -717,8 +719,8 @@ void Map::Draw() {
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    for(int x = sX - viewDist;x < sX+viewDist;x++) {
-        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
             if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty() || chunk.bGen == false) {
@@ -729,8 +731,8 @@ void Map::Draw() {
         }
     }
 
-/*    for(int x = sX - viewDist;x < sX+viewDist;x++) {
-        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+/*    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
             if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
@@ -750,8 +752,8 @@ void Map::RebuildAllVisible() {
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
-    for(int x = sX - viewDist;x < sX+viewDist;x++) {
-        for(int z = sZ-viewDist;z < sZ+viewDist;z++) {
+    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
             BuildChunkAO(x,z);
             BuildChunk(x,z);
         }
@@ -779,11 +781,11 @@ void Map::RunBuilder() {
 
     int build_count = 0;
 
-    int endX = sX+viewDist;
-    int endZ = sZ+viewDist;
-/*    // First ensure every chunk within viewdist is both generated and built
-    for(int x = sX - viewDist;x < sX+viewDist;x++) {
-        for(int z = sZ-viewDist;z < endZ;z++) {
+    int endX = sX+gViewDist;
+    int endZ = sZ+gViewDist;
+    // First ensure every chunk within gViewDist is generated
+    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        for(int z = sZ-gViewDist;z < endZ;z++) {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
 
@@ -791,18 +793,10 @@ void Map::RunBuilder() {
                 chunk.Generate(x,z,*this);
                 goto exitLoop;
             }
-
-            if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
-                //if(build_count < 1) {
-                    BuildChunk(x,z);
-                    build_count++;
-                    goto exitLoop;
-                //}
-            }
         }
     }
     exitLoop:
-````
+/*````
 
     // Render one of the next chunks following the highest priority first
     for(int priority = Priority::ONE;priority < Priority::NUM_PRIORITIES;priority++) {
@@ -821,11 +815,11 @@ void Map::RunBuilder() {
 
     // Use the time to build a random one
     // TODO: Actually make a system for this
-    int minX = sX - viewDist;
-    int maxX = sX + viewDist;
+    int minX = sX - gViewDist;
+    int maxX = sX + gViewDist;
 
-    int minZ = sZ - viewDist;
-    int maxZ = sZ + viewDist;
+    int minZ = sZ - gViewDist;
+    int maxZ = sZ + gViewDist;
 
     int randX = (rand() % (maxX - minX) + 1) + minX;
     int randZ = (rand() % (maxZ - minZ) + 1) + minZ;

@@ -17,4 +17,8 @@ extern float fAmbient;
 extern std::vector<vec3_t>bricklist;
 extern std::vector<vec3_t>cameralist;
 
+extern int gAOLevel;
+extern int gViewDist;
+extern bool gEnableAO;
+
 #endif
