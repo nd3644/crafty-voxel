@@ -147,10 +147,14 @@ void Camera::RunMouseLogic() {
 
     int mouseX = 0, mouseY = 0;
     if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
-        ImGuiIO& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse) {
+        #ifdef ENABLE_IMGUI
+            ImGuiIO& io = ImGui::GetIO();
+            if (!io.WantCaptureMouse) {
+                bFocus = true;
+            }
+        #else
             bFocus = true;
-        }
+        #endif
     }
     if(keys[SDL_SCANCODE_ESCAPE]) {
         bFocus = false;
@@ -278,4 +282,8 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
 
 bool Camera::IsThirdPerson() const {
     return bThirdPerson;
+}
+
+void Camera::CalcNewFrustumPlanes() {
+    
 }

@@ -22,12 +22,16 @@
 #include "sprite.h"
 #include "globals.h"
 #include "cloud_system.h"
+#include "renderer.h"
 
 #include <chrono>
 
-#include <imgui.h>
-#include <imgui_impl_sdl.h>
-#include <imgui_impl_opengl3.h>
+
+#ifdef ENABLE_IMGUI
+    #include <imgui.h>
+    #include <imgui_impl_sdl.h>
+    #include <imgui_impl_opengl3.h>
+#endif
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
@@ -43,6 +47,7 @@ extern void DrawMiniMap(Camera &myCamera, Map &myMap);
 extern void DrawDebugUI(Camera &myCamera, Map &myMap);
 extern void DrawCursor();
 extern void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh);
+extern void DrawFrustumCullingView(Eternal::Renderer &renderer, float xoffs, float yoffs); // Visualizes the frustum and chunk visibility
 
 bool bEnableVSync = true;
 bool bDrawColliders = false;
@@ -56,18 +61,13 @@ bool bDebugMenuOpen = true;
 
 Eternal::Sprite cursorTex;
 
-Shader myShader, myShader2D, myCloudShader;
+Shader myShader,           // Default terrain shader
+        myShader2D,        // 2D textured sprites
+        myCloudShader,     // For the clouds only
+        myRendererShader; // For Renderer, 2D primitives
 
 int main(int argc, char* args[]) {
 	CompileArr();
-
-	myShader.projMatrix = glm::mat4(1);
-	myShader.viewMatrix = glm::mat4(1);
-	myShader.modelMatrix = glm::mat4(1);
-
-    myShader2D.projMatrix = glm::mat4(1);
-    myShader2D.modelMatrix = glm::mat4(1);
-    myShader2D.viewMatrix = glm::mat4(1);
 	Init();
     Eternal::InputHandle myInputHandle;
     Mesh brickTargetMesh;
@@ -76,6 +76,8 @@ int main(int argc, char* args[]) {
     Map myMap(myCamera);
     CloudSystem myCloudSys;
     BrickSelectorWidget myBrickWidget;
+    Eternal::Renderer myRenderer;
+    myRenderer.Initialize();
 
     myMap.FromBMP("textures/heightmap.bmp");
     myBrickWidget.Init(myMap);
@@ -92,7 +94,10 @@ int main(int argc, char* args[]) {
 		fdelta += 0.01f;
         mouseWheelDelta = 0; // Reset this every frame
 		while (SDL_PollEvent(&myEvent)) {
-            ImGui_ImplSDL2_ProcessEvent(&myEvent);
+            #ifdef ENABLE_IMGUI
+                ImGui_ImplSDL2_ProcessEvent(&myEvent);
+            #endif
+
             if(myEvent.type == SDL_MOUSEWHEEL) {
                 if(myEvent.wheel.y != 0) {
                     mouseWheelDelta += myEvent.wheel.y;
@@ -169,6 +174,13 @@ int main(int argc, char* args[]) {
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
+
+        myRendererShader.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
+        myRendererShader.modelMatrix = glm::mat4(1);
+        myRendererShader.viewMatrix = glm::mat4(1);
+        myRendererShader.Bind();
+        DrawFrustumCullingView(myRenderer,2,20);
+
         start = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
         end = std::chrono::high_resolution_clock::now();
@@ -186,16 +198,18 @@ int main(int argc, char* args[]) {
 }
 
 void SetupImgui() {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    #ifdef ENABLE_IMGUI
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO &io = ImGui::GetIO(); (void)io;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 
-    ImGui::StyleColorsDark();
+        ImGui::StyleColorsDark();
 
-    ImGui_ImplSDL2_InitForOpenGL(myWindow, myGLContext);
-    ImGui_ImplOpenGL3_Init();
+        ImGui_ImplSDL2_InitForOpenGL(myWindow, myGLContext);
+        ImGui_ImplOpenGL3_Init();
+    #endif
 }
 
 void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
@@ -259,13 +273,10 @@ void Init() {
 
     SetupImgui();
 
-    // Init shader
     myShader.Initialize("shaders/terrain.vs", "shaders/terrain.fs");
-
-    // Init 2D shader
     myShader2D.Initialize("shaders/default.vs", "shaders/default.fs");
-
     myCloudShader.Initialize("shaders/cloud.vs", "shaders/cloud.fs");
+    myRendererShader.Initialize("shaders/no_texture.vs", "shaders/no_texture.fs");
 
     cursorTex.Load("textures/cursor.png");
 
@@ -281,10 +292,14 @@ void Init() {
 }
 
 void Cleanup() {
+
+
     // Imgui
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
+    #ifdef ENABLE_IMGUI
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplSDL2_Shutdown();
+        ImGui::DestroyContext();
+    #endif
 
     // SDL/GL
 	SDL_GL_DeleteContext(myGLContext);
@@ -307,7 +322,6 @@ void DrawCursor() {
 }
 
 void DrawMiniMap(Camera &myCamera, Map &myMap) {
-
     Eternal::Sprite square, grey;
     square.Load("textures/square.png");
     grey.Load("textures/grey.png");
@@ -392,7 +406,7 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
 
 
     if(myCamera.IsThirdPerson()) {
-        glDisable(GL_TEXTURE_2D);
+        ;
         // Draw camera box
         for(auto &vec: cameralist) {
             brickTargetMesh.Clean();
@@ -422,65 +436,84 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
 
 void DrawDebugUI(Camera &myCamera, Map &map) {
     glDisable(GL_DEPTH_TEST);
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowBgAlpha(0.5f);
-    ImGui::SetNextWindowSize(ImVec2(-1, 280));
-    // ImGui content goes here
+    #ifdef ENABLE_IMGUI
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
 
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
-    ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-    std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
-    ImGui::Text("%s", str.c_str());
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowBgAlpha(0.5f);
+        ImGui::SetNextWindowSize(ImVec2(-1, 280));
+        // ImGui content goes here
 
-    str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
-    ImGui::Text("%s", str.c_str());
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
+        ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
+        ImGui::Text("%s", str.c_str());
 
-    str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
-    ImGui::Text("%s", str.c_str());
+        str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
+        ImGui::Text("%s", str.c_str());
 
-    str = "FrameTime: " + std::to_string(FrameTime.count()) + "ms";
-    ImGui::Text("%s", str.c_str());
-    
-    str = "SwapTime: " + std::to_string(SwapTime.count()) + "ms";
-    ImGui::Text("%s", str.c_str());
+        str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
+        ImGui::Text("%s", str.c_str());
 
-    str = "OrthoTime: " + std::to_string(OrthoTime.count()) + "ms";
-    ImGui::Text("%s", str.c_str());
+        str = "FrameTime: " + std::to_string(FrameTime.count()) + "ms";
+        ImGui::Text("%s", str.c_str());
+        
+        str = "SwapTime: " + std::to_string(SwapTime.count()) + "ms";
+        ImGui::Text("%s", str.c_str());
 
-    str = "avg fps: " + std::to_string(lastAvgFps);
-    ImGui::Text("%s", str.c_str());
+        str = "OrthoTime: " + std::to_string(OrthoTime.count()) + "ms";
+        ImGui::Text("%s", str.c_str());
 
-/*    std::string polyNumber = std::to_string(gblPolyCount);
-    polyNumber.insert(polyNumber.begin()+3,',');
-    str = "polycount: : " + polyNumber;
-    ImGui::Text("%s", str.c_str());*/
+        str = "avg fps: " + std::to_string(lastAvgFps);
+        ImGui::Text("%s", str.c_str());
 
-    str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
-    ImGui::Text("%s", str.c_str());
-    str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
-    ImGui::Text("%s", str.c_str());
+    /*    std::string polyNumber = std::to_string(gblPolyCount);
+        polyNumber.insert(polyNumber.begin()+3,',');
+        str = "polycount: : " + polyNumber;
+        ImGui::Text("%s", str.c_str());*/
 
-    ImGui::Separator();
-    ImGui::Checkbox("V-Sync", &bEnableVSync);
-    if (ImGui::IsItemDeactivatedAfterEdit()) {
-        SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
-    }
-    ImGui::Checkbox("Colliders", &bDrawColliders);
-    ImGui::Checkbox("Enable AO", &gEnableAO);
-    if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
-//        map.RebuildAllVisible();
-    }
-    ImGui::SliderInt("AO Level", &gAOLevel, 0, 100);
-    ImGui::SliderInt("View dist", &gViewDist, 8, 32);
-    ImGui::End();
-    ImGui::PopStyleColor(1);
+        str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
+        ImGui::Text("%s", str.c_str());
+        str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
+        ImGui::Text("%s", str.c_str());
 
-    ImGui::Render();
-    glViewport(0, 0, WIN_W, WIN_H);
-    glUseProgram(0);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui::Separator();
+        ImGui::Checkbox("V-Sync", &bEnableVSync);
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
+        }
+        ImGui::Checkbox("Colliders", &bDrawColliders);
+        ImGui::Checkbox("Enable AO", &gEnableAO);
+        if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
+    //        map.RebuildAllVisible();
+        }
+        ImGui::SliderInt("AO Level", &gAOLevel, 0, 100);
+        ImGui::SliderInt("View dist", &gViewDist, 8, 32);
+        ImGui::End();
+        ImGui::PopStyleColor(1);
+
+        ImGui::Render();
+        glViewport(0, 0, WIN_W, WIN_H);
+        glUseProgram(0);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    #endif
+}
+
+void DrawFrustumCullingView(Eternal::Renderer &renderer, float xoffs, float yoffs) {
+    float chunk_visual_size = 16;
+
+/*    backSprite.Draw(xoffs,yoffs,16*chunk_visual_size,256*chunk_visual_size,
+                    0,0,16,16);
+*/
+
+    Rect r(32,64,64,64);
+
+    Quad q;
+    q.FromRect(r);
+    renderer.SetColor(1,0,0,1);
+    renderer.DrawQuad(q);
+        
 }

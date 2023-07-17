@@ -15,6 +15,9 @@ namespace Eternal {
             void Load(std::string sfilename);
 
             void Bind(int unit = 0);
+
+            void Draw(float x, float y, float w, float h,
+                        float cx, float cy, float cw, float ch);
             void Draw(Rect &pos, Rect &clip);
 
             void Draw_NoBind(Rect &pos, Rect &clip);

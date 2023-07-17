@@ -126,7 +126,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         brickType = 1;
     }
 
-    std::cout << "generating " << chunkx << " , " << chunkz << std::endl;
+    std::cout << "generating " << chunkx << " , " << chunkz << " ";
 
     static int counter = 0;
 
@@ -413,7 +413,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     chunk.bIniialBuild = true;
 
     mesh.Clean();
-    for (int y = 0; y < MAX_HEIGHT; y++) {
+    for (int y = 2; y < MAX_HEIGHT; y++) {
         for (int x = 0; x < CHUNK_SIZE;x++) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
             for (int z = 0; z < CHUNK_SIZE;z++) {
@@ -431,6 +431,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 float posX = (chunkX*CHUNK_SIZE)+x;
                 float posZ = (chunkZ*CHUNK_SIZE)+z;
                 mesh.SetTranslation(posX,y,posZ);
+
+                static int max = 0;
 
                 int len = 1;
                 for(int i = 1;i < CHUNK_SIZE;i++) {
@@ -451,6 +453,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     }
                 }
                 skip:
+
                 z += len-1;
 
                 for(int i = 0;i < 6*6;i++)

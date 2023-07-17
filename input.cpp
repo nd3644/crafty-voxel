@@ -33,22 +33,30 @@ bool Eternal::InputHandle::IsKeyTap(Key key) {
 }
 
 bool Eternal::InputHandle::IsMouseClick(MouseButtons b) {
-    ImGuiIO& io = ImGui::GetIO();
-    if (!io.WantCaptureMouse) {
+    #ifdef ENABLE_IMGUI
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
+            if((myMouse & b) && !(prevMouseState & b)) {
+                return true;
+            }
+        }
+    #else
         if((myMouse & b) && !(prevMouseState & b)) {
             return true;
         }
-    }
+    #endif
     return false;
 }
 
 bool Eternal::InputHandle::IsMouseDown(MouseButtons b) {
+    #ifdef ENABLE_IMGUI
     ImGuiIO& io = ImGui::GetIO();
     if (!io.WantCaptureMouse) {
         if(myMouse & b) {
             return true;
         }
     }
+    #endif
     return false;
 }
 

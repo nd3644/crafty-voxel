@@ -33,7 +33,7 @@ void CloudSystem::Update(Camera &cam) {
 
 void CloudSystem::Draw() {
     float CLOUD_DEFAULT_ALTITUDE = Map::MAX_HEIGHT + 8;
-    glDisable(GL_TEXTURE_2D);
+    ;
     glDisable(GL_CULL_FACE);
     for(auto &cloud: myClouds) {
         Mesh mesh;

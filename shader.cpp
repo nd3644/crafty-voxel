@@ -3,8 +3,6 @@
 #include <iostream>
 #include <fstream>
 
-//GLuint myProgram;
-
 bool CheckShaderErrors(GLuint shader) {
 	GLint myReturn = 0;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &myReturn);
@@ -36,6 +34,7 @@ bool CheckProgramLinkErrors(GLuint program) {
 
 
 Shader::Shader() {
+    projMatrix = modelMatrix = viewMatrix = glm::mat4(1);
 }
 
 Shader::~Shader() {

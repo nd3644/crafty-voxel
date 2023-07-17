@@ -12,6 +12,15 @@ class BrickSelectorWidget;
 class Camera
 {
     public:
+        enum FrustumPlanes {
+            PLANE_LEFT = 0,
+            PLANE_RIGHT,
+            PLANE_TOP,
+            PLANE_BOTTOM,
+            PLANE_FRONT,
+            PLANE_BACK,
+            NUM_PLANES
+        };
         Camera();
         ~Camera();
 
@@ -111,12 +120,13 @@ class Camera
         glm::vec3 tmp;
 
         bool IsThirdPerson() const;
-
     private:
         void CheckInput(Eternal::InputHandle &input);
         void RunMouseLogic();
+        void CalcNewFrustumPlanes();
         
     private:
+        plane_t FrustumPlanes();
         bool bThirdPerson;
         int jumpCooldown;
 

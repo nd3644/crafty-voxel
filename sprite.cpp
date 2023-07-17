@@ -75,7 +75,7 @@ void Eternal::Sprite::Load(std::string sfile) {
         exit(1);
     }
 
-    glEnable(GL_TEXTURE_2D);
+    ;
     glBindTexture(GL_TEXTURE_2D, myTexID);
    
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -92,8 +92,7 @@ void Eternal::Sprite::Load(std::string sfile) {
 }
 
 void Eternal::Sprite::Bind(int unit) {
-
-    glEnable(GL_TEXTURE_2D);
+    ;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, myTexID);
 }
@@ -103,8 +102,14 @@ void Eternal::Sprite::ForceResize(int width, int height) {
     h = height;
 }
 
-void Eternal::Sprite::Draw(Rect &pos, Rect &clip) {
+void Eternal::Sprite::Draw(float x, float y, float w, float h,
+                        float cx, float cy, float cw, float ch) {
+    Rect r(x,y,w,h);
+    Rect c(cx,cy,cw,ch);
+    Draw(r,c);
+}
 
+void Eternal::Sprite::Draw(Rect &pos, Rect &clip) {
     glBindTexture(GL_TEXTURE_2D, myTexID);
     Draw_NoBind(pos, clip);
 }
