@@ -1,21 +1,29 @@
 CXX=g++
-CXXFLAGS=-std=c++11 -Wall -O2 -I/usr/include/imgui/ -I/usr/include/imgui/backends/ -DENABLE_IMGUI
+CXXFLAGS=-std=c++11 -Wall -O2  -I./include/ -I/usr/include/imgui/ -I/usr/include/imgui/backends/ -DENABLE_IMGUI
 LDFLAGS=-lSDL2main -lSDL2 -lSDL2_image -lGL -lGLEW -L/usr/lib/imgui/ -limgui -lstb -lnoise -lgsl
-SRCS=$(wildcard *.cpp)
-OBJS=$(patsubst %.cpp,%.o,$(SRCS))
+SRCS=$(wildcard src/*.cpp)
+OBJS=$(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
+BUILD_DIR = build
 
-TARGET = crafty.out
+MAKEFLAGS += -j$(nproc)
 
-all: $(TARGET)
+.PHONY: all clean run
+
+TARGET = $(BUILD_DIR)/crafty.out
+
+all: $(TARGET) | $(BUILD_DIR)
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+$(BUILD_DIR)/%.o: src/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -rf $(TARGET) $(BUILD_DIR)
 
 run:
 	./$(TARGET)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
