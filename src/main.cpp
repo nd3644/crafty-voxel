@@ -10,7 +10,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "perlin.h"
 #include "map.h"
 #include "shader.h"
 #include "cube.h"
@@ -66,7 +65,7 @@ Eternal::Sprite cursorTex;
 Shader myShader,           // Default terrain shader
         myShader2D,        // 2D textured sprites
         myCloudShader,     // For the clouds only
-        myRendererShader; // For Renderer, 2D primitives
+        myRendererShader;  // For Renderer, 2D primitives
 
 int main(int argc, char* args[]) {
 	CompileArr();

@@ -41,48 +41,24 @@ public:
     };
 
     struct chunk_t {
-        int pipleline_stage;
 
-        chunk_t() {
-            bVisible = false;
-            pipleline_stage = 0;
-            bGen = false;
-            bIsCurrentlyGenerating = false;
-            bIniialBuild = false;
-            for(int i = 0;i < CHUNK_SIZE;i++) {
-                for(int j = 0;j < CHUNK_SIZE;j++) {     
-                    for(int y = 0;y < MAX_HEIGHT;y++) {
-                        iBricks[i][y][j] = 0;
-                        iLightLevels[i][y][j] = 0;
+        enum ChunkState {
+            DEFAULT_STAGE = 0,
+            GEN_STAGE,
+            AO_STAGE,
+            BUILD_STAGE,
+            UPLOAD_STAGE,
+            READY_STAGE,
+            NUM_STAGES
+        };
 
+        ChunkState curStage;
 
-                        for(int f = 0;f < 6;f++) {
-                            for(int v = 0;v < 4;v++) {
-                                ambientVecs[i][y][j][f][v] = 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        chunk_t();
+        ~chunk_t();
 
-        ~chunk_t() {
-        }
-
-        void PushLights(Map &map) {
-//            std::cout << "pushlen: " << lightList.size() << std::endl;
-            for(light_t &l: lightList) {
-                pushedLights.push_back(l);
-                map.AddLight(l.x, l.z, l.y, true);
-            }
-        }
-
-        void PopLights(Map &map) {
-            for(light_t &l: pushedLights) {
-                map.AddLight(l.x, l.z, l.y, false);
-            }
-            pushedLights.clear();
-        }
+        void PushLights(Map &map);
+        void PopLights(Map &map);
 
         Mesh mesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
@@ -95,13 +71,9 @@ public:
         bool bGen;
         // This is for preventing Generate recursively calling itself. This can probably be done better
         bool bIsCurrentlyGenerating;
-        bool bIniialBuild;
+        bool bIniialBuild, bInitialAOBuild;
 
         void Generate(int chunkx, int chunkz, Map &map);
-        void DummyFunc() {
-//            mesh.Clean();
-            //transMesh.Clean();
-        }
     };
 
     enum Priority {
@@ -123,46 +95,25 @@ public:
     /* This function makes a terrible amount of effort to prevent negative indices
       because they were causing a lot of trouble. */
 	inline int GetBrick(int x, int z, int y) {
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
-            return 0;
-        }
-
-        int origxchunk = x / CHUNK_SIZE;
-        int origzchunk = z / CHUNK_SIZE;
-
-        if(x < 0)
-            x += half_limit;
-
-        if(z < 0)
-            z += half_limit;
-
         int xchunk = x / CHUNK_SIZE;
         int zchunk = z / CHUNK_SIZE;
 
         int xindex = x % CHUNK_SIZE;
         int zindex = z % CHUNK_SIZE;
 
-        auto chunk_index = std::make_pair(xchunk,zchunk);
+        int val = 0;
+        auto key = std::make_pair(xchunk,zchunk);
+        auto it = Chunks.find(key);
+        if(it != Chunks.end()) {
+            auto &chunk = Chunks[key];
+            val = chunk.iBricks[xindex][y][zindex];
+        }
 
-        auto &chunk = Chunks[chunk_index];
-
-		return chunk.iBricks[xindex][y][zindex];
+        return val;
 	}
 
     inline void SetBrick(int x, int z, int y, int id) {
         using namespace std;
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
-            return;
-        }
-
-        int origxchunk = x / CHUNK_SIZE;
-        int origzchunk = z / CHUNK_SIZE;
-
-        if(x < 0)
-            x += half_limit;
-
-        if(z < 0)
-            z += half_limit;
 
         int xchunk = x / CHUNK_SIZE;
         int zchunk = z / CHUNK_SIZE;
@@ -170,69 +121,20 @@ public:
         int xindex = x % CHUNK_SIZE;
         int zindex = z % CHUNK_SIZE;
 
-        auto chunk_index = std::make_pair(xchunk,zchunk);
 
-        auto &chunk = Chunks[chunk_index];
-
-        chunk.iBricks[xindex][y][zindex] = id;
+        auto key = std::make_pair(xchunk,zchunk);
+        auto it = Chunks.find(key);
+        if(it != Chunks.end()) {
+            auto &chunk = Chunks[key];
+            chunk.iBricks[xindex][y][zindex] = id;
+        }
 	}
 
     inline int GetLightLevel(int x, int z, int y) {
-        return 0;
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
-            return -1;
-        }
-
-//        int origxchunk = x / CHUNK_SIZE;
-//        int origzchunk = z / CHUNK_SIZE;
-
-        if(x < 0)
-            x += half_limit;
-
-        if(z < 0)
-            z += half_limit;
-
-        int xchunk = x / CHUNK_SIZE;
-        int zchunk = z / CHUNK_SIZE;
-
-        int xindex = x % CHUNK_SIZE;
-        int zindex = z % CHUNK_SIZE;
-
-        auto chunk_index = std::make_pair(xchunk,zchunk);
-
-        auto &chunk = Chunks[chunk_index];
-
-		return chunk.iLightLevels[xindex][y][zindex];
+		return 0;
 	}
 
     inline void SetLightLevel(int x, int z, int y, int lvl) {
-        return;
-        using namespace std;
-        if(x < -half_limit || z < -half_limit || x > half_limit || z > half_limit || y < 0 || y >= MAX_HEIGHT) {
-            return;
-        }
-
-//        int origxchunk = x / CHUNK_SIZE;
-//        int origzchunk = z / CHUNK_SIZE;
-
-        if(x < 0)
-            x += half_limit;
-
-        if(z < 0)
-            z += half_limit;
-
-        int xchunk = x / CHUNK_SIZE;
-        int zchunk = z / CHUNK_SIZE;
-
-        int xindex = x % CHUNK_SIZE;
-        int zindex = z % CHUNK_SIZE;
-
-//        auto chunk_index = std::make_pair(xchunk,zchunk);
-
-        if(lvl < 0)
-            lvl = 0;
-
-        Chunks[std::make_pair(xchunk,zchunk)].iLightLevels[xindex][y][zindex] = lvl;
 	}
 
     void AddLight(int x, int z, int y, bool bRemove) {
@@ -342,7 +244,6 @@ public:
     void BuildChunk(int chunkX, int chunkZ);
     void BuildChunkAO(int chunkX, int chunkZ);
 
-    void BuildChunkTrans(int x, int z);
     void RebuildLights();
 
     void RebuildAll();
@@ -420,7 +321,7 @@ public:
         return true;
     }
 private:
-
+    std::thread threads[16];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
     std::vector<build_schedule_info_t>ScheduledBuilds;

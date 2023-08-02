@@ -67,6 +67,7 @@ class Mesh {
         void BindBufferData();
     private:
         bool bDataIsBound;
+        bool bInit;
         float xTrans, yTrans, zTrans;
         GLuint vertArrObj;
         GLuint arrayBuffers[4];

@@ -18,7 +18,7 @@ bool gEnableAO = true;
 
 bool gbFrustumTopView = false;
 
-int gViewDist = 16;
+int gViewDist = 8;
 float fFov = 75.0f;
 float gfZNear = 0.1f;
-float gfZFar = 600.0f;
+float gfZFar = 1000.0f;

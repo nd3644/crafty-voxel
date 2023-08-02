@@ -14,8 +14,8 @@ Camera::Camera() {
     direction = glm::vec3(0,0,1);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
-//    position = glm::vec3(120,32,120);
-    position = formerPosition = glm::vec3(8,120,0);
+//    position = formerPosition = glm::vec3(8,120,0);
+    position = formerPosition = glm::vec3(8 + 2000,120,0 + 2000);
     bFocus = true;
     bThirdPerson = false;
     bground = false;
@@ -90,6 +90,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         fJumpVel = 0;
         position.y += 0.25f;
     }
+
 }
 
 void Camera::CheckInput(Eternal::InputHandle &input) {
@@ -126,6 +127,9 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
         forward.y = 0;
         moveDelta -= forward * STRAFE_SPD;
 	}
+
+    position.x = std::max(position.x, 0.0f);
+    position.z = std::max(position.z, 0.0f);
 }
 
 void Camera::RunMouseLogic() {
@@ -148,7 +152,7 @@ void Camera::RunMouseLogic() {
 
     if(bFocus) {
         if(!SDL_GetWindowGrab(myWindow)) {
-            SDL_SetWindowGrab(myWindow,SDL_TRUE);
+//            SDL_SetWindowGrab(myWindow,SDL_TRUE);
             SDL_ShowCursor(SDL_DISABLE);
         }
         float LookSens = 0.05f;
@@ -181,6 +185,7 @@ void Camera::RunMouseLogic() {
 }
 
 void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
+    return;
     glm::vec3 p = position;
     glm::vec3 outter;
 
@@ -280,8 +285,7 @@ void Camera::CalcNewFrustumPlanes() {
 
     float hFov = glm::degrees(2 * glm::atan(glm::tan(glm::radians(fFov / 2)) * static_cast<float>(WIN_W) / static_cast<float>(WIN_H)));
 
-    std::cout << "fov: " << hFov << std::endl;
-
+//    std::cout << "fov: " << hFov << std::endl;
 
     // near
     myFrustumPlanes[PLANE_NEAR].normal = direction;

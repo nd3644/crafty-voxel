@@ -11,13 +11,6 @@
 #include <GL/glew.h>
 #include <algorithm>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include <libnoise/noise.h>
-#include <gsl/gsl_spline.h>
-
 #include <immintrin.h>
 
 #include <stack>
@@ -35,6 +28,8 @@ Map::Map(Camera &c) : camera(c) {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores/2;
     }
+
+    std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
 
     bIsDay = true;
 }
@@ -89,154 +84,6 @@ void Map::FillWater(int fx, int fz, int fy) {
     }
 }
 
-const int numPoints = 6;
-double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
-double ay[numPoints] = { 30, 10, 100, 100, 110, 128 };
-
-double interpolateY(double x)
-{
-    if(x < -1)
-        x = -1;
-    if(x > 1)
-        x = 1;
-    
-    gsl_interp_accel* accel = gsl_interp_accel_alloc();
-    gsl_interp* interp = gsl_interp_alloc(gsl_interp_linear, numPoints);
-
-    gsl_interp_init(interp, ax, ay, numPoints);
-    double interpolatedY = gsl_interp_eval(interp, ax, ay, x, accel);
-
-    gsl_interp_free(interp);
-    gsl_interp_accel_free(accel);
-
-    return interpolatedY;
-}
-
-void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
-    if(bGen || bIsCurrentlyGenerating)
-        return;
-
-    const int SEA_LEVEL = 63;
-
-    bIsCurrentlyGenerating = true;
-    bool bMount = (rand()%5 == 1) ? true : false;
-
-    int brickType = 1;
-    if(bMount) {
-        brickType = 1;
-    }
-
-    std::cout << "generating " << chunkx << " , " << chunkz << " ";
-
-    static int counter = 0;
-
-    using namespace noise;
-
-    module::Perlin normalPerlin;
-    normalPerlin.SetFrequency(0.2);
-
-    module::Perlin baseFlatTerrain;
-
-    module::ScaleBias flatTerrain;
-    flatTerrain.SetSourceModule(0, baseFlatTerrain);
-    flatTerrain.SetScale(0.125);
-
-    module::RidgedMulti mountainTerrain;
-    mountainTerrain.SetLacunarity(1.5);
-    mountainTerrain.SetOctaveCount(1);
-
-    module::Perlin terrainType;
-    terrainType.SetFrequency(0.2);
-    terrainType.SetPersistence(0.25);
-
-    module::Select finalTerrain;
-    finalTerrain.SetSourceModule(0, flatTerrain);
-    finalTerrain.SetSourceModule(1, mountainTerrain);
-    finalTerrain.SetControlModule(terrainType);
-    finalTerrain.SetBounds(0.0, 1000.0);
-    finalTerrain.SetEdgeFalloff(0.125);
-
-    std::vector<vec3_t>toFill;
-    for (int x = 0; x < CHUNK_SIZE;x++) {
-        int xindex = (chunkx*CHUNK_SIZE)+x;
-		for (int z = 0; z < CHUNK_SIZE; z++) {
-            int zindex = (chunkz*CHUNK_SIZE)+z;
-            float unit = normalPerlin.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5);
-            int height = 0;//(((unit + 1) / 2) * MAX_HEIGHT);
-
-            double xValue = unit;
-//            double yValue = gsl_spline_eval(spline, xValue, accel);
-//            height = yValue;
-            height = interpolateY(xValue);
-
-            if(height >= MAX_HEIGHT)
-                height = MAX_HEIGHT - 1;
-            
-            for (int y = height; y > 0; y--) {
-				map.SetBrick(xindex, zindex, y, brickType);
-                if(y > 96)
-                    map.SetBrick(xindex,zindex,y,map.IdFromName("otherstone"));
-			}
-
-            for(int y = 1;y < SEA_LEVEL + 5;y++) {
-                if(map.GetBrick(xindex,zindex,y) == 1) {
-                    map.SetBrick(xindex,zindex,y,map.IdFromName("sand"));
-                }
-            }
-            for(int y = 1;y < SEA_LEVEL;y++) {
-                if(map.GetBrick(xindex,zindex,y) == 0) {
-                    map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
-                }
-            }
-		}
-	}
-
-    // Plant some trees
-
-    if(rand() % 6 == 0) {
-        int lX = rand() % 16;
-        int lZ = rand() % 16;
-        lX += chunkx * CHUNK_SIZE;
-        lZ += chunkz * CHUNK_SIZE;
-        int height = (rand() % 6) + 5;
-
-        bool bCanPlant = false;
-
-        int groundLvl = 1;
-        for(groundLvl = 1;groundLvl < MAX_HEIGHT;groundLvl++) {
-            if(map.GetBrick(lX,lZ,groundLvl) == 0) {
-                if(map.GetBrick(lX,lZ,groundLvl-1) == map.IdFromName("grass_top")) { // Only grow ontop of grass
-                    bCanPlant = true;
-                }
-                break;
-            }
-        }
-
-        if(bCanPlant) {
-            for(int y = 0;y < groundLvl+height;y++) {
-                map.SetBrick(lX,lZ,y,map.IdFromName("tree"));
-            }
-
-            for(int y = 0;y < 4;y++) {
-                int length = 4 - y;
-                for(int x = lX - length;x <= lX + length;x++) {
-                    for(int z = lZ - length;z <= lZ + length;z++) {
-                        map.SetBrick(x,z,(groundLvl+height)+y,map.IdFromName("leaves"));
-                    }
-                }
-            }
-            for(int x = lX - 3;x <= lX + 3;x++) {
-                for(int z = lZ - 3;z <= lZ + 3;z++) {
-                    map.SetBrick(x,z,(groundLvl+height)-1,map.IdFromName("leaves"));
-                }
-            }
-        }
-        
-    }
-
-    bGen = true;
-}
-
 std::vector<std::string> Map::TextureNamesFromFile(std::string filename) {
     std::vector<std::string>result;
     std::ifstream file(filename);
@@ -269,14 +116,7 @@ void Map::FromBMP(std::string sfile) {
     myTexArray.Load(BrickTextureFilenames);
     LoadBrickMetaData();
 
-
-    for(int x = -gViewDist;x < gViewDist;x++) {
-        for(int z = -gViewDist;z < gViewDist;z++) {
-            Chunks[std::make_pair(x,z)].Generate(x,z,*this);
-        }
-    }
-
-    RebuildAllVisible();
+//    RebuildAllVisible();
 }
 
 void Map::RebuildAll() {
@@ -289,6 +129,9 @@ void Map::RebuildAll() {
 }
 
 void Map::BuildChunkAO(int chunkX, int chunkZ) {
+    if(chunkX < 0 || chunkZ < 0) {
+        return;
+    }
     chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
     for (int y = 0; y < MAX_HEIGHT; y++) {
         for (int x = 0; x < CHUNK_SIZE;x++) {
@@ -313,7 +156,6 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
                 }
 
                 uint8_t ambShade = gAOLevel;
-
 
                 // Top
                 uint8_t (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
@@ -396,14 +238,19 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
             }
         }
     }
+
+    finishAO:
+    chunk.bInitialAOBuild = true;
+    chunk.curStage = chunk_t::BUILD_STAGE;
 }
 
 void Map::BuildChunk(int chunkX, int chunkZ) {
-    //std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
+    if(chunkX < 0 || chunkZ < 0) {
+        return;
+    }
 
-//    std::cout << "building " << chunkX << ", " << chunkZ << std::endl;
-
-//    BuildChunkAO(chunkX,chunkZ);
+    std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
+    std::cout << "size: " << Chunks.size() << std::endl;
 
     int cube_count = 0;
     chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
@@ -572,142 +419,15 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
             }
         }
     }
-    mesh.BindBufferData();
-
-    // Transparent pass
-//    BuildChunkTrans(chunkX,chunkZ);
-
-//    std::cout << "built " << cube_count << std::endl;
-
-/*    std::string str = std::to_string(dbgIterCount);
-    if(str.length() > 3) {
-        str.insert(str.begin()+3, ',');
-    }
-    std::cout << "iter_count: " << str << std::endl;*/
+//    mesh.BindBufferData();
+    chunk.curStage = chunk_t::UPLOAD_STAGE;
 }
 
-void Map::BuildChunkTrans(int chunkX, int chunkZ) {
-    return;
-    chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
-    Mesh &mesh = chunk.mesh;
-
-    chunk.bIniialBuild = true;
-
-    mesh.Clean();
-    for (int y = 0; y < MAX_HEIGHT; y++) {
-        for (int x = 0; x < CHUNK_SIZE;x++) {
-            int xindex = (chunkX*CHUNK_SIZE)+x;
-            for (int z = 0; z < CHUNK_SIZE;z++) {
-                int zindex = (chunkZ*CHUNK_SIZE)+z;
-
-                // Check the current brick is not empty
-                if (GetBrick(xindex, zindex, y) <= 0) {
-                    continue;
-                }
-                float posX = (chunkX*CHUNK_SIZE)+x;
-                float posZ = (chunkZ*CHUNK_SIZE)+z;
-                mesh.SetTranslation(posX,y,posZ);
-                int brickID = GetBrick(xindex,zindex,y);
-
-                float trans = BrickTransparencies[brickID-1];
-
-                if(trans == 1) {
-                    continue;
-                }
-                int len = 1;
-
-                for(int i = 0;i < 6*6;i++)
-                    mesh.Index1(BrickLookup[brickID-1][i/6]);
-
-                float lv = fAmbient;
-                if(lv > 1)
-                    lv = 1;
-                if(lv < fAmbient)
-                    lv = fAmbient;
-
-                // Draw top
-                if(GetBrick(xindex,zindex,y+1) == 0) {
-                    mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
-                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
-                    mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
-
-                    mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);
-                    mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);
-                    mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
-                }
-            
-                if(GetBrick(xindex,zindex,y-1) == 0) {
-                // Draw bottom
-                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
-                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
-                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
-                mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
-
-                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
-                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
-                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
-                }
-
-                lv -= 0.2f;
-                // Draw left
-                if(GetBrick(xindex+1,zindex,y) == 0) {
-                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, 0);
-                mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
-                mesh.TexCoord2(len, 1);     mesh.Vert3(0.5, -0.5, len);
-
-                mesh.TexCoord2(len, 0);     mesh.Vert3(0.5, 0.5, len);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
-                mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0);
-                }
-
-                if(GetBrick(xindex-1,zindex,y) == 0) {
-                // Draw right
-                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-                mesh.TexCoord2(len, 1);     mesh.Vert3(-0.5, -0.5, len);
-                mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
-
-                mesh.TexCoord2(len, 0);     mesh.Vert3(-0.5, 0.5, len);
-                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-                }
-
-                if(GetBrick(xindex,zindex-1,y) == 0) {
-                // Draw back
-                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
-                mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0);
-
-                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
-                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0);
-                }
-
-                if(GetBrick(xindex,zindex+1,y) == 0) {
-                // Draw front
-                mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);mesh.Color4(lv, lv, lv, trans); mesh.Color4(lv, lv, lv, trans);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
-                mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len);
-                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
-
-                mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);
-                mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len);
-                mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len);
-                }
-            }
-        }
-    }
-    mesh.BindBufferData();
-}
-
-void Map::RebuildLights() {
-
-}
+void Map::RebuildLights() { }
+void Map::RunBuilder() { }
 
 void Map::Draw(Camera &cam) {
+    
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
@@ -721,13 +441,29 @@ void Map::Draw(Camera &cam) {
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+
+    for(auto &t: threads) {
+        if(t.joinable())
+            t.join();
+    }
+
+
+    int curThread = 0;
+    std::thread builder;
+
+    int build_count = 0;
     int skip = 0;
+    int len = 0;
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
+            if(x < 0 || z < 0) {
+                continue;
+            }
+            len++;
 
+//            std::cout << "drawing " << x << " , " << z << std::endl;
 
             bool bVisible = false;
-            glm::vec3 newCamPos = cam.position;
             glm::vec3 newCamDir = cam.direction;
             newCamDir = glm::normalize(newCamDir);
 
@@ -773,32 +509,52 @@ void Map::Draw(Camera &cam) {
                 continue;
             }
             
-            if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty() || chunk.bGen == false) {
+            if(chunk.curStage < chunk_t::UPLOAD_STAGE) {
+                if(curThread < NUM_THREADS) {
+                    threads[curThread] = std::thread([this, &chunk, x, z]() {
+                        if(!chunk.bGen) {
+                            chunk.Generate(x,z,*this);
+                        }
+                        else if(!chunk.bInitialAOBuild) {
+                            BuildChunkAO(x,z);
+                        }
+                        else if(!chunk.bIniialBuild) {
+                            BuildChunk(x,z);
+                        }
+                    });
+                    curThread++;
+                    continue;
+                }
                 continue;
+            }
+            if(chunk.curStage != chunk.READY_STAGE) {
+                if(chunk.curStage == chunk.UPLOAD_STAGE) {
+                    chunk.mesh.BindBufferData();
+                    chunk.curStage = chunk.READY_STAGE;
+                }
+                else {
+                    continue;
+                }
             }
             Mesh &mesh = chunk.mesh;
             mesh.Draw(Mesh::MODE_TRIANGLES);
         }
     }
 
-/*    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
-        for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
-            auto index = std::make_pair(x,z);
-            auto &chunk = Chunks[index];
-            if(chunk.bIniialBuild == false || chunk.mesh.IsEmpty()) {
-                continue;
-            }
-            chunk.transMesh.Draw(Mesh::MODE_TRIANGLES);
-        }
-    }
-*/
-
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();
     }
+
+//    std::cout << "len: " << len << std::endl;
+
+/*    for(auto &c: Chunks) {
+        std::cout << c.first.first << " , " << c.first.second << std::endl;
+    }
+    std::cout << std::endl;*/
 }
 
 void Map::RebuildAllVisible() {
+    return;
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
@@ -823,95 +579,6 @@ void Map::ScheduleMeshBuild(build_schedule_info_t info) {
     }
     // Otherwise add it
     ScheduledBuilds.push_back(info);
-}
-
-void Map::RunBuilder() {
-    int sX = ((int)camera.position.x / CHUNK_SIZE);
-    int sZ = ((int)camera.position.z / CHUNK_SIZE);
-
-    int build_count = 0;
-
-    int endX = sX+gViewDist;
-    int endZ = sZ+gViewDist;
-    // First ensure every chunk within gViewDist is generated
-    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
-        for(int z = sZ-gViewDist;z < endZ;z++) {
-            auto index = std::make_pair(x,z);
-            auto &chunk = Chunks[index];
-
-            if(!chunk.bGen) {
-                chunk.Generate(x,z,*this);
-                goto exitLoop;
-            }
-        }
-    }
-    exitLoop:
-/*````
-
-    // Render one of the next chunks following the highest priority first
-    for(int priority = Priority::ONE;priority < Priority::NUM_PRIORITIES;priority++) {
-        for(size_t i = 0;i < ScheduledBuilds.size();i++) {
-            if(ScheduledBuilds[i].priorityLevel == priority) {
-                BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
-                ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
-                build_count++;
-
-                // break out of the loop
-                priority = Priority::NUM_PRIORITIES;
-                break;
-            }
-        }
-    }*/
-
-    // Use the time to build a random one
-    // TODO: Actually make a system for this
-    int minX = sX - gViewDist;
-    int maxX = sX + gViewDist;
-
-    int minZ = sZ - gViewDist;
-    int maxZ = sZ + gViewDist;
-
-    int randX = (rand() % (maxX - minX) + 1) + minX;
-    int randZ = (rand() % (maxZ - minZ) + 1) + minZ;
-
-    static int rebuildX = randX;
-    static int rebuildZ = randZ;
-
-    chunk_t &rndChunk = *GetChunk(rebuildX, rebuildZ);
-    if(rndChunk.pipleline_stage == 0) {
-        BuildChunkAO(floor(camera.position.x / CHUNK_SIZE), floor(camera.position.z / CHUNK_SIZE));
-        rndChunk.pipleline_stage++;
-    }
-    else {
-        BuildChunk(floor(camera.position.x / CHUNK_SIZE), floor(camera.position.z / CHUNK_SIZE));
-        rndChunk.pipleline_stage = 0;
-
-        rebuildX = randX;
-        rebuildZ = randZ;
-    }
-
-   static bool b = false;
-
-   // Ensure immediate priority chunks are built on the same frame
-    for(size_t i = 0;i < ScheduledBuilds.size();i++) {
-        if(ScheduledBuilds[i].priorityLevel == Priority::IMMEDIATE) {
-
-            auto &chunk = *GetChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
-            if(chunk.pipleline_stage == 0) {
-                BuildChunkAO(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
-                chunk.pipleline_stage++;
-            }
-            else {
-                BuildChunk(ScheduledBuilds[i].x, ScheduledBuilds[i].z);
-                chunk.pipleline_stage = 0;
-                ScheduledBuilds.erase(ScheduledBuilds.begin()+i);
-            }
-            build_count++;
-        }
-    }
-    b = !b;
-
-//    std::cout << "built: " << build_count << std::endl;
 }
 
 void Map::LoadBrickMetaData() {
@@ -960,3 +627,4 @@ void Map::ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level) {
     }
 }
 
+ 

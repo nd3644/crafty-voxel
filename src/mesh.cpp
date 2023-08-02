@@ -7,46 +7,48 @@
 #include "globals.h"
 
 Mesh::Mesh() {
-    xTrans = yTrans = zTrans = 0.0f;
-    glGenVertexArrays(1, &vertArrObj);
-    glBindVertexArray(vertArrObj);
-    glGenBuffers(4, arrayBuffers);
-
-    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[1]);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, 0);  
-    glEnableVertexAttribArray(2);
-
-    glEnableVertexAttribArray(3);
-    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
-    glVertexAttribIPointer(3, 1, GL_INT, 0, 0);
-
+    bInit = false;
     bDataIsBound = false;
 }
 
 Mesh::~Mesh() {
-    if(glIsVertexArray(vertArrObj)) {
-        glDeleteVertexArrays(1, &vertArrObj);
-    }
+    if(bInit) {
+        if(glIsVertexArray(vertArrObj)) {
+            glDeleteVertexArrays(1, &vertArrObj);
+        }
 
-    if(glIsBuffer(arrayBuffers[0])) {
-        glDeleteBuffers(4, arrayBuffers);
+        if(glIsBuffer(arrayBuffers[0])) {
+            glDeleteBuffers(4, arrayBuffers);
+        }
     }
-
-    vVertBuffer.clear();
-    vTexCoords.clear();
-    ColorBuffer.clear();
-    Indices.clear();
 }
 
 void Mesh::BindBufferData() {
+
+    if(!bInit) {
+        xTrans = yTrans = zTrans = 0.0f;
+        glGenVertexArrays(1, &vertArrObj);
+        glBindVertexArray(vertArrObj);
+        glGenBuffers(4, arrayBuffers);
+
+        glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[1]);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+
+        glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
+        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, 0);  
+        glEnableVertexAttribArray(2);
+
+        glEnableVertexAttribArray(3);
+        glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
+        glVertexAttribIPointer(3, 1, GL_INT, 0, 0);
+
+        bInit = true;
+    }
 
     vVertBuffer.shrink_to_fit();
     vTexCoords.shrink_to_fit();
