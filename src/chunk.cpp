@@ -85,7 +85,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         brickType = 1;
     }
 
-    std::cout << "generating " << chunkx << " , " << chunkz << " ";
+ //   std::cout << "generating " << chunkx << " , " << chunkz << " ";
 
     static int counter = 0;
 

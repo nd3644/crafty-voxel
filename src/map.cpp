@@ -26,7 +26,7 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = 2;
     } else {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
-        NUM_THREADS = num_cores/2;
+        NUM_THREADS = num_cores;
     }
 
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
@@ -123,7 +123,7 @@ void Map::RebuildAll() {
     // Build chunks
     for(int x = 0;x < width/CHUNK_SIZE;x++) {
         for(int z = 0;z < depth/CHUNK_SIZE;z++) {
-            //BuildChunk(x,z);
+            BuildChunk(x,z);
         }
     }
 }
@@ -249,8 +249,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
         return;
     }
 
-    std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
-    std::cout << "size: " << Chunks.size() << std::endl;
+/*    std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
+    std::cout << "size: " << Chunks.size() << std::endl;*/
 
     int cube_count = 0;
     chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
@@ -554,7 +554,6 @@ void Map::Draw(Camera &cam) {
 }
 
 void Map::RebuildAllVisible() {
-    return;
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 
@@ -624,6 +623,30 @@ void Map::ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level) {
 
             ScheduleMeshBuild(info);
         }
+    }
+}
+
+void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
+    std::vector<std::thread>threadList;
+    int curThread = 0;
+    for(int x = fromX - radius;x < fromX + radius;x++) {
+        for(int z = fromZ - radius;z < fromZ + radius;z++) {
+            auto &chunk = Chunks[std::make_pair(x,z)];
+            threadList.emplace_back(std::thread([this, &chunk, x, z]() {
+                chunk.Generate(x,z,*this);
+            }));
+
+            if(threadList.size() >= NUM_THREADS) { // Don't spawn too many
+                for(auto &t: threadList) {
+                    t.join();
+                }
+                threadList.clear();
+            }
+        }
+    }
+
+    for(auto &t: threadList) { // Finish the threads
+        t.join();
     }
 }
 

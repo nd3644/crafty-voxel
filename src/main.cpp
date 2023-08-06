@@ -86,6 +86,8 @@ int main(int argc, char* args[]) {
 	float fdelta = 0.0f;
 	bool bDone = false;
 
+    myMap.GenerateChunksFromOrigin((int)myCamera.position.x / Map::CHUNK_SIZE, (int)myCamera.position.z / Map::CHUNK_SIZE, 48);
+
     static int counter = 0;
 	while (bDone == false) {
         auto frameStartTime = std::chrono::high_resolution_clock::now();

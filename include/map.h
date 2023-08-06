@@ -64,6 +64,7 @@ public:
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
+        
         std::vector<light_t>lightList;
         std::vector<light_t>pushedLights;
         bool bVisible;
@@ -101,7 +102,7 @@ public:
         int xindex = x % CHUNK_SIZE;
         int zindex = z % CHUNK_SIZE;
 
-        int val = 0;
+        int val = 255;
         auto key = std::make_pair(xchunk,zchunk);
         auto it = Chunks.find(key);
         if(it != Chunks.end()) {
@@ -320,6 +321,9 @@ public:
         }
         return true;
     }
+
+    // Pre-generates the world given a radius around a chunk
+    void GenerateChunksFromOrigin(int fromX, int fromZ, int radius);
 private:
     std::thread threads[16];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
