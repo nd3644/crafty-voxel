@@ -31,7 +31,7 @@ public:
     int NUM_THREADS;
 
     static constexpr int CHUNK_SIZE = 16;
-    static constexpr int MAX_HEIGHT = 256;
+    static constexpr int MAX_HEIGHT = 200;
     static constexpr int MAX_LIGHT_LEVEL = 16;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
@@ -63,6 +63,7 @@ public:
         Mesh mesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
+        
         uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
         
         std::vector<light_t>lightList;

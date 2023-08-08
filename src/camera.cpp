@@ -185,7 +185,6 @@ void Camera::RunMouseLogic() {
 }
 
 void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
-    return;
     glm::vec3 p = position;
     glm::vec3 outter;
 
@@ -242,7 +241,9 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         std::cout << "BRICKTYPE: " << brickType << std::endl;
         //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
         //myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
-        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        myMap.BuildChunkAO(chunkX,chunkZ);
+        myMap.BuildChunk(chunkX, chunkZ);
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
@@ -266,7 +267,9 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
         //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
         //myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
 
-        myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        myMap.BuildChunkAO(chunkX,chunkZ);
+        myMap.BuildChunk(chunkX, chunkZ);
     }
 
     formerPosition = position;

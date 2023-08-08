@@ -13,7 +13,7 @@ float fAmbient = 0.8f;
 std::vector<vec3_t>bricklist;
 std::vector<vec3_t>cameralist;
 
-int gAOLevel = 90;
+int gAOLevel = 80;
 bool gEnableAO = true;
 
 bool gbFrustumTopView = false;
