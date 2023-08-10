@@ -40,6 +40,41 @@ public:
         int x, y, z;
     };
 
+    struct brick_ao_t {
+
+        brick_ao_t() {
+            for(int f = 0;f < 6;f++) {
+                for(int v = 0;v < 4;v++) {
+                    ambientVecs[f][v] = 100;
+                }
+            }
+        }
+
+        uint8_t ambientVecs[6][4];
+
+        bool operator==(brick_ao_t &other) {
+            for(int f = 0;f < 6;f++) {
+                for(int v = 0;v < 4;v++) {
+                    if(other.ambientVecs[f][v] != ambientVecs[f][v]) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        bool operator!=(brick_ao_t &other) {
+            for(int f = 0;f < 6;f++) {
+                for(int v = 0;v < 4;v++) {
+                    if(other.ambientVecs[f][v] != ambientVecs[f][v]) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    };
+
     struct chunk_t {
 
         enum ChunkState {
@@ -64,7 +99,7 @@ public:
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         
-        uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
+//        uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
         
         std::vector<light_t>lightList;
         std::vector<light_t>pushedLights;
@@ -242,6 +277,8 @@ public:
             }
         }
     }
+
+    brick_ao_t GetBrickAO(int xindex, int zindex, int y);
 
     void BuildChunk(int chunkX, int chunkZ);
     void BuildChunkAO(int chunkX, int chunkZ);

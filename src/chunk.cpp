@@ -45,7 +45,7 @@ Map::chunk_t::chunk_t() {
 
                 for(int f = 0;f < 6;f++) {
                     for(int v = 0;v < 4;v++) {
-                        ambientVecs[i][y][j][f][v] = 1;
+                        // ambientVecs[i][y][j][f][v] = 1;
                     }
                 }
             }

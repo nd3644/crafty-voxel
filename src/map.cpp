@@ -133,7 +133,8 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
         return;
     }
     chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
-    for (int y = 0; y < MAX_HEIGHT; y++) {
+    goto finishAO;
+/*    for (int y = 0; y < MAX_HEIGHT; y++) {
         for (int x = 0; x < CHUNK_SIZE;x++) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
             for (int z = 0; z < CHUNK_SIZE;z++) {
@@ -237,11 +238,115 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
                 }
             }
         }
-    }
+    }*/
 
     finishAO:
     chunk.bInitialAOBuild = true;
     chunk.curStage = chunk_t::BUILD_STAGE;
+}
+
+Map::brick_ao_t Map::GetBrickAO(int xindex, int zindex, int y) {
+
+    brick_ao_t ao;
+
+    int brickID = GetBrick(xindex,zindex,y);
+    if (GetBrick(xindex, zindex, y) <= 0                // Is the brick air
+    || IsBrickSurroundedByOpaque(xindex,zindex,y)              // Is it visible or occluded by bricks?
+    ) {            // Is it opaque? Transparencies are handled in a seperate pass
+        return ao;
+    }
+
+    // Set default AO values to 1.0f (no AO at all)
+    for(int f = 0;f < 6;f++)
+        for(int v = 0;v < 4;v++)
+            ao.ambientVecs[f][v] = 100;
+
+    if(!gEnableAO) {
+        return ao;
+    }
+
+    uint8_t ambShade = gAOLevel;
+
+    // Top
+    uint8_t (&topamb)[4] = ao.ambientVecs[0];
+    if(GetBrick(xindex-1,zindex,y+1) != 0 || GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0) {
+        topamb[0] = ambShade;
+    }
+    if(GetBrick(xindex+1,zindex,y+1) != 0 || GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0) {
+        topamb[1] = ambShade;
+    }
+    if(GetBrick(xindex-1,zindex,y+1) != 0 || GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0) {
+        topamb[2] = ambShade;
+    }
+    if(GetBrick(xindex+1,zindex,y+1) != 0 || GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0) {
+        topamb[3] = ambShade;
+    }
+    
+    // Left
+    uint8_t (&leftamb)[4] = ao.ambientVecs[2];
+    //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
+    if(GetBrick(xindex-1,zindex-1,y) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex,y+1) != 0) {
+        leftamb[0] = ambShade;
+    }
+    if(GetBrick(xindex-1,zindex+1,y) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex,y+1) != 0) {
+        leftamb[1] = ambShade;
+    }
+    if(GetBrick(xindex-1,zindex+1,y) != 0 || GetBrick(xindex-1,zindex+1,y-1) != 0 || GetBrick(xindex-1,zindex,y-1) != 0) {
+        leftamb[2] = ambShade;
+    }
+    if(GetBrick(xindex-1,zindex-1,y) != 0 || GetBrick(xindex-1,zindex-1,y-1) != 0 || GetBrick(xindex-1,zindex,y-1) != 0) {
+        leftamb[3] = ambShade;
+    }
+
+    // ...
+    // Right
+    uint8_t (&rightamb)[4] = ao.ambientVecs[3];
+    //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
+    if(GetBrick(xindex+1,zindex-1,y) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex,y+1) != 0) {
+        rightamb[0] = ambShade;
+    }
+    if(GetBrick(xindex+1,zindex+1,y) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex,y+1) != 0) {
+        rightamb[1] = ambShade;
+    }
+    if(GetBrick(xindex+1,zindex+1,y) != 0 || GetBrick(xindex+1,zindex+1,y-1) != 0 || GetBrick(xindex+1,zindex,y-1) != 0) {
+        rightamb[2] = ambShade;
+    }
+    if(GetBrick(xindex+1,zindex-1,y) != 0 || GetBrick(xindex+1,zindex-1,y-1) != 0 || GetBrick(xindex+1,zindex,y-1) != 0) {
+        rightamb[3] = ambShade;
+    }
+
+    // back
+    uint8_t (&backamb)[4] = ao.ambientVecs[4];
+    //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
+    if(GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y) != 0) {
+        backamb[0] = ambShade;
+    }
+    if(GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex-1,y) != 0) {
+        backamb[1] = ambShade;
+    }
+    if(GetBrick(xindex,zindex-1,y-1) != 0 || GetBrick(xindex+1,zindex-1,y-1) != 0 || GetBrick(xindex+1,zindex-1,y) != 0) {
+        backamb[2] = ambShade;
+    }
+    if(GetBrick(xindex,zindex-1,y-1) != 0 || GetBrick(xindex-1,zindex-1,y-1) != 0 || GetBrick(xindex-1,zindex-1,y) != 0) {
+        backamb[3] = ambShade;
+    }
+
+    // Front
+    uint8_t (&frontamb)[4] = ao.ambientVecs[5];
+    if(GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y) != 0) {
+        frontamb[0] = ambShade;
+    }
+    if(GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y) != 0) {
+        frontamb[1] = ambShade;
+    }
+    if(GetBrick(xindex,zindex+1,y-1) != 0 || GetBrick(xindex+1,zindex+1,y-1) != 0 || GetBrick(xindex+1,zindex+1,y) != 0) {
+        frontamb[2] = ambShade;
+    }
+    if(GetBrick(xindex,zindex+1,y-1) != 0 || GetBrick(xindex-1,zindex+1,y-1) != 0 || GetBrick(xindex-1,zindex+1,y) != 0) {
+        frontamb[3] = ambShade;
+    }
+
+    return ao;
 }
 
 void Map::BuildChunk(int chunkX, int chunkZ) {
@@ -278,6 +383,8 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 float posZ = (chunkZ*CHUNK_SIZE)+z;
                 mesh.SetTranslation(posX,y,posZ);
 
+                brick_ao_t curBrickAO = GetBrickAO(xindex,zindex,y);
+
                 static int max = 0;
 
                 int len = 1;
@@ -285,12 +392,12 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     if(z < CHUNK_SIZE-i
                     && brickID == GetBrick(xindex,zindex+i,y)
                     && brickLightLevel == GetLightLevel(xindex,zindex+i,y)) {
-                        for(int f = 0;f < 6;f++) {
-                            for(int v = 0;v < 4;v++) {
-                                if(chunk.ambientVecs[x][y][z+i][f][v] != chunk.ambientVecs[x][y][z][f][v]) {
-                                    goto skip;  // This is just a crude way to break out of the loops
-                                }
-                            }
+/*                                if(chunk.ambientVecs[x][y][z+i][f][v] != chunk.ambientVecs[x][y][z][f][v]) {
+                            goto skip;  // This is just a crude way to break out of the loops
+                        }*/
+
+                        if(GetBrickAO(xindex,zindex+i,y) != curBrickAO) {
+                            goto skip;
                         }
                         len++;
                     }
@@ -309,7 +416,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 // Draw top
 
                 
-                uint8_t (&topamb_a)[4] = chunk.ambientVecs[x][y][z][0];
+                uint8_t (&topamb_a)[4] = curBrickAO.ambientVecs[0];
                 float amb[4];
                 for(int k = 0;k < 4;k++) {
                     amb[k] = ((float)topamb_a[k] / 100.0f) * lv;
@@ -335,7 +442,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
 
 
-                uint8_t (&botamb_a)[4] = chunk.ambientVecs[x][y][z][1];
+                uint8_t (&botamb_a)[4] = curBrickAO.ambientVecs[1];
                 for(int k = 0;k < 4;k++) {
                     amb[k] = (float)botamb_a[k] / 100.0f;
                 }
@@ -354,7 +461,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
 
-                uint8_t (&leftamb_a)[4] = chunk.ambientVecs[x][y][z][2];
+                uint8_t (&leftamb_a)[4] = curBrickAO.ambientVecs[2];
                 for(int k = 0;k < 4;k++) {
                     amb[k] = ((float)leftamb_a[k] / 100.0f) * lv;
                 }
@@ -370,7 +477,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
 
-                uint8_t (&rightamb_a)[4] = chunk.ambientVecs[x][y][z][3];
+                uint8_t (&rightamb_a)[4] = curBrickAO.ambientVecs[3];
                 for(int k = 0;k < 4;k++) {
                     amb[k] = ((float)rightamb_a[k] / 100.0f * lv);
                 }
@@ -387,7 +494,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
 
-                uint8_t (&backamb_a)[4] = chunk.ambientVecs[x][y][z][4];
+                uint8_t (&backamb_a)[4] = curBrickAO.ambientVecs[4];
                 for(int k = 0;k < 4;k++) {
                     amb[k] = ((float)backamb_a[k] / 100.0f) * lv;
                 }
@@ -404,7 +511,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
 
                 // Draw front
-                uint8_t (&frontamb_a)[4] = chunk.ambientVecs[x][y][z][5];
+                uint8_t (&frontamb_a)[4] = curBrickAO.ambientVecs[5];
                 for(int k = 0;k < 4;k++) {
                     amb[k] = ((float)frontamb_a[k] / 100.0f) * lv;
                 }
