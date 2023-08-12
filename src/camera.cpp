@@ -152,7 +152,7 @@ void Camera::RunMouseLogic() {
 
     if(bFocus) {
         if(!SDL_GetWindowGrab(myWindow)) {
-//            SDL_SetWindowGrab(myWindow,SDL_TRUE);
+            SDL_SetWindowGrab(myWindow,SDL_TRUE);
             SDL_ShowCursor(SDL_DISABLE);
         }
         float LookSens = 0.05f;

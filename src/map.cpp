@@ -413,6 +413,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
 
                 float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
+                lv -= chunk.heatShift;
                 // Draw top
 
                 
@@ -440,11 +441,11 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
-
+                lv -= chunk.heatShift;
 
                 uint8_t (&botamb_a)[4] = curBrickAO.ambientVecs[1];
                 for(int k = 0;k < 4;k++) {
-                    amb[k] = (float)botamb_a[k] / 100.0f;
+                    amb[k] = ((float)botamb_a[k] / 100.0f) * lv;
                 }
 
 
@@ -460,6 +461,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
                 lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+                lv -= chunk.heatShift;
 
                 uint8_t (&leftamb_a)[4] = curBrickAO.ambientVecs[2];
                 for(int k = 0;k < 4;k++) {
@@ -476,6 +478,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
                 lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
+                lv -= chunk.heatShift;
 
                 uint8_t (&rightamb_a)[4] = curBrickAO.ambientVecs[3];
                 for(int k = 0;k < 4;k++) {
@@ -493,6 +496,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
+                lv -= chunk.heatShift;
 
                 uint8_t (&backamb_a)[4] = curBrickAO.ambientVecs[4];
                 for(int k = 0;k < 4;k++) {
@@ -509,6 +513,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tr
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
+                lv -= chunk.heatShift;
 
                 // Draw front
                 uint8_t (&frontamb_a)[4] = curBrickAO.ambientVecs[5];

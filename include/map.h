@@ -111,6 +111,8 @@ public:
         bool bIniialBuild, bInitialAOBuild;
 
         void Generate(int chunkx, int chunkz, Map &map);
+
+        float heatShift;
     };
 
     enum Priority {

@@ -9,7 +9,7 @@
 
 const int numPoints = 6;
 double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
-double ay[numPoints] = { 30, 10, 100, 110, 130, 200 };
+double ay[numPoints] = { 20, 05, 80, 90, 110, 256 };
 
 double interpolateY(double x)
 {
@@ -51,6 +51,8 @@ Map::chunk_t::chunk_t() {
             }
         }
     }
+
+    heatShift = 1.0f;
 }
 
 Map::chunk_t::~chunk_t() {
@@ -87,9 +89,15 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
  //   std::cout << "generating " << chunkx << " , " << chunkz << " ";
 
+    constexpr int HEAT_PERLIN_SEED = 4321;
+
     static int counter = 0;
 
     using namespace noise;
+
+    module::Perlin heatPerlin;
+    heatPerlin.SetSeed(HEAT_PERLIN_SEED);
+    heatPerlin.SetFrequency(0.05);
 
     module::Perlin normalPerlin;
     normalPerlin.SetFrequency(0.2);
@@ -115,6 +123,8 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     finalTerrain.SetBounds(0.0, 1000.0);
     finalTerrain.SetEdgeFalloff(0.125);
 
+    heatShift = heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8) / 100.0f, ((chunkz*CHUNK_SIZE)+8) / 100.0f, 0.5f) / 12.0f;
+
     std::vector<vec3_t>toFill;
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
@@ -131,12 +141,18 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             if(height >= MAX_HEIGHT)
                 height = MAX_HEIGHT - 1;
             
-            for (int y = height; y > 0; y--) {
-				map.SetBrick(xindex, zindex, y, brickType);
 
-                if(y > 96) {
-                    map.SetBrick(xindex, zindex, y, map.BrickNameMap["stone"]);
+            // default to grass
+            brickType = map.BrickNameMap["grass_top"];
+
+            double heatVal = heatPerlin.GetValue((float)xindex / 100.0f, (float)zindex / 100.0f, 0.5f);
+
+            for (int y = height; y > 0; y--) {
+                brickType = map.BrickNameMap["grass_top"];
+                if(heatVal > 0.5 && y < MAX_HEIGHT / 4) {
+                    brickType = map.BrickNameMap["sand"];
                 }
+				map.SetBrick(xindex, zindex, y, brickType);
 			}
 
             for(int y = 1;y < SEA_LEVEL + 5;y++) {
