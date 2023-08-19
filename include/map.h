@@ -31,7 +31,7 @@ public:
     int NUM_THREADS;
 
     static constexpr int CHUNK_SIZE = 16;
-    static constexpr int MAX_HEIGHT = 200;
+    static constexpr int MAX_HEIGHT = 256;
     static constexpr int MAX_LIGHT_LEVEL = 16;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;

@@ -15,7 +15,7 @@ Camera::Camera() {
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
 //    position = formerPosition = glm::vec3(8,120,0);
-    position = formerPosition = glm::vec3(8 + 2000,120,0 + 2000);
+    position = formerPosition = glm::vec3(100 + 2000,120,100 + 2000);
     bFocus = true;
     bThirdPerson = false;
     bground = false;

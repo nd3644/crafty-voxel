@@ -7,12 +7,22 @@
 
 #include "map.h"
 
-const int numPoints = 6;
+#include <cassert>
+
+/* const int numPoints = 6;
 double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
-double ay[numPoints] = { 20, 05, 80, 90, 110, 256 };
+double ay[numPoints] = { 20, 05, 80, 90, 110, 256 }; */
+
+
+std::vector<double>ax = { -1, -0.5, 0.0, 0.5, 0.8, 1 };
+std::vector<double>ay = { 50, 100, 105, 130, 150, 180 };
 
 double interpolateY(double x)
 {
+    assert(ax.size() == ay.size());
+
+    int numPoints = ax.size();
+
     if(x < -1)
         x = -1;
     if(x > 1)
@@ -21,8 +31,8 @@ double interpolateY(double x)
     gsl_interp_accel* accel = gsl_interp_accel_alloc();
     gsl_interp* interp = gsl_interp_alloc(gsl_interp_linear, numPoints);
 
-    gsl_interp_init(interp, ax, ay, numPoints);
-    double interpolatedY = gsl_interp_eval(interp, ax, ay, x, accel);
+    gsl_interp_init(interp, ax.data(), ay.data(), numPoints);
+    double interpolatedY = gsl_interp_eval(interp, ax.data(), ay.data(), x, accel);
 
     gsl_interp_free(interp);
     gsl_interp_accel_free(accel);
@@ -95,48 +105,40 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     using namespace noise;
 
-    module::Perlin heatPerlin;
-    heatPerlin.SetSeed(HEAT_PERLIN_SEED);
-    heatPerlin.SetFrequency(0.05);
+    double FREQ = 0.0025;
 
-    module::Perlin normalPerlin;
-    normalPerlin.SetFrequency(0.2);
+//    module::Perlin normalPerlin;
+    module::Perlin normalPerlin, heatPerlin;
+    heatPerlin.SetSeed(5331);
+    heatPerlin.SetFrequency(FREQ / 4.0);
 
-    module::Perlin baseFlatTerrain;
+    normalPerlin.SetFrequency(FREQ);
+    heatShift = 0;//heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8), ((chunkz*CHUNK_SIZE)+8), 0.5f) / 12.0f;
 
-    module::ScaleBias flatTerrain;
-    flatTerrain.SetSourceModule(0, baseFlatTerrain);
-    flatTerrain.SetScale(0.125);
-
-    module::RidgedMulti mountainTerrain;
-    mountainTerrain.SetLacunarity(1.5);
-    mountainTerrain.SetOctaveCount(1);
-
-    module::Perlin terrainType;
-    terrainType.SetFrequency(0.2);
-    terrainType.SetPersistence(0.25);
-
-    module::Select finalTerrain;
-    finalTerrain.SetSourceModule(0, flatTerrain);
-    finalTerrain.SetSourceModule(1, mountainTerrain);
-    finalTerrain.SetControlModule(terrainType);
-    finalTerrain.SetBounds(0.0, 1000.0);
-    finalTerrain.SetEdgeFalloff(0.125);
-
-    heatShift = heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8) / 100.0f, ((chunkz*CHUNK_SIZE)+8) / 100.0f, 0.5f) / 12.0f;
+    module::ScaleBias scaled;
+    scaled.SetSourceModule(0, normalPerlin);
+    scaled.SetScale(0.7);
+    scaled.SetBias(-0.3);
 
     std::vector<vec3_t>toFill;
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
-            float unit = normalPerlin.GetValue((float)xindex / 100.0f,(float)zindex / 100.0f,0.5);
+            float unit = scaled.GetValue((float)xindex,(float)zindex,0.5);
             int height = 0;//(((unit + 1) / 2) * MAX_HEIGHT);
+
+            normalPerlin.SetOctaveCount(noise::module::DEFAULT_PERLIN_OCTAVE_COUNT);
+
+            if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
+                normalPerlin.SetOctaveCount(5);
+            }
 
             double xValue = unit;
 //            double yValue = gsl_spline_eval(spline, xValue, accel);
 //            height = yValue;
             height = interpolateY(xValue);
+            height = ClampValue(height,0, MAX_HEIGHT / 2);
 
             if(height >= MAX_HEIGHT)
                 height = MAX_HEIGHT - 1;
@@ -145,10 +147,13 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             // default to grass
             brickType = map.BrickNameMap["grass_top"];
 
-            double heatVal = heatPerlin.GetValue((float)xindex / 100.0f, (float)zindex / 100.0f, 0.5f);
+            double heatVal = 0;//heatPerlin.GetValue((float)xindex, (float)zindex, 0.5f);
 
             for (int y = height; y > 0; y--) {
                 brickType = map.BrickNameMap["grass_top"];
+                if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
+                    brickType = map.BrickNameMap["sand"];
+                }
                 if(heatVal > 0.5 && y < MAX_HEIGHT / 4) {
                     brickType = map.BrickNameMap["sand"];
                 }
@@ -163,6 +168,9 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             for(int y = 1;y < SEA_LEVEL;y++) {
                 if(map.GetBrick(xindex,zindex,y) == 0) {
                     map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
+                    if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
+                        brickType = map.BrickNameMap["sand"];
+                    }
                 }
             }
 		}
@@ -210,6 +218,41 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         }
         
     }*/
+
+
+    module::RidgedMulti valleyNoise;
+    valleyNoise.SetSeed(987);
+    valleyNoise.SetFrequency(FREQ);
+
+    module::ScaleBias scaledValley;
+    scaledValley.SetSourceModule(0, valleyNoise);
+    scaledValley.SetScale(0.8);
+
+    for (int x = 0; x < CHUNK_SIZE;x++) {
+        int xindex = (chunkx*CHUNK_SIZE)+x;
+		for (int z = 0; z < CHUNK_SIZE; z++) {
+            int zindex = (chunkz*CHUNK_SIZE)+z;
+
+            if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
+                continue;
+            }
+
+            float unit = scaledValley.GetValue((float)xindex,(float)zindex,0.5) * (float)MAX_HEIGHT;
+            int depth = (int)unit;
+
+
+            int yStop = (MAX_HEIGHT-depth < 0) ? 0 : MAX_HEIGHT-depth;
+            for(int y = MAX_HEIGHT;y > yStop;y--) {
+                if(y < SEA_LEVEL) {
+                    map.SetBrick(xindex,zindex,y,0);
+                    map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
+                }
+                else if(map.GetBrick(xindex,zindex,y) != 0) {
+                     map.SetBrick(xindex,zindex,y,0);
+                }
+            }
+        }
+    }
 
     curStage = AO_STAGE;
 

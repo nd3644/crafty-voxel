@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++11 -Wall -O2  -fno-rtti -g -I./include/ -I/usr/include/imgui/ -I/usr/include/imgui/backends/ -DENABLE_IMGUI
+CXXFLAGS=-std=c++11 -Wall -O1  -fno-rtti -g -I./include/ -I/usr/include/imgui/ -I/usr/include/imgui/backends/ -DENABLE_IMGUI
 LDFLAGS=-lSDL2main -lSDL2 -lSDL2_image -lGL -lGLEW -L/usr/lib/imgui/ -limgui -lstb -lnoise -lgsl
 SRCS=$(wildcard src/*.cpp)
 OBJS=$(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
