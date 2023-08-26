@@ -14,8 +14,8 @@ double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
 double ay[numPoints] = { 20, 05, 80, 90, 110, 256 }; */
 
 
-std::vector<double>ax = { -1, -0.5, 0.0, 0.5, 0.8, 1 };
-std::vector<double>ay = { 50, 100, 105, 130, 150, 180 };
+std::vector<double>ax = { -1, -0.9, -0.8, -0.5, 0.0, 0.5, 0.8, 1 };
+std::vector<double>ay = { 25, 30, 100, 105, 130, 150, 200, 256 };
 
 double interpolateY(double x)
 {
@@ -108,11 +108,14 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     double FREQ = 0.0025;
 
 //    module::Perlin normalPerlin;
-    module::Perlin normalPerlin, heatPerlin;
+    module::Perlin normalPerlin, erosionPerlin;
+    module::Perlin heatPerlin;
     heatPerlin.SetSeed(5331);
     heatPerlin.SetFrequency(FREQ / 4.0);
 
     normalPerlin.SetFrequency(FREQ);
+    erosionPerlin.SetFrequency(FREQ / 2.0);
+
     heatShift = 0;//heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8), ((chunkz*CHUNK_SIZE)+8), 0.5f) / 12.0f;
 
     module::ScaleBias scaled;
@@ -138,7 +141,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 //            double yValue = gsl_spline_eval(spline, xValue, accel);
 //            height = yValue;
             height = interpolateY(xValue);
-            height = ClampValue(height,0, MAX_HEIGHT / 2);
 
             if(height >= MAX_HEIGHT)
                 height = MAX_HEIGHT - 1;
@@ -151,12 +153,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
             for (int y = height; y > 0; y--) {
                 brickType = map.BrickNameMap["grass_top"];
-                if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
-                    brickType = map.BrickNameMap["sand"];
-                }
-                if(heatVal > 0.5 && y < MAX_HEIGHT / 4) {
-                    brickType = map.BrickNameMap["sand"];
-                }
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 
@@ -220,14 +216,14 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     }*/
 
 
-    module::RidgedMulti valleyNoise;
+/*     module::RidgedMulti valleyNoise;
     valleyNoise.SetSeed(987);
     valleyNoise.SetFrequency(FREQ);
 
     module::ScaleBias scaledValley;
     scaledValley.SetSourceModule(0, valleyNoise);
-    scaledValley.SetScale(0.8);
 
+    const int waterRepDepth = 15;
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
@@ -240,19 +236,23 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             float unit = scaledValley.GetValue((float)xindex,(float)zindex,0.5) * (float)MAX_HEIGHT;
             int depth = (int)unit;
 
+            depth -= (scaled.GetValue((float)xindex,(float)zindex,0.5) * (float)MAX_HEIGHT);
 
             int yStop = (MAX_HEIGHT-depth < 0) ? 0 : MAX_HEIGHT-depth;
+
+            int replacementDepth = 0;
             for(int y = MAX_HEIGHT;y > yStop;y--) {
                 if(y < SEA_LEVEL) {
                     map.SetBrick(xindex,zindex,y,0);
                     map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
                 }
                 else if(map.GetBrick(xindex,zindex,y) != 0) {
-                     map.SetBrick(xindex,zindex,y,0);
+                    map.SetBrick(xindex,zindex,y,0);
                 }
+                
             }
         }
-    }
+    } */
 
     curStage = AO_STAGE;
 
