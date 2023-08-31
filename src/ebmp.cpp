@@ -40,7 +40,6 @@ int Eternal::Bmp::Load(std::string const &sfilename) {
         return 1;
     }
 
-    uint32_t infoHeaderSize = 0;
 
     fileHandle.read((char *)&myInfoHeader.size, sizeof(myInfoHeader.size));
 
@@ -69,7 +68,7 @@ int Eternal::Bmp::Load(std::string const &sfilename) {
     std::cout << "comp: " << myInfoHeader.compression << std::endl; */
 
     if(myInfoHeader.palette_length != 0) {
-        for(int i = 0;i < myInfoHeader.palette_length;i++) {
+        for(uint32_t i = 0;i < myInfoHeader.palette_length;i++) {
             fileHandle.read((char*)&Palette[i].R, sizeof(uint8_t));
             fileHandle.read((char*)&Palette[i].G, sizeof(uint8_t));
             fileHandle.read((char*)&Palette[i].B, sizeof(uint8_t));
@@ -85,7 +84,7 @@ int Eternal::Bmp::Load(std::string const &sfilename) {
     const int w = myInfoHeader.img_w;
 	const int h = myInfoHeader.img_h;
     if(myInfoHeader.bpp == 8) {
-        for(int i = 0;i < myInfoHeader.data_size;i++) {
+        for(uint32_t i = 0;i < myInfoHeader.data_size;i++) {
             fileHandle.read((char*)&temp,1);
 
 

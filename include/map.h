@@ -249,7 +249,7 @@ public:
                 continue;
             }
 
-            visited.push_back({posx, posy, posz});
+            visited.push_back({posx, posy, posz, 1});
 
             int lvl = GetLightLevel(posx,posz,posy);
             if(bRemove) {
@@ -339,7 +339,7 @@ public:
     }
 
     float GetBrickTransparency(int id) {
-        if(id < 0 || id >= BrickTransparencies.size())
+        if(id < 0 || id >= static_cast<int>(BrickTransparencies.size()))
             return 1;
         return BrickTransparencies[id];
     }

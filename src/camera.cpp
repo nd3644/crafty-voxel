@@ -5,8 +5,7 @@
 #include <SDL2/SDL.h>
 
 #include "mesh.h"
-#include "brick_selector_widget.h"
-#include <imgui.h>
+#include "brick_selector_widget.h" 
 
 extern SDL_Window* myWindow;
 
@@ -17,8 +16,12 @@ Camera::Camera() {
 //    position = formerPosition = glm::vec3(8,120,0);
     position = formerPosition = glm::vec3(100 + 2000,120,100 + 2000);
     bFocus = true;
-    bThirdPerson = false;
-    bground = false;
+    bIsInThirdPersonMode = false;
+    bIsOnGround = false;
+    bSprinting = false;
+    ticksSinceLastForwardPress = 0;
+
+    fFovModifier = 0.0f;
 }
 
 Camera::~Camera() { }
@@ -28,15 +31,15 @@ void Camera::CheckInput() {
 }
 
 void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
-	const Uint8 *keys = SDL_GetKeyboardState(0);
+    using namespace Eternal;
+
     CalcNewFrustumPlanes();
 
     FindTargettedBrick(myMap, input, selectWidget);
-//    const float pi = 3.14159f;
-
 
     // The "position" of the camera depends on the 3rd or first person state
-    if(bThirdPerson) {
+    // The position isn't really different but the view is kind of "zoomed out"
+    if(bIsInThirdPersonMode) {
         glm::vec3 newPosition = position;
         newPosition -= (direction*64.0f);
         myShader.viewMatrix = glm::lookAt(newPosition, position + direction, up);
@@ -65,18 +68,18 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     RunMouseLogic();
 
     CheckGround(myMap);
-    if(!bground) {
+    if(!bIsOnGround) {
         fJumpVel += 0.001f;
     }
     else {
         fJumpVel = 0;
     }
 
-    if (keys[SDL_SCANCODE_SPACE] && bground) {
+    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround) {
         fJumpVel = -0.05f;
         position.y += 0.05f;
 	}
-	else if (keys[SDL_SCANCODE_LCTRL]) {
+	else if (input.IsKeyDown(InputHandle::KEY_LCTRL)) {
         position -= up * 0.25f;
 	}
 
@@ -86,47 +89,67 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     cameralist.emplace_back(position.x,position.y,position.z - 0.5f);
 
     // This is just a debug "go up" button
-    if(keys[SDL_SCANCODE_1]) {
+    if(input.IsKeyDown(InputHandle::KEY_1)) {
         fJumpVel = 0;
         position.y += 0.25f;
     }
 
+    if(bSprinting) {
+        if(fFovModifier < 5)
+            fFovModifier += 0.1f;
+    }
+    else {
+        if(fFovModifier > 0)
+            fFovModifier -= 0.1f;
+    }
+    std::cout << fFovModifier<< std::endl;
+
 }
 
 void Camera::CheckInput(Eternal::InputHandle &input) {
+
+    using namespace Eternal;
+
     right = glm::normalize(glm::cross(direction, up));
     const Uint8 * keys = SDL_GetKeyboardState(0);
 
     STRAFE_SPD = DEFAULT_STRAFE_SPD;
-    if (keys[SDL_SCANCODE_LSHIFT]) {
+    if (input.IsKeyDown(InputHandle::KEY_LSHIFT)) {
         STRAFE_SPD = 0.4f;
 	}
-    else if (keys[SDL_SCANCODE_Q]) {
+    else if (input.IsKeyDown(InputHandle::KEY_Q)) {
         STRAFE_SPD = 0.01f;
 	}
-	if (keys[SDL_SCANCODE_A]) {
+	if (input.IsKeyDown(InputHandle::KEY_A)) {
         moveDelta -= right * STRAFE_SPD;
 	}
-	else if (keys[SDL_SCANCODE_D]) {
+	else if (input.IsKeyDown(InputHandle::KEY_D)) {
         moveDelta += right * STRAFE_SPD;
 	}
 
-    if (keys[SDL_SCANCODE_F5]) {
-        bThirdPerson = false;
-	}
-    if (keys[SDL_SCANCODE_F6]) {
-        bThirdPerson = true;
+    if (input.IsKeyTap(InputHandle::KEY_F5)) {
+        bIsInThirdPersonMode = !bIsInThirdPersonMode;
 	}
 
-	if (keys[SDL_SCANCODE_W]) {
+    if(input.IsKeyTap((Eternal::InputHandle::Key)SDL_SCANCODE_W)) {
+        ticksSinceLastForwardPress = SDL_GetTicks();
+    }
+	else if (keys[SDL_SCANCODE_W]) {
+        if(SDL_GetTicks() - ticksSinceLastForwardPress < 10) {
+            bSprinting = true;
+        }
         glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
         moveDelta += forward * STRAFE_SPD;
 	}
-	else if (keys[SDL_SCANCODE_S]) {
-        glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
-        forward.y = 0;
-        moveDelta -= forward * STRAFE_SPD;
-	}
+    else {
+        bSprinting = false;
+        if (keys[SDL_SCANCODE_S]) {
+            glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
+            forward.y = 0;
+            moveDelta -= forward * STRAFE_SPD;
+        }
+    }
+	
 
     position.x = std::max(position.x, 0.0f);
     position.z = std::max(position.z, 0.0f);
@@ -275,8 +298,8 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     formerPosition = position;
 }
 
-bool Camera::IsThirdPerson() const {
-    return bThirdPerson;
+bool Camera::IsInThirdPersonMode() const {
+    return bIsInThirdPersonMode;
 }
 
 void Camera::CalcNewFrustumPlanes() {
@@ -332,5 +355,73 @@ void Camera::CalcNewFrustumPlanes() {
 
     myFrustumPlanes[PLANE_BOTTOM].normal = { 0.0f, halfCos, halfSin };
     myFrustumPlanes[PLANE_BOTTOM].normal = { 0.0f, halfCos, halfSin };*/
+}
 
+void Camera::CheckGround(Map &map) {
+    bIsOnGround = false;
+    float d = 0.25f;
+    if(map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z - d)), (int)position.y-1) > 0
+    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z - d)), (int)position.y-1) > 0
+    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z + d)), (int)position.y-1) > 0
+    || map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z + d)), (int)position.y-1) > 0) {
+        bIsOnGround = true;
+        float standingPos = ((int)position.y-1)+2.0f;
+        if(position.y < standingPos)
+            position.y = standingPos;
+        bricklist.emplace_back((int)(position.x+0.5f), (int)position.y-1, (int)(position.z));
+    }
+
+    // Check the roof just for fun
+    if(map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
+    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
+    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z + d)), (int)position.y+1) > 0
+    || map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z + d)), (int)position.y+1) > 0) {
+        if(fJumpVel < 0)
+            fJumpVel = 0;
+    }
+}
+
+bool Camera::CheckCollision(Map &map) {
+    float size = 1;
+    Rect r(0,0,size,size);
+
+    int camX = position.x;
+    int camY = position.y;
+    int camZ = position.z;
+
+    // Draw cur level
+    for(int x = camX-8;x < camX+8;x++) {
+        r.x = x * size;
+        for(int z = camZ-8;z < camZ+8;z++) {
+            r.y = z * size;
+            int y = camY;
+
+            // shin level
+            if(map.GetBrick(x,z,y) != 0
+            || map.GetBrick(x,z,y-1)) {
+                Rect p;
+                p.x = position.x * size;
+                p.y = position.z * size;
+                p.y -= (size/2);
+                p.w = p.h = 0.5f;
+                p.x += 0.25f;
+                p.y += 0.25f;
+                glm::vec2 n;
+                if(p.IsColliding(r, n)) {
+                    collidingBrick = r;
+
+
+                    tmp.x = p.x - r.x;
+                    tmp.z = p.y - r.y;
+                    
+                    return true;
+                }
+            }
+        }
+    }
+    return false; 
+}
+
+float Camera::GetCurrentFovModifier() const {
+    return fFovModifier;
 }

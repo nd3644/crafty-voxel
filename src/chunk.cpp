@@ -99,9 +99,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
  //   std::cout << "generating " << chunkx << " , " << chunkz << " ";
 
-    constexpr int HEAT_PERLIN_SEED = 4321;
-
-    static int counter = 0;
+//    constexpr int HEAT_PERLIN_SEED = 4321;
 
     using namespace noise;
 
@@ -148,8 +146,6 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
             // default to grass
             brickType = map.BrickNameMap["grass_top"];
-
-            double heatVal = 0;//heatPerlin.GetValue((float)xindex, (float)zindex, 0.5f);
 
             for (int y = height; y > 0; y--) {
                 brickType = map.BrickNameMap["grass_top"];

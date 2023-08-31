@@ -122,7 +122,7 @@ int main(int argc, char* args[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float fAspect = (float)WIN_W / (float)WIN_H;
-        myShader.projMatrix = glm::perspective(glm::radians(fFov), fAspect, gfZNear, gfZFar);
+        myShader.projMatrix = glm::perspective(glm::radians(fFov + myCamera.GetCurrentFovModifier()), fAspect, gfZNear, gfZFar);
 
         myShader.Bind();
 
@@ -409,8 +409,7 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 
-    if(myCamera.IsThirdPerson()) {
-        ;
+    if(myCamera.IsInThirdPersonMode()) {
         // Draw camera box
         for(auto &vec: cameralist) {
             brickTargetMesh.Clean();

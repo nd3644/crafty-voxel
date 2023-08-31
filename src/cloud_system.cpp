@@ -22,7 +22,7 @@ void CloudSystem::Update(Camera &cam) {
         myClouds.push_back(cloud);
     }
 
-    for(int i = 0;i < myClouds.size();i++) {
+    for(std::size_t i = 0;i < myClouds.size();i++) {
         auto &cloud = myClouds[i];
         cloud.z += 0.005f;
         if(abs(cloud.z - cam.position.z) > 256) {

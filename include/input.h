@@ -11,11 +11,23 @@ namespace Eternal {
                 KEY_RIGHT = SDL_SCANCODE_RIGHT,
                 KEY_UP = SDL_SCANCODE_UP,
                 KEY_DOWN = SDL_SCANCODE_DOWN,
+                KEY_Q = SDL_SCANCODE_Q,
+                KEY_A = SDL_SCANCODE_A,
+                KEY_D = SDL_SCANCODE_D,
+                KEY_W = SDL_SCANCODE_W,
+                KEY_S = SDL_SCANCODE_S,
                 KEY_SPACE = SDL_SCANCODE_SPACE,
                 KEY_ESCAPE = SDL_SCANCODE_ESCAPE,
                 KEY_START = SDL_SCANCODE_RETURN,
                 KEY_GRAVE = SDL_SCANCODE_GRAVE,
-                KEY_RETURN = SDL_SCANCODE_RETURN
+                KEY_RETURN = SDL_SCANCODE_RETURN,
+                KEY_LCTRL = SDL_SCANCODE_LCTRL,
+                KEY_LSHIFT = SDL_SCANCODE_LSHIFT,
+                
+                KEY_F5 = SDL_SCANCODE_F5,
+                KEY_F6 = SDL_SCANCODE_F6,
+
+                KEY_1 = SDL_SCANCODE_1
             };
 
             enum MouseButtons {

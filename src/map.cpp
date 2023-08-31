@@ -249,7 +249,7 @@ Map::brick_ao_t Map::GetBrickAO(int xindex, int zindex, int y) {
 
     brick_ao_t ao;
 
-    int brickID = GetBrick(xindex,zindex,y);
+    //int brickID = GetBrick(xindex,zindex,y);
     if (GetBrick(xindex, zindex, y) <= 0                // Is the brick air
     || IsBrickSurroundedByOpaque(xindex,zindex,y)              // Is it visible or occluded by bricks?
     ) {            // Is it opaque? Transparencies are handled in a seperate pass
@@ -385,7 +385,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 brick_ao_t curBrickAO = GetBrickAO(xindex,zindex,y);
 
-                static int max = 0;
 
                 int len = 1;
                 for(int i = 1;i < CHUNK_SIZE;i++) {
@@ -563,7 +562,6 @@ void Map::Draw(Camera &cam) {
     int curThread = 0;
     std::thread builder;
 
-    int build_count = 0;
     int skip = 0;
     int len = 0;
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
@@ -591,16 +589,16 @@ void Map::Draw(Camera &cam) {
             chunk_edges[6] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
             chunk_edges[7] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
 
-            for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 4) {
-                for(float pz = (z * CHUNK_SIZE);pz < (z * CHUNK_SIZE) + CHUNK_SIZE;pz += 4) {
+            for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 2) {
+                for(float pz = (z * CHUNK_SIZE);pz < (z * CHUNK_SIZE) + CHUNK_SIZE;pz += 2) {
                     for(float py = 0;py < MAX_HEIGHT;py += 32) {
                         glm::vec3 point(px,py,pz);
 
-                        if(abs((cam.position.x / CHUNK_SIZE) - x) <= 1
+/*                         if(abs((cam.position.x / CHUNK_SIZE) - x) <= 1
                         && abs((cam.position.z / CHUNK_SIZE) - z) <= 1) {
                             bVisible = true;
                             goto found;
-                        }
+                        } */
                         if(glm::dot(cam.myFrustumPlanes[Camera::PLANE_LEFT].position - point,cam.myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
                         && glm::dot(cam.myFrustumPlanes[Camera::PLANE_RIGHT].position - point,cam.myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10
                         && glm::dot(cam.myFrustumPlanes[Camera::PLANE_NEAR].position - point,cam.myFrustumPlanes[Camera::PLANE_NEAR].normal)
@@ -740,7 +738,6 @@ void Map::ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level) {
 
 void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
     std::vector<std::thread>threadList;
-    int curThread = 0;
     for(int x = fromX - radius;x < fromX + radius;x++) {
         for(int z = fromZ - radius;z < fromZ + radius;z++) {
             auto &chunk = Chunks[std::make_pair(x,z)];
@@ -748,7 +745,7 @@ void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
                 chunk.Generate(x,z,*this);
             }));
 
-            if(threadList.size() >= NUM_THREADS) { // Don't spawn too many
+            if(static_cast<int>(threadList.size()) >= NUM_THREADS) { // Don't spawn too many
                 for(auto &t: threadList) {
                     t.join();
                 }
