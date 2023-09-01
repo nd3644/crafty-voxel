@@ -391,9 +391,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     if(z < CHUNK_SIZE-i
                     && brickID == GetBrick(xindex,zindex+i,y)
                     && brickLightLevel == GetLightLevel(xindex,zindex+i,y)) {
-/*                                if(chunk.ambientVecs[x][y][z+i][f][v] != chunk.ambientVecs[x][y][z][f][v]) {
-                            goto skip;  // This is just a crude way to break out of the loops
-                        }*/
 
                         if(GetBrickAO(xindex,zindex+i,y) != curBrickAO) {
                             goto skip;
@@ -593,12 +590,6 @@ void Map::Draw(Camera &cam) {
                 for(float pz = (z * CHUNK_SIZE);pz < (z * CHUNK_SIZE) + CHUNK_SIZE;pz += 2) {
                     for(float py = 0;py < MAX_HEIGHT;py += 32) {
                         glm::vec3 point(px,py,pz);
-
-/*                         if(abs((cam.position.x / CHUNK_SIZE) - x) <= 1
-                        && abs((cam.position.z / CHUNK_SIZE) - z) <= 1) {
-                            bVisible = true;
-                            goto found;
-                        } */
                         if(glm::dot(cam.myFrustumPlanes[Camera::PLANE_LEFT].position - point,cam.myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
                         && glm::dot(cam.myFrustumPlanes[Camera::PLANE_RIGHT].position - point,cam.myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10
                         && glm::dot(cam.myFrustumPlanes[Camera::PLANE_NEAR].position - point,cam.myFrustumPlanes[Camera::PLANE_NEAR].normal)
@@ -654,13 +645,6 @@ void Map::Draw(Camera &cam) {
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();
     }
-
-//    std::cout << "len: " << len << std::endl;
-
-/*    for(auto &c: Chunks) {
-        std::cout << c.first.first << " , " << c.first.second << std::endl;
-    }
-    std::cout << std::endl;*/
 }
 
 void Map::RebuildAllVisible() {

@@ -241,12 +241,6 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
         int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);
         myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-        if(brickType == 3) { // torch
-            myMap.AddLight((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y, true);
-        }
-        else {
-            myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-        }
         myMap.BuildChunkAO(chunkX,chunkZ);
         myMap.BuildChunk(chunkX, chunkZ);
     }

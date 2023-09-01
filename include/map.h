@@ -41,42 +41,13 @@ public:
     };
 
     struct brick_ao_t {
-
-        brick_ao_t() {
-            for(int f = 0;f < 6;f++) {
-                for(int v = 0;v < 4;v++) {
-                    ambientVecs[f][v] = 100;
-                }
-            }
-        }
-
+        brick_ao_t();
         uint8_t ambientVecs[6][4];
-
-        bool operator==(brick_ao_t &other) {
-            for(int f = 0;f < 6;f++) {
-                for(int v = 0;v < 4;v++) {
-                    if(other.ambientVecs[f][v] != ambientVecs[f][v]) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-        bool operator!=(brick_ao_t &other) {
-            for(int f = 0;f < 6;f++) {
-                for(int v = 0;v < 4;v++) {
-                    if(other.ambientVecs[f][v] != ambientVecs[f][v]) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
+        bool operator==(brick_ao_t &other);
+        bool operator!=(brick_ao_t &other);
     };
 
     struct chunk_t {
-
         enum ChunkState {
             DEFAULT_STAGE = 0,
             GEN_STAGE,
@@ -92,17 +63,12 @@ public:
         chunk_t();
         ~chunk_t();
 
-        void PushLights(Map &map);
-        void PopLights(Map &map);
-
         Mesh mesh;
         uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
         
 //        uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
         
-        std::vector<light_t>lightList;
-        std::vector<light_t>pushedLights;
         bool bVisible;
 
         bool bGen;
@@ -175,110 +141,6 @@ public:
 
     inline void SetLightLevel(int x, int z, int y, int lvl) {
 	}
-
-    void AddLight(int x, int z, int y, bool bRemove) {
-        int chunkx = floor(x / CHUNK_SIZE);
-        int chunkz = floor(z / CHUNK_SIZE);
-
-        if(bRemove) {
-            auto &list = Chunks[std::make_pair(chunkx,chunkz)].lightList;
-            for(size_t i = 0;i < list.size();i++) {
-                if(list[i].x == x && list[i].y == y && list[i].z == z) {
-                    list.erase(list.begin()+i);
-                    break;
-                }
-            }
-        }
-        else {
-            Chunks[std::make_pair(chunkx,chunkz)].lightList.push_back({x,y,z});
-        }
-
-        struct node { int x, y, z; float v; };
-        std::vector<node>visited;
-
-        float start = MAX_LIGHT_LEVEL;
-        std::queue<node> positions;
-        positions.push({x, y, z, start});
-        int iter_count = 0;
-
-        int RECURSIVE_LIMIT = 80960;
-
-        std::vector<glm::vec3> dirs = {
-            {-1, 0, 0},
-            {1, 0, 0},
-            {0, 0, -1},
-            {0, 0, 1},
-            {0, -1, 0},
-            {0, 1, 0},
-        };
-        
-        const float fallOff = 1;
-        while (!positions.empty()) {
-            if(iter_count > RECURSIVE_LIMIT) {
-                break;
-            }
-
-            auto currentPos = positions.front();
-            positions.pop();
-            
-            int posx = currentPos.x;
-            int posy = currentPos.y;
-            int posz = currentPos.z;
-
-            bool bFound = false;
-            for(auto &p: visited) {
-                if(p.x == posx && p.y == posy && p.z == posz) {
-                    bFound = true;
-                    break;
-                }
-            }
-            if(bFound) {
-                continue;
-            }
-            if(currentPos.v <= 0) {
-                continue;
-            }
-
-            if(GetBrick(posx,posz,posy) != 0) { // If solid brick
-                if(posx != x && posz != z && posy != y) {
-                    continue;
-                }
-            }
-
-            if(GetBrick(posx,posz,posy) != 0 && GetBrick(posx,posz,posy) != 3) {
-                continue;
-            }
-
-            visited.push_back({posx, posy, posz, 1});
-
-            int lvl = GetLightLevel(posx,posz,posy);
-            if(bRemove) {
-                if(currentPos.v > 0) {
-                    SetLightLevel(posx, posz, posy ,lvl-(int)currentPos.v);
-                }
-            }
-            else {
-                SetLightLevel(posx, posz, posy ,lvl+(int)currentPos.v);
-            }
-
-            for(size_t i = 0;i < dirs.size();i++) {
-                glm::vec3 &d = dirs[i];
-
-                positions.push({posx + (int)d.x, posy + (int)d.y, posz + (int)d.z, currentPos.v-fallOff});
-            }
-            
-            iter_count++;
-        }
-        visited.clear();
-        std::cout << "iter_count: " << iter_count << std::endl;
-
-        // Schedule mesh updates
-        for(int mx = chunkx - 2;mx < chunkx + 2;mx++){
-            for(int mz = chunkz - 2;mz < chunkz + 2;mz++){
-                ScheduleMeshBuild({mx,mz,Map::Priority::ONE});
-            }
-        }
-    }
 
     brick_ao_t GetBrickAO(int xindex, int zindex, int y);
 

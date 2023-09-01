@@ -68,21 +68,6 @@ Map::chunk_t::chunk_t() {
 Map::chunk_t::~chunk_t() {
 }
 
-void Map::chunk_t::PushLights(Map &map) {
-//            std::cout << "pushlen: " << lightList.size() << std::endl;
-    for(light_t &l: lightList) {
-        pushedLights.push_back(l);
-        map.AddLight(l.x, l.z, l.y, true);
-    }
-}
-
-void Map::chunk_t::PopLights(Map &map) {
-    for(light_t &l: pushedLights) {
-        map.AddLight(l.x, l.z, l.y, false);
-    }
-    pushedLights.clear();
-}
-
 void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen || bIsCurrentlyGenerating)
         return;
@@ -97,8 +82,7 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         brickType = 1;
     }
 
- //   std::cout << "generating " << chunkx << " , " << chunkz << " ";
-
+    std::cout << "generating " << chunkx << " , " << chunkz << " ";
 //    constexpr int HEAT_PERLIN_SEED = 4321;
 
     using namespace noise;
