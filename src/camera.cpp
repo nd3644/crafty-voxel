@@ -26,17 +26,7 @@ Camera::Camera() {
 
 Camera::~Camera() { }
 
-void Camera::CheckInput() {
-
-}
-
-void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
-    using namespace Eternal;
-
-    CalcNewFrustumPlanes();
-
-    FindTargettedBrick(myMap, input, selectWidget);
-
+void Camera::CalcViewMatrix(Shader &myShader) {
     // The "position" of the camera depends on the 3rd or first person state
     // The position isn't really different but the view is kind of "zoomed out"
     if(bIsInThirdPersonMode) {
@@ -52,18 +42,16 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     GLuint view = glGetUniformLocation(myShader.myProgram, "View");
     glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
 
-    moveDelta = glm::vec3(0,0,0);
+}
+
+void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {
+    using namespace Eternal;
+
+    CalcNewFrustumPlanes();
+    FindTargettedBrick(myMap, input, selectWidget);
+    CalcViewMatrix(myShader);
+
     CheckInput(input);
-
-    position.x += moveDelta.x;
-    if(CheckCollision(myMap)) {
-        position.x -= moveDelta.x;
-    }
-
-    position.z += moveDelta.z;
-    if(CheckCollision(myMap)) {
-        position.z -= moveDelta.z;   
-    }
 
     RunMouseLogic(input);
 
@@ -107,6 +95,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
 void Camera::CheckInput(Eternal::InputHandle &input) {
     using namespace Eternal;
 
+    moveDelta = glm::vec3(0,0,0);
+
     right = glm::normalize(glm::cross(direction, up));
 
     STRAFE_SPD = DEFAULT_STRAFE_SPD;
@@ -145,9 +135,18 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
             moveDelta -= forward * STRAFE_SPD;
         }
     }
+}
 
-    position.x = std::max(position.x, 0.0f);
-    position.z = std::max(position.z, 0.0f);
+void Camera::UpdatePositionFrmoMoveDelta(Map &myMap) {
+    position.x += moveDelta.x;
+    if(CheckCollision(myMap)) {
+        position.x -= moveDelta.x;
+    }
+
+    position.z += moveDelta.z;
+    if(CheckCollision(myMap)) {
+        position.z -= moveDelta.z;   
+    }
 }
 
 void Camera::RunMouseLogic(Eternal::InputHandle &input) {
@@ -193,7 +192,7 @@ void Camera::RunMouseLogic(Eternal::InputHandle &input) {
         glm::mat4 yawRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(xDelta), glm::vec3(0.0f, 1.0f, 0.0f));
         direction = glm::vec3(yawRotationMatrix * glm::vec4(direction, 1.0f));
 
-        SDL_WarpMouseInWindow(myWindow,400,300);
+        SDL_WarpMouseInWindow(myWindow,SCR_CENTREX,SCR_CENTREY);
     }
     else {
         if(SDL_GetWindowGrab(myWindow)) {
@@ -240,55 +239,20 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     int chunkZ = std::floor(targetted_brick.z / Map::CHUNK_SIZE);
         
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
-//        std::cout << "deleting brick " << myMap.GetBrick(targetted_brick.x, targetted_brick.z, targetted_brick.y) << " at (" << targetted_brick.x << ", " << targetted_brick.y << ", " << targetted_brick.z << std::endl;
         int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);
         myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
         if(brickType == 3) { // torch
             myMap.AddLight((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y, true);
         }
         else {
-            for(int x = chunkX-2;x < chunkX+2;x++) {
-                for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    //myMap.GetChunk(x,z)->PushLights(myMap);                    
-                }
-            }
             myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-            for(int x = chunkX-2;x < chunkX+2;x++) {
-                for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    //myMap.GetChunk(x,z)->PopLights(myMap);                    
-                }
-            }
         }
-        std::cout << "BRICKTYPE: " << brickType << std::endl;
-        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
-        //myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
-        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
         myMap.BuildChunkAO(chunkX,chunkZ);
         myMap.BuildChunk(chunkX, chunkZ);
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
-        if(brickType == 3) {
-            //myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
-            //myMap.AddLight((int)outter.x, (int)outter.z, (int)outter.y, false);
-        }
-        else {
-            for(int x = chunkX-2;x < chunkX+2;x++) {
-                for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    //myMap.GetChunk(x,z)->PushLights(myMap);                    
-                }
-            }
-            myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
-            for(int x = chunkX-2;x < chunkX+2;x++) {
-                for(int z = chunkZ-2;z < chunkZ+2;z++) {
-                    //myMap.GetChunk(x,z)->PopLights(myMap);                    
-                }
-            }
-        }
-        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
-        //myMap.ScheduleAdjacentChunkBuilds(chunkX,chunkZ, Map::Priority::ONE);
-
-        //myMap.ScheduleMeshBuild({chunkX, chunkZ, Map::Priority::IMMEDIATE});
+        myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
         myMap.BuildChunkAO(chunkX,chunkZ);
         myMap.BuildChunk(chunkX, chunkZ);
     }
@@ -301,15 +265,12 @@ bool Camera::IsInThirdPersonMode() const {
 }
 
 void Camera::CalcNewFrustumPlanes() {
-
     // All frustum planes intersect the camera position
     for(int i = 0;i < NUM_PLANES;i++) {
         myFrustumPlanes[i].position = position;
     }
 
     float hFov = glm::degrees(2 * glm::atan(glm::tan(glm::radians(fFov / 2)) * static_cast<float>(WIN_W) / static_cast<float>(WIN_H)));
-
-//    std::cout << "fov: " << hFov << std::endl;
 
     // near
     myFrustumPlanes[PLANE_NEAR].normal = direction;
@@ -338,21 +299,6 @@ void Camera::CalcNewFrustumPlanes() {
     rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(-(fFov / 2.0f) + 90.0f), right);
     rotatedVector = rotationMatrix * glm::vec4(direction, 1.0f);
     myFrustumPlanes[PLANE_BOTTOM].normal = rotatedVector;
-
-//    std::cout << "(" << rotatedVector.x << ", " << rotatedVector.y << ", " << rotatedVector.z << std::endl;
-
-
-
-/*    float halfSin = sin(fFov / 2.0f);
-    float halfCos = cos(fFov / 2.0f);
-    myFrustumPlanes[PLANE_LEFT].normal = { halfCos, 0.0f, halfSin };
-
-    myFrustumPlanes[PLANE_RIGHT].normal = { -halfCos, 0.0f, halfSin };
-
-    myFrustumPlanes[PLANE_TOP].normal = { 0.0f, -halfCos, halfSin };
-
-    myFrustumPlanes[PLANE_BOTTOM].normal = { 0.0f, halfCos, halfSin };
-    myFrustumPlanes[PLANE_BOTTOM].normal = { 0.0f, halfCos, halfSin };*/
 }
 
 void Camera::CheckGround(Map &map) {

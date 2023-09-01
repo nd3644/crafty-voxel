@@ -15,28 +15,24 @@ class Camera
         Camera();
         ~Camera();
 
+        /*!
+            Updates myShader's view matrix by handling inputs and resolving any collisions with the map.
+        */
         void Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
-        void CheckGround(Map &map);
-
-        bool CheckCollision(Map &map);
-
-        glm::vec3 tmp;
-
         bool IsInThirdPersonMode() const;
-
         float GetCurrentFovModifier() const;
+
     private: // Private methods
         void CheckInput(Eternal::InputHandle &input);
+        void FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
         void RunMouseLogic(Eternal::InputHandle &input);
         void CalcNewFrustumPlanes();
+        void CalcViewMatrix(Shader &myShader);
+        void UpdatePositionFrmoMoveDelta(Map &myMap);
+        bool CheckCollision(Map &map);
+        void CheckGround(Map &map);
 
     public: // Public vars
-        static constexpr float DEFAULT_STRAFE_SPD = 0.05f;
-        float STRAFE_SPD = DEFAULT_STRAFE_SPD;
-        
-        glm::vec3 position, formerPosition, direction, up, right;
-        glm::vec3 targetted_brick;
-
         enum FrustumPlanes {
             PLANE_LEFT = 0,
             PLANE_RIGHT,
@@ -46,6 +42,12 @@ class Camera
             PLANE_FAR,
             NUM_PLANES
         };
+        plane_t myFrustumPlanes[NUM_PLANES];
+        static constexpr float DEFAULT_STRAFE_SPD = 0.05f;
+        float STRAFE_SPD = DEFAULT_STRAFE_SPD;
+        
+        glm::vec3 position, formerPosition, direction, up, right;
+        glm::vec3 targetted_brick;
 
     private: // Private vars
         float fFovModifier;
@@ -60,11 +62,7 @@ class Camera
         float fJumpVel;
         bool bFocus;
         bool bIsOnGround;
-        void CheckInput();
-        void FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
-
-    public:
-        plane_t myFrustumPlanes[NUM_PLANES];
+        glm::vec3 tmp;
 };
 
 #endif
