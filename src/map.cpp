@@ -134,111 +134,8 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
     }
     chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
     goto finishAO;
-/*    for (int y = 0; y < MAX_HEIGHT; y++) {
-        for (int x = 0; x < CHUNK_SIZE;x++) {
-            int xindex = (chunkX*CHUNK_SIZE)+x;
-            for (int z = 0; z < CHUNK_SIZE;z++) {
-                int zindex = (chunkZ*CHUNK_SIZE)+z;
 
-                int brickID = GetBrick(xindex,zindex,y);
-                if (GetBrick(xindex, zindex, y) <= 0                // Is the brick air
-                || IsBrickSurroundedByOpaque(xindex,zindex,y)              // Is it visible or occluded by bricks?
-                ) {            // Is it opaque? Transparencies are handled in a seperate pass
-                    continue;
-                }
-
-                // Set default AO values to 1.0f (no AO at all)
-                for(int f = 0;f < 6;f++)
-                    for(int v = 0;v < 4;v++)
-                        chunk.ambientVecs[x][y][z][f][v] = 100;
-
-                if(!gEnableAO) {
-                    continue;
-                }
-
-                uint8_t ambShade = gAOLevel;
-
-                // Top
-                uint8_t (&topamb)[4] = chunk.ambientVecs[x][y][z][0];
-                if(GetBrick(xindex-1,zindex,y+1) != 0 || GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0) {
-                    topamb[0] = ambShade;
-                }
-                if(GetBrick(xindex+1,zindex,y+1) != 0 || GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0) {
-                    topamb[1] = ambShade;
-                }
-                if(GetBrick(xindex-1,zindex,y+1) != 0 || GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0) {
-                    topamb[2] = ambShade;
-                }
-                if(GetBrick(xindex+1,zindex,y+1) != 0 || GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0) {
-                    topamb[3] = ambShade;
-                }
-                
-                // Left
-                uint8_t (&leftamb)[4] = chunk.ambientVecs[x][y][z][2];
-                //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
-                if(GetBrick(xindex-1,zindex-1,y) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex,y+1) != 0) {
-                    leftamb[0] = ambShade;
-                }
-                if(GetBrick(xindex-1,zindex+1,y) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex,y+1) != 0) {
-                    leftamb[1] = ambShade;
-                }
-                if(GetBrick(xindex-1,zindex+1,y) != 0 || GetBrick(xindex-1,zindex+1,y-1) != 0 || GetBrick(xindex-1,zindex,y-1) != 0) {
-                    leftamb[2] = ambShade;
-                }
-                if(GetBrick(xindex-1,zindex-1,y) != 0 || GetBrick(xindex-1,zindex-1,y-1) != 0 || GetBrick(xindex-1,zindex,y-1) != 0) {
-                    leftamb[3] = ambShade;
-                }
-
-                // ...
-                // Right
-                uint8_t (&rightamb)[4] = chunk.ambientVecs[x][y][z][3];
-                //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
-                if(GetBrick(xindex+1,zindex-1,y) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex,y+1) != 0) {
-                    rightamb[0] = ambShade;
-                }
-                if(GetBrick(xindex+1,zindex+1,y) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex,y+1) != 0) {
-                    rightamb[1] = ambShade;
-                }
-                if(GetBrick(xindex+1,zindex+1,y) != 0 || GetBrick(xindex+1,zindex+1,y-1) != 0 || GetBrick(xindex+1,zindex,y-1) != 0) {
-                    rightamb[2] = ambShade;
-                }
-                if(GetBrick(xindex+1,zindex-1,y) != 0 || GetBrick(xindex+1,zindex-1,y-1) != 0 || GetBrick(xindex+1,zindex,y-1) != 0) {
-                    rightamb[3] = ambShade;
-                }
-
-                // back
-                uint8_t (&backamb)[4] = chunk.ambientVecs[x][y][z][4];
-                //float topamb[0] = lv, topamb[1] = lv, topamb[2] = lv, topamb[3] = lv;
-                if(GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y+1) != 0 || GetBrick(xindex+1,zindex-1,y) != 0) {
-                    backamb[0] = ambShade;
-                }
-                if(GetBrick(xindex,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex-1,y+1) != 0 || GetBrick(xindex-1,zindex-1,y) != 0) {
-                    backamb[1] = ambShade;
-                }
-                if(GetBrick(xindex,zindex-1,y-1) != 0 || GetBrick(xindex+1,zindex-1,y-1) != 0 || GetBrick(xindex+1,zindex-1,y) != 0) {
-                    backamb[2] = ambShade;
-                }
-                if(GetBrick(xindex,zindex-1,y-1) != 0 || GetBrick(xindex-1,zindex-1,y-1) != 0 || GetBrick(xindex-1,zindex-1,y) != 0) {
-                    backamb[3] = ambShade;
-                }
-
-                // Front
-                uint8_t (&frontamb)[4] = chunk.ambientVecs[x][y][z][5];
-                if(GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y+1) != 0 || GetBrick(xindex+1,zindex+1,y) != 0) {
-                    frontamb[0] = ambShade;
-                }
-                if(GetBrick(xindex,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y+1) != 0 || GetBrick(xindex-1,zindex+1,y) != 0) {
-                    frontamb[1] = ambShade;
-                }
-                if(GetBrick(xindex,zindex+1,y-1) != 0 || GetBrick(xindex+1,zindex+1,y-1) != 0 || GetBrick(xindex+1,zindex+1,y) != 0) {
-                    frontamb[2] = ambShade;
-                }
-                if(GetBrick(xindex,zindex+1,y-1) != 0 || GetBrick(xindex-1,zindex+1,y-1) != 0 || GetBrick(xindex-1,zindex+1,y) != 0) {
-                    frontamb[3] = ambShade;
-                }
-            }
-        }
-    }*/
+    // legacy func
 
     finishAO:
     chunk.bInitialAOBuild = true;
@@ -534,8 +431,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 void Map::RebuildLights() { }
 void Map::RunBuilder() { }
 
-void Map::Draw(Camera &cam) {
-    
+void Map::Draw(Camera &cam) {    
     int sX = ((int)camera.position.x / CHUNK_SIZE);
     int sZ = ((int)camera.position.z / CHUNK_SIZE);
 

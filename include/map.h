@@ -99,48 +99,8 @@ public:
 
     /* This function makes a terrible amount of effort to prevent negative indices
       because they were causing a lot of trouble. */
-	inline int GetBrick(int x, int z, int y) {
-        int xchunk = x / CHUNK_SIZE;
-        int zchunk = z / CHUNK_SIZE;
-
-        int xindex = x % CHUNK_SIZE;
-        int zindex = z % CHUNK_SIZE;
-
-        int val = 255;
-        auto key = std::make_pair(xchunk,zchunk);
-        auto it = Chunks.find(key);
-        if(it != Chunks.end()) {
-            auto &chunk = Chunks[key];
-            val = chunk.iBricks[xindex][y][zindex];
-        }
-
-        return val;
-	}
-
-    inline void SetBrick(int x, int z, int y, int id) {
-        using namespace std;
-
-        int xchunk = x / CHUNK_SIZE;
-        int zchunk = z / CHUNK_SIZE;
-
-        int xindex = x % CHUNK_SIZE;
-        int zindex = z % CHUNK_SIZE;
-
-
-        auto key = std::make_pair(xchunk,zchunk);
-        auto it = Chunks.find(key);
-        if(it != Chunks.end()) {
-            auto &chunk = Chunks[key];
-            chunk.iBricks[xindex][y][zindex] = id;
-        }
-	}
-
-    inline int GetLightLevel(int x, int z, int y) {
-		return 0;
-	}
-
-    inline void SetLightLevel(int x, int z, int y, int lvl) {
-	}
+	int GetBrick(int x, int z, int y);
+    void SetBrick(int x, int z, int y, int id);
 
     brick_ao_t GetBrickAO(int xindex, int zindex, int y);
 

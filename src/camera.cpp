@@ -52,6 +52,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     CalcViewMatrix(myShader);
 
     CheckInput(input);
+    UpdatePositionFrmoMoveDelta(myMap);
 
     RunMouseLogic(input);
 
