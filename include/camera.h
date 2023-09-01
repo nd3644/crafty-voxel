@@ -27,7 +27,7 @@ class Camera
         float GetCurrentFovModifier() const;
     private: // Private methods
         void CheckInput(Eternal::InputHandle &input);
-        void RunMouseLogic();
+        void RunMouseLogic(Eternal::InputHandle &input);
         void CalcNewFrustumPlanes();
 
     public: // Public vars

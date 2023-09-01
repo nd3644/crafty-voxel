@@ -65,7 +65,7 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         position.z -= moveDelta.z;   
     }
 
-    RunMouseLogic();
+    RunMouseLogic(input);
 
     CheckGround(myMap);
     if(!bIsOnGround) {
@@ -102,16 +102,12 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         if(fFovModifier > 0)
             fFovModifier -= 0.1f;
     }
-    std::cout << fFovModifier<< std::endl;
-
 }
 
 void Camera::CheckInput(Eternal::InputHandle &input) {
-
     using namespace Eternal;
 
     right = glm::normalize(glm::cross(direction, up));
-    const Uint8 * keys = SDL_GetKeyboardState(0);
 
     STRAFE_SPD = DEFAULT_STRAFE_SPD;
     if (input.IsKeyDown(InputHandle::KEY_LSHIFT)) {
@@ -134,7 +130,7 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
     if(input.IsKeyTap((Eternal::InputHandle::Key)SDL_SCANCODE_W)) {
         ticksSinceLastForwardPress = SDL_GetTicks();
     }
-	else if (keys[SDL_SCANCODE_W]) {
+	else if (input.IsKeyDown(InputHandle::KEY_W)) {
         if(SDL_GetTicks() - ticksSinceLastForwardPress < 10) {
             bSprinting = true;
         }
@@ -143,20 +139,22 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
 	}
     else {
         bSprinting = false;
-        if (keys[SDL_SCANCODE_S]) {
+        if (input.IsKeyDown(InputHandle::KEY_S)) {
             glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
             forward.y = 0;
             moveDelta -= forward * STRAFE_SPD;
         }
     }
-	
 
     position.x = std::max(position.x, 0.0f);
     position.z = std::max(position.z, 0.0f);
 }
 
-void Camera::RunMouseLogic() {
-    const Uint8 *keys = SDL_GetKeyboardState(0);
+void Camera::RunMouseLogic(Eternal::InputHandle &input) {
+    using namespace Eternal;
+
+    int SCR_CENTREX = WIN_W / 2;
+    int SCR_CENTREY = WIN_H / 2;
 
     int mouseX = 0, mouseY = 0;
     if(SDL_GetMouseState(&mouseX, &mouseY) & SDL_BUTTON(1)) {
@@ -169,7 +167,7 @@ void Camera::RunMouseLogic() {
             bFocus = true;
         #endif
     }
-    if(keys[SDL_SCANCODE_ESCAPE]) {
+    if(input.IsKeyDown(InputHandle::KEY_ESCAPE)) {
         bFocus = false;
     }
 
@@ -180,8 +178,8 @@ void Camera::RunMouseLogic() {
         }
         float LookSens = 0.05f;
 
-        float yDelta = (300 - mouseY) * LookSens;
-        float xDelta = (400 - mouseX) * LookSens;
+        float yDelta = (SCR_CENTREY - mouseY) * LookSens;
+        float xDelta = (SCR_CENTREX - mouseX) * LookSens;
 
         float currentPitch = glm::degrees(std::asin(direction.y));
         float newPitch = currentPitch + yDelta;
