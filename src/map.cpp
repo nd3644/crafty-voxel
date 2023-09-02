@@ -142,7 +142,7 @@ void Map::BuildChunkAO(int chunkX, int chunkZ) {
     chunk.curStage = chunk_t::BUILD_STAGE;
 }
 
-Map::brick_ao_t Map::GetBrickAO(int xindex, int zindex, int y) {
+brick_ao_t Map::GetBrickAO(int xindex, int zindex, int y) {
 
     brick_ao_t ao;
 
@@ -640,3 +640,77 @@ void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
 }
 
  
+int Map::Map::GetBrick(int x, int z, int y) {
+    int xchunk = x / CHUNK_SIZE;
+    int zchunk = z / CHUNK_SIZE;
+
+    int xindex = x % CHUNK_SIZE;
+    int zindex = z % CHUNK_SIZE;
+
+    int val = 255;
+    auto key = std::make_pair(xchunk,zchunk);
+    auto it = Chunks.find(key);
+    if(it != Chunks.end()) {
+        auto &chunk = Chunks[key];
+        val = chunk.iBricks[xindex][y][zindex];
+    }
+
+    return val;
+}
+
+void Map::Map::SetBrick(int x, int z, int y, int id) {
+    using namespace std;
+
+    int xchunk = x / CHUNK_SIZE;
+    int zchunk = z / CHUNK_SIZE;
+
+    int xindex = x % CHUNK_SIZE;
+    int zindex = z % CHUNK_SIZE;
+
+
+    auto key = std::make_pair(xchunk,zchunk);
+    auto it = Chunks.find(key);
+    if(it != Chunks.end()) {
+        auto &chunk = Chunks[key];
+        chunk.iBricks[xindex][y][zindex] = id;
+    }
+}
+
+Map::chunk_t *Map::GetChunk(int x, int z) {
+    x *= CHUNK_SIZE;
+    z *= CHUNK_SIZE;
+
+    int xchunk = x / CHUNK_SIZE;
+    int zchunk = z / CHUNK_SIZE;
+
+    auto chunk_index = std::make_pair(xchunk,zchunk);
+
+    return &Chunks[chunk_index];
+}
+
+float Map::GetBrickTransparency(int id) {
+    if(id < 0 || id >= static_cast<int>(BrickTransparencies.size()))
+        return 1;
+    return BrickTransparencies[id];
+}
+
+bool Map::IsBrickSurroundedByOpaque(int x, int z, int y) {
+    // These are checked in a funny order because they are in order of most-to-least likely
+    if(GetBrick(x,z,y+1) <= 0 
+    || GetBrick(x-1,z,y) <= 0
+    || GetBrick(x+1,z,y) <= 0
+    || GetBrick(x,z-1,y) <= 0
+    || GetBrick(x,z+1,y) <= 0
+    || GetBrick(x,z,y-1) <= 0){
+        return false;
+    }
+    return true;
+}
+
+int Map::IdFromName(std::string str) {
+    return BrickNameMap[str];
+}
+
+std::vector<std::string> Map::GetTextureFilenames() {
+    return BrickTextureFilenames;
+}
