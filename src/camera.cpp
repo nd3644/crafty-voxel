@@ -236,8 +236,8 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     targetted_brick.y = (int)p.y;
     targetted_brick.z = (int)p.z;
 
-    int chunkX = std::floor(targetted_brick.x / Map::CHUNK_SIZE);
-    int chunkZ = std::floor(targetted_brick.z / Map::CHUNK_SIZE);
+    int chunkX = std::floor(targetted_brick.x / chunk_t::CHUNK_SIZE);
+    int chunkZ = std::floor(targetted_brick.z / chunk_t::CHUNK_SIZE);
         
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
         int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);

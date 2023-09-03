@@ -16,7 +16,7 @@
 #include <stack>
 
 Map::Map(Camera &c) : camera(c) {
-    height = MAX_HEIGHT;
+    height = chunk_t::MAX_HEIGHT;
     width = 128;
     depth = 128;
 
@@ -121,8 +121,8 @@ void Map::FromBMP(std::string sfile) {
 
 void Map::RebuildAll() {
     // Build chunks
-    for(int x = 0;x < width/CHUNK_SIZE;x++) {
-        for(int z = 0;z < depth/CHUNK_SIZE;z++) {
+    for(int x = 0;x < width/chunk_t::CHUNK_SIZE;x++) {
+        for(int z = 0;z < depth/chunk_t::CHUNK_SIZE;z++) {
             BuildChunk(x,z);
         }
     }
@@ -250,6 +250,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     if(chunkX < 0 || chunkZ < 0) {
         return;
     }
+
+    const auto MAX_HEIGHT = chunk_t::MAX_HEIGHT;
+    const auto CHUNK_SIZE = chunk_t::CHUNK_SIZE;
 
 /*    std::cout << "building chunk " << "(" << chunkX << " , " << chunkZ << ")" << std::endl;
     std::cout << "size: " << Chunks.size() << std::endl;*/
@@ -432,8 +435,8 @@ void Map::RebuildLights() { }
 void Map::RunBuilder() { }
 
 void Map::Draw(Camera &cam) {    
-    int sX = ((int)camera.position.x / CHUNK_SIZE);
-    int sZ = ((int)camera.position.z / CHUNK_SIZE);
+    int sX = ((int)camera.position.x / chunk_t::CHUNK_SIZE);
+    int sZ = ((int)camera.position.z / chunk_t::CHUNK_SIZE);
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_J]) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -471,6 +474,9 @@ void Map::Draw(Camera &cam) {
             newCamDir = glm::normalize(newCamDir);
 
             glm::vec3 chunk_edges[8];
+
+            auto MAX_HEIGHT = chunk_t::MAX_HEIGHT;
+            auto CHUNK_SIZE = chunk_t::CHUNK_SIZE;
             
             chunk_edges[0] = {(x * CHUNK_SIZE), 0.0f, (z * CHUNK_SIZE)};
             chunk_edges[1] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE)};
@@ -544,8 +550,8 @@ void Map::Draw(Camera &cam) {
 }
 
 void Map::RebuildAllVisible() {
-    int sX = ((int)camera.position.x / CHUNK_SIZE);
-    int sZ = ((int)camera.position.z / CHUNK_SIZE);
+    int sX = ((int)camera.position.x / chunk_t::CHUNK_SIZE);
+    int sZ = ((int)camera.position.z / chunk_t::CHUNK_SIZE);
 
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
@@ -641,11 +647,11 @@ void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
 
  
 int Map::Map::GetBrick(int x, int z, int y) {
-    int xchunk = x / CHUNK_SIZE;
-    int zchunk = z / CHUNK_SIZE;
+    int xchunk = x / chunk_t::CHUNK_SIZE;
+    int zchunk = z / chunk_t::CHUNK_SIZE;
 
-    int xindex = x % CHUNK_SIZE;
-    int zindex = z % CHUNK_SIZE;
+    int xindex = x % chunk_t::CHUNK_SIZE;
+    int zindex = z % chunk_t::CHUNK_SIZE;
 
     int val = 255;
     auto key = std::make_pair(xchunk,zchunk);
@@ -661,11 +667,11 @@ int Map::Map::GetBrick(int x, int z, int y) {
 void Map::Map::SetBrick(int x, int z, int y, int id) {
     using namespace std;
 
-    int xchunk = x / CHUNK_SIZE;
-    int zchunk = z / CHUNK_SIZE;
+    int xchunk = x / chunk_t::CHUNK_SIZE;
+    int zchunk = z / chunk_t::CHUNK_SIZE;
 
-    int xindex = x % CHUNK_SIZE;
-    int zindex = z % CHUNK_SIZE;
+    int xindex = x % chunk_t::CHUNK_SIZE;
+    int zindex = z % chunk_t::CHUNK_SIZE;
 
 
     auto key = std::make_pair(xchunk,zchunk);
@@ -676,12 +682,12 @@ void Map::Map::SetBrick(int x, int z, int y, int id) {
     }
 }
 
-Map::chunk_t *Map::GetChunk(int x, int z) {
-    x *= CHUNK_SIZE;
-    z *= CHUNK_SIZE;
+chunk_t *Map::GetChunk(int x, int z) {
+    x *= chunk_t::CHUNK_SIZE;
+    z *= chunk_t::CHUNK_SIZE;
 
-    int xchunk = x / CHUNK_SIZE;
-    int zchunk = z / CHUNK_SIZE;
+    int xchunk = x / chunk_t::CHUNK_SIZE;
+    int zchunk = z / chunk_t::CHUNK_SIZE;
 
     auto chunk_index = std::make_pair(xchunk,zchunk);
 

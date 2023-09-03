@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "texture_array.h"
 #include "brick_ao.h"
+#include "chunk.h"
 #include <iostream>
 #include <map>
 #include <unordered_map>
@@ -31,48 +32,12 @@ public:
 
     int NUM_THREADS;
 
-    static constexpr int CHUNK_SIZE = 16;
-    static constexpr int MAX_HEIGHT = 256;
     static constexpr int MAX_LIGHT_LEVEL = 16;
 
     const static int half_limit = std::numeric_limits<int>::max() / 2;
 
     struct light_t {
         int x, y, z;
-    };
-
-    struct chunk_t {
-        enum ChunkState {
-            DEFAULT_STAGE = 0,
-            GEN_STAGE,
-            AO_STAGE,
-            BUILD_STAGE,
-            UPLOAD_STAGE,
-            READY_STAGE,
-            NUM_STAGES
-        };
-
-        ChunkState curStage;
-
-        chunk_t();
-        ~chunk_t();
-
-        Mesh mesh;
-        uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
-        uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
-        
-//        uint8_t ambientVecs[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE][6][4];
-        
-        bool bVisible;
-
-        bool bGen;
-        // This is for preventing Generate recursively calling itself. This can probably be done better
-        bool bIsCurrentlyGenerating;
-        bool bIniialBuild, bInitialAOBuild;
-
-        void Generate(int chunkx, int chunkz, Map &map);
-
-        float heatShift;
     };
 
     enum Priority {
@@ -140,6 +105,8 @@ public:
 
     // Pre-generates the world given a radius around a chunk
     void GenerateChunksFromOrigin(int fromX, int fromZ, int radius);
+
+    std::map<std::string, int>BrickNameMap;
 private:
     std::thread threads[16];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
@@ -154,7 +121,6 @@ private:
     std::vector<std::array<int,6>>BrickLookup;
     std::vector<float>BrickTransparencies;
 
-    std::map<std::string, int>BrickNameMap;
     std::map <std::pair<int,int>, chunk_t>Chunks;
 
 };

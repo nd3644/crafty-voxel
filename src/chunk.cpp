@@ -40,7 +40,7 @@ double interpolateY(double x)
     return interpolatedY;
 }
 
-Map::chunk_t::chunk_t() {
+chunk_t::chunk_t() {
     curStage = DEFAULT_STAGE;
     bVisible = false;
     bGen = false;
@@ -65,10 +65,10 @@ Map::chunk_t::chunk_t() {
     heatShift = 1.0f;
 }
 
-Map::chunk_t::~chunk_t() {
+chunk_t::~chunk_t() {
 }
 
-void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
+void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen || bIsCurrentlyGenerating)
         return;
 
@@ -124,8 +124,8 @@ void Map::chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 //            height = yValue;
             height = interpolateY(xValue);
 
-            if(height >= MAX_HEIGHT)
-                height = MAX_HEIGHT - 1;
+            if(height >= chunk_t::MAX_HEIGHT)
+                height = chunk_t::MAX_HEIGHT - 1;
             
 
             // default to grass
