@@ -9,7 +9,6 @@ struct chunk_t {
     enum ChunkState {
         DEFAULT_STAGE = 0,
         GEN_STAGE,
-        AO_STAGE,
         BUILD_STAGE,
         UPLOAD_STAGE,
         READY_STAGE,

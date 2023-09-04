@@ -132,13 +132,6 @@ int main(int argc, char* args[]) {
         auto end = std::chrono::high_resolution_clock::now();
         CameraUpdateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-
-        // Build the map
-        start = std::chrono::high_resolution_clock::now();
-        myMap.RunBuilder();
-        end = std::chrono::high_resolution_clock::now();
-        MapBuildDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
         // Draw the map
         start = std::chrono::high_resolution_clock::now();
         myMap.Draw(myCamera);

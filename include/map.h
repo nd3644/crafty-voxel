@@ -37,22 +37,13 @@ public: // public methods
     brick_ao_t GetBrickAO(int xindex, int zindex, int y);
 
     void BuildChunk(int chunkX, int chunkZ);
-    void BuildChunkAO(int chunkX, int chunkZ);
-
-    void RebuildLights();
-
+    
     void RebuildAll();
 
 	void FromBMP(std::string sfile);
 	void Draw(Camera &cam);
 
-    void RunBuilder();
-
     void LoadBrickMetaData();
-
-    std::vector<vec3_t>lights;
-
-    std::vector<std::tuple<float, float, RGB>>toDraw;
 
     std::vector<std::string> GetTextureFilenames();
     bool IsDay() const ;
@@ -63,43 +54,29 @@ public: // public methods
 
     chunk_t *GetChunk(int x, int z);
 
-    float GetBrickTransparency(int id);
+    float GetBrickTransparency(int id) const;
 
-    // Makes all chunks within the view distance rebuild their meshes.
-    // This is more for debugging than anything.
+    /*!
+        @brief Rebuilds all chunks within the view distance
+        This is mostly for debugging
+    */
     void RebuildAllVisible();
 
     bool IsBrickSurroundedByOpaque(int x, int z, int y);
-
     /*!
-
         @brief Pre-generates the world given a radius around a chunk  
-        Pre-generates the world for a given radius around a position.   
-        @param fromX X-Starting origin in chunk indices
-        @param fromZ Z-Starting origin in chunk indices
+
+        Pre-generates the world for a given radius around a position.
+
+        @param fromX X-Starting origin in chunks
+        @param fromZ Z-Starting origin in chunks
     */
     void GenerateChunksFromOrigin(int fromX, int fromZ, int radius);
 
 public: // public vars
     int NUM_THREADS;
     static constexpr int MAX_LIGHT_LEVEL = 16;
-
-    struct light_t {
-        int x, y, z;
-    };
-
-    enum Priority {
-        IMMEDIATE = 0,
-        ONE,
-        TWO,
-        THREE,
-        NUM_PRIORITIES            
-    };
-    struct build_schedule_info_t {
-        int x, z;
-        Priority priorityLevel;
-    };
-
+    
     std::map<std::string, int>BrickNameMap;
 private: // private methods
 
@@ -107,7 +84,6 @@ private:
     std::thread threads[16];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
-    std::vector<build_schedule_info_t>ScheduledBuilds;
 
 private:
     bool bIsDay;

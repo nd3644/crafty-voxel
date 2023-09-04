@@ -244,13 +244,11 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
         int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);
         myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-        myMap.BuildChunkAO(chunkX,chunkZ);
         myMap.BuildChunk(chunkX, chunkZ);
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();
         myMap.SetBrick((int)outter.x, (int)outter.z, (int)outter.y,brickType);
-        myMap.BuildChunkAO(chunkX,chunkZ);
         myMap.BuildChunk(chunkX, chunkZ);
     }
 

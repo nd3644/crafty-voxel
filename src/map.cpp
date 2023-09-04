@@ -111,20 +111,6 @@ void Map::RebuildAll() {
     // TODO: Re-implement this
 }
 
-void Map::BuildChunkAO(int chunkX, int chunkZ) {
-    if(chunkX < 0 || chunkZ < 0) {
-        return;
-    }
-    chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
-    goto finishAO;
-
-    // legacy func
-
-    finishAO:
-    chunk.bInitialAOBuild = true;
-    chunk.curStage = chunk_t::BUILD_STAGE;
-}
-
 brick_ao_t Map::GetBrickAO(int xindex, int zindex, int y) {
 
     brick_ao_t ao;
@@ -414,9 +400,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     chunk.curStage = chunk_t::UPLOAD_STAGE;
 }
 
-void Map::RebuildLights() { }
-void Map::RunBuilder() { }
-
 void Map::Draw(Camera &cam) {    
     int sX = ((int)camera.position.x / chunk_t::CHUNK_SIZE);
     int sZ = ((int)camera.position.z / chunk_t::CHUNK_SIZE);
@@ -436,7 +419,6 @@ void Map::Draw(Camera &cam) {
         if(t.joinable())
             t.join();
     }
-
 
     int curThread = 0;
     std::thread builder;
@@ -501,9 +483,6 @@ void Map::Draw(Camera &cam) {
                         if(!chunk.bGen) {
                             chunk.Generate(x,z,*this);
                         }
-                        else if(!chunk.bInitialAOBuild) {
-                            BuildChunkAO(x,z);
-                        }
                         else if(!chunk.bIniialBuild) {
                             BuildChunk(x,z);
                         }
@@ -538,7 +517,6 @@ void Map::RebuildAllVisible() {
 
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
-            BuildChunkAO(x,z);
             BuildChunk(x,z);
         }
     }
@@ -649,7 +627,7 @@ chunk_t *Map::GetChunk(int x, int z) {
     return &Chunks[chunk_index];
 }
 
-float Map::GetBrickTransparency(int id) {
+float Map::GetBrickTransparency(int id) const {
     if(id < 0 || id >= static_cast<int>(BrickTransparencies.size()))
         return 1;
     return BrickTransparencies[id];

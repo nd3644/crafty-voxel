@@ -234,7 +234,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         }
     } */
 
-    curStage = AO_STAGE;
+    curStage = BUILD_STAGE;
 
     bGen = true;
 }
