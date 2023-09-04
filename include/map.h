@@ -26,32 +26,6 @@ public: // public methods
 	Map(Camera &c);
 	~Map();
 
-    int height;
-    int width;
-    int depth;
-
-    int NUM_THREADS;
-
-    static constexpr int MAX_LIGHT_LEVEL = 16;
-
-    const static int half_limit = std::numeric_limits<int>::max() / 2;
-
-    struct light_t {
-        int x, y, z;
-    };
-
-    enum Priority {
-        IMMEDIATE = 0,
-        ONE,
-        TWO,
-        THREE,
-        NUM_PRIORITIES            
-    };
-    struct build_schedule_info_t {
-        int x, z;
-        Priority priorityLevel;
-    };
-
     int IdFromName(std::string str);
 
     /* This function makes a terrible amount of effort to prevent negative indices
@@ -76,9 +50,6 @@ public: // public methods
 
     void LoadBrickMetaData();
 
-    // Take a chunk position and buiilds the 9 chunks within and around that point
-    void ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level);
-
     std::vector<vec3_t>lights;
 
     std::vector<std::tuple<float, float, RGB>>toDraw;
@@ -90,8 +61,6 @@ public: // public methods
     std::vector<std::array<int,6>>GetLookupArr() const;
     void FillWater(int x, int z, int y);
 
-    void ScheduleMeshBuild(build_schedule_info_t info);
-
     chunk_t *GetChunk(int x, int z);
 
     float GetBrickTransparency(int id);
@@ -100,13 +69,36 @@ public: // public methods
     // This is more for debugging than anything.
     void RebuildAllVisible();
 
-
     bool IsBrickSurroundedByOpaque(int x, int z, int y);
 
-    // Pre-generates the world given a radius around a chunk
+    /*!
+
+        @brief Pre-generates the world given a radius around a chunk  
+        Pre-generates the world for a given radius around a position.   
+        @param fromX X-Starting origin in chunk indices
+        @param fromZ Z-Starting origin in chunk indices
+    */
     void GenerateChunksFromOrigin(int fromX, int fromZ, int radius);
 
 public: // public vars
+    int NUM_THREADS;
+    static constexpr int MAX_LIGHT_LEVEL = 16;
+
+    struct light_t {
+        int x, y, z;
+    };
+
+    enum Priority {
+        IMMEDIATE = 0,
+        ONE,
+        TWO,
+        THREE,
+        NUM_PRIORITIES            
+    };
+    struct build_schedule_info_t {
+        int x, z;
+        Priority priorityLevel;
+    };
 
     std::map<std::string, int>BrickNameMap;
 private: // private methods

@@ -16,10 +16,6 @@
 #include <stack>
 
 Map::Map(Camera &c) : camera(c) {
-    height = chunk_t::MAX_HEIGHT;
-    width = 128;
-    depth = 128;
-
     unsigned int num_cores = std::thread::hardware_concurrency();
     if (num_cores == 0) {
         std::cerr << "Unable to determine the number of cores." << std::endl;
@@ -103,15 +99,6 @@ std::vector<std::string> Map::TextureNamesFromFile(std::string filename) {
 }
 
 void Map::FromBMP(std::string sfile) {
-	Eternal::Bmp myBmp(sfile);
-	if (myBmp.GetError().size() > 0) {
-		std::cerr << "BMP Error: " << myBmp.GetError();
-		exit(-1);
-	}
-
-    width = myBmp.GetWidth();
-    depth = myBmp.GetHeight();
-
     BrickTextureFilenames = TextureNamesFromFile("brick_textures.txt");
     myTexArray.Load(BrickTextureFilenames);
     LoadBrickMetaData();
@@ -121,11 +108,7 @@ void Map::FromBMP(std::string sfile) {
 
 void Map::RebuildAll() {
     // Build chunks
-    for(int x = 0;x < width/chunk_t::CHUNK_SIZE;x++) {
-        for(int z = 0;z < depth/chunk_t::CHUNK_SIZE;z++) {
-            BuildChunk(x,z);
-        }
-    }
+    // TODO: Re-implement this
 }
 
 void Map::BuildChunkAO(int chunkX, int chunkZ) {
@@ -561,21 +544,6 @@ void Map::RebuildAllVisible() {
     }
 }
 
-void Map::ScheduleMeshBuild(build_schedule_info_t info) {
-    // Check if the chunk is already scheduled
-    for(size_t i = 0;i < ScheduledBuilds.size();i++) {
-        build_schedule_info_t &s = ScheduledBuilds[i];
-        if(s.x == info.x && s.z == info.z) {
-            if(info.priorityLevel > s.priorityLevel) {
-                s.priorityLevel = info.priorityLevel;
-            }
-            return; // Already scheduled ...
-        }
-    }
-    // Otherwise add it
-    ScheduledBuilds.push_back(info);
-}
-
 void Map::LoadBrickMetaData() {
     std::ifstream infile("bricks.txt");
     float transparency = 0;
@@ -607,19 +575,6 @@ bool Map::IsDay() const {
 
 void Map::SetDay(bool b) {
     bIsDay = b;
-}
-
-void Map::ScheduleAdjacentChunkBuilds(int startx, int startz, Priority level) {
-    for(int x = startx - 1;x < startx + 2;x++) {
-        for(int z = startz - 1;z < startz + 2;z++) {
-            build_schedule_info_t info;
-            info.priorityLevel = level;
-            info.x = x;
-            info.z = z;
-
-            ScheduleMeshBuild(info);
-        }
-    }
 }
 
 void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
