@@ -26,10 +26,13 @@ public: // public methods
 	Map(Camera &c);
 	~Map();
 
+
+    /*!
+        @brief Returns a BrickID from a string name, e.g. "dirt"
+        @param str the string name of a brick, e.g. "dirt"
+    */
     int IdFromName(std::string str);
 
-    /* This function makes a terrible amount of effort to prevent negative indices
-      because they were causing a lot of trouble. */
 	int GetBrick(int x, int z, int y);
     void SetBrick(int x, int z, int y, int id);
     int GetLightLevel(int x, int z, int y) { return 0; }
@@ -37,10 +40,10 @@ public: // public methods
     brick_ao_t GetBrickAO(int xindex, int zindex, int y);
 
     void BuildChunk(int chunkX, int chunkZ);
-    
+
     void RebuildAll();
 
-	void FromBMP(std::string sfile);
+	void Initialize();
 	void Draw(Camera &cam);
 
     void LoadBrickMetaData();

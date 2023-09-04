@@ -80,7 +80,7 @@ int main(int argc, char* args[]) {
     Eternal::Renderer myRenderer;
     myRenderer.Initialize();
 
-    myMap.FromBMP("textures/heightmap.bmp");
+    myMap.Initialize();
     myBrickWidget.Init(myMap);
     
 	float fdelta = 0.0f;

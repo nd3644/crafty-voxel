@@ -98,7 +98,7 @@ std::vector<std::string> Map::TextureNamesFromFile(std::string filename) {
     return result;
 }
 
-void Map::FromBMP(std::string sfile) {
+void Map::Initialize() {
     BrickTextureFilenames = TextureNamesFromFile("brick_textures.txt");
     myTexArray.Load(BrickTextureFilenames);
     LoadBrickMetaData();
