@@ -86,7 +86,7 @@ int main(int argc, char* args[]) {
 	float fdelta = 0.0f;
 	bool bDone = false;
 
-    myMap.GenerateChunksFromOrigin((int)myCamera.position.x / chunk_t::CHUNK_SIZE, (int)myCamera.position.z / chunk_t::CHUNK_SIZE, 8);
+    myMap.GenerateChunksFromOrigin((int)myCamera.position.x / chunk_t::CHUNK_SIZE, (int)myCamera.position.z / chunk_t::CHUNK_SIZE, gViewDist + 32);
 
     static int counter = 0;
 	while (bDone == false) {
@@ -480,7 +480,7 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
 
         str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
         ImGui::Text("%s", str.c_str());
-        str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / Map::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / Map::CHUNK_SIZE) + ")";
+        str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / chunk_t::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / chunk_t::CHUNK_SIZE) + ")";
         ImGui::Text("%s", str.c_str());
 
         ImGui::Separator();

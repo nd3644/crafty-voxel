@@ -7,6 +7,8 @@
 #include "mesh.h"
 #include "brick_selector_widget.h" 
 
+#include <imgui.h>
+
 extern SDL_Window* myWindow;
 
 Camera::Camera() {

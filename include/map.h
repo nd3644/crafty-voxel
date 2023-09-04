@@ -22,13 +22,13 @@
 class Camera;
 class Map
 {
-public:
+public: // public methods
 	Map(Camera &c);
 	~Map();
 
-	 int height;
-	 int width;
-	 int depth;
+    int height;
+    int width;
+    int depth;
 
     int NUM_THREADS;
 
@@ -106,7 +106,11 @@ public:
     // Pre-generates the world given a radius around a chunk
     void GenerateChunksFromOrigin(int fromX, int fromZ, int radius);
 
+public: // public vars
+
     std::map<std::string, int>BrickNameMap;
+private: // private methods
+
 private:
     std::thread threads[16];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
