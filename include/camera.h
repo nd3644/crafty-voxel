@@ -22,6 +22,32 @@ class Camera
         bool IsInThirdPersonMode() const;
         float GetCurrentFovModifier() const;
 
+        bool DoesLineIntersectFrustum(glm::vec3 start, glm::vec3 end) {
+            return DoesLineIntersectFrustum(start,end,0);
+        }
+        bool DoesLineIntersectFrustum(glm::vec3 start, glm::vec3 end, int depth) {
+            const int RECURSIVE_LIMIT = 4;
+            if(depth >= RECURSIVE_LIMIT) {
+                return false;
+            }
+
+            glm::vec3 point(
+                (start.x + end.x) / 2.0,
+                (start.y + end.y) / 2.0,
+                (start.z + end.z) / 2.0
+            );
+
+            if(glm::dot(myFrustumPlanes[Camera::PLANE_LEFT].position - point,myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
+            && glm::dot(myFrustumPlanes[Camera::PLANE_RIGHT].position - point,myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10
+            && glm::dot(myFrustumPlanes[Camera::PLANE_NEAR].position - point,myFrustumPlanes[Camera::PLANE_NEAR].normal)
+            && glm::dot(myFrustumPlanes[Camera::PLANE_TOP].position - point,myFrustumPlanes[Camera::PLANE_TOP].normal) <= 10
+            && glm::dot(myFrustumPlanes[Camera::PLANE_BOTTOM].position - point,myFrustumPlanes[Camera::PLANE_BOTTOM].normal) <= 10) {
+                return true;
+            }
+
+            return DoesLineIntersectFrustum(start,point,depth+1) || DoesLineIntersectFrustum(point,end, depth+1);
+        }
+
     private: // Private methods
         void CheckInput(Eternal::InputHandle &input);
         void FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);

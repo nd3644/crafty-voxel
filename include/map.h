@@ -41,16 +41,12 @@ public: // public methods
 
     void BuildChunk(int chunkX, int chunkZ);
 
-    void RebuildAll();
-
 	void Initialize();
 	void Draw(Camera &cam);
 
     void LoadBrickMetaData();
 
     std::vector<std::string> GetTextureFilenames();
-    bool IsDay() const ;
-    void SetDay(bool b);
 
     std::vector<std::array<int,6>>GetLookupArr() const;
     void FillWater(int x, int z, int y);
@@ -89,7 +85,6 @@ private:
     std::vector<std::string>BrickTextureFilenames;
 
 private:
-    bool bIsDay;
     std::vector<std::thread>BuilderThreads;
     Camera &camera;
     TextureArray myTexArray;

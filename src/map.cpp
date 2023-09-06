@@ -26,8 +26,6 @@ Map::Map(Camera &c) : camera(c) {
     }
 
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
-
-    bIsDay = true;
 }
 
 Map::~Map() {
@@ -106,13 +104,7 @@ void Map::Initialize() {
 //    RebuildAllVisible();
 }
 
-void Map::RebuildAll() {
-    // Build chunks
-    // TODO: Re-implement this
-}
-
 brick_ao_t Map::GetBrickAO(int xindex, int zindex, int y) {
-
     brick_ao_t ao;
 
     //int brickID = GetBrick(xindex,zindex,y);
@@ -425,6 +417,8 @@ void Map::Draw(Camera &cam) {
 
     int skip = 0;
     int len = 0;
+
+    // Loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
             if(x < 0 || z < 0) {
@@ -443,6 +437,8 @@ void Map::Draw(Camera &cam) {
             auto MAX_HEIGHT = chunk_t::MAX_HEIGHT;
             auto CHUNK_SIZE = chunk_t::CHUNK_SIZE;
             
+
+            // Define the bounding box for the chunk
             chunk_edges[0] = {(x * CHUNK_SIZE), 0.0f, (z * CHUNK_SIZE)};
             chunk_edges[1] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE)};
             chunk_edges[2] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE) + CHUNK_SIZE};
@@ -453,7 +449,7 @@ void Map::Draw(Camera &cam) {
             chunk_edges[6] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
             chunk_edges[7] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
 
-            for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 2) {
+/*             for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 2) {
                 for(float pz = (z * CHUNK_SIZE);pz < (z * CHUNK_SIZE) + CHUNK_SIZE;pz += 2) {
                     for(float py = 0;py < MAX_HEIGHT;py += 32) {
                         glm::vec3 point(px,py,pz);
@@ -465,6 +461,15 @@ void Map::Draw(Camera &cam) {
                             bVisible = true;
                             goto found;
                         }
+                    }
+                }
+            }
+            found: */
+            for(int i = 0;i < 8;i++) {
+                for(int j = i+1;j < 8;j++) {
+                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j])) {
+                        bVisible = true;
+                        goto found;
                     }
                 }
             }
@@ -524,6 +529,10 @@ void Map::RebuildAllVisible() {
 
 void Map::LoadBrickMetaData() {
     std::ifstream infile("bricks.txt");
+    if(!infile.is_open()) {
+        std::cout << "ERROR: Map::LoadBrickMetaDatA(): couldn't open bricks.txt" << std::endl;
+        exit(1);
+    }
     float transparency = 0;
     while(!infile.eof()) {
 
@@ -545,14 +554,6 @@ void Map::LoadBrickMetaData() {
 
 std::vector<std::array<int,6>> Map::GetLookupArr() const {
     return BrickLookup;
-}
-
-bool Map::IsDay() const {
-    return bIsDay;
-}
-
-void Map::SetDay(bool b) {
-    bIsDay = b;
 }
 
 void Map::GenerateChunksFromOrigin(int fromX, int fromZ, int radius) {
