@@ -30,11 +30,7 @@ class Camera
                 return false;
             }
 
-            glm::vec3 point(
-                (start.x + end.x) / 2.0,
-                (start.y + end.y) / 2.0,
-                (start.z + end.z) / 2.0
-            );
+            glm::vec3 point = (start+end) * 0.5f;
 
             if(glm::dot(myFrustumPlanes[Camera::PLANE_LEFT].position - point,myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
             && glm::dot(myFrustumPlanes[Camera::PLANE_RIGHT].position - point,myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10

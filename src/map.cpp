@@ -422,10 +422,12 @@ void Map::Draw(Camera &cam) {
 
     // Loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        if(x < 0)
+            continue;
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
-            if(x < 0 || z < 0) {
+            if(z < 0)
                 continue;
-            }
+            
             len++;
 
 //            std::cout << "drawing " << x << " , " << z << std::endl;
@@ -452,35 +454,15 @@ void Map::Draw(Camera &cam) {
             chunk_edges[7] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
 
             auto startTime = std::chrono::high_resolution_clock::now();
-            
-
-/* 
-             for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 2) {
-                for(float pz = (z * CHUNK_SIZE);pz < (z * CHUNK_SIZE) + CHUNK_SIZE;pz += 2) {
-                    for(float py = 0;py < MAX_HEIGHT;py += 32) {
-                        glm::vec3 point(px,py,pz);
-                        if(glm::dot(cam.myFrustumPlanes[Camera::PLANE_LEFT].position - point,cam.myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
-                        && glm::dot(cam.myFrustumPlanes[Camera::PLANE_RIGHT].position - point,cam.myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10
-                        && glm::dot(cam.myFrustumPlanes[Camera::PLANE_NEAR].position - point,cam.myFrustumPlanes[Camera::PLANE_NEAR].normal)
-                        && glm::dot(cam.myFrustumPlanes[Camera::PLANE_TOP].position - point,cam.myFrustumPlanes[Camera::PLANE_TOP].normal) <= 10
-                        && glm::dot(cam.myFrustumPlanes[Camera::PLANE_BOTTOM].position - point,cam.myFrustumPlanes[Camera::PLANE_BOTTOM].normal) <= 10) {
-                            bVisible = true;
-                            goto found;
-                        }
-                    }
-                }
-            }  */
-             for(int i = 0;i < 4;i++) {
+            for(int i = 0;i < 4;i++) {
                 for(int j = 4;j < 8;j++) {
-                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j], 0, 3)) {
+                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j],0,4)) {
                         bVisible = true;
                         goto found;
                     }
                 }
-            } 
+            }
             found:
-
-
             auto endTime = std::chrono::high_resolution_clock::now();
             timerRes += std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
 
@@ -525,7 +507,8 @@ void Map::Draw(Camera &cam) {
         RebuildAllVisible();
     }
 
-    std::cout << timerRes << std::endl;
+    // (debug) Print out the total time spent on binary search
+    //std::cout << timerRes << std::endl;
 }
 
 void Map::RebuildAllVisible() {

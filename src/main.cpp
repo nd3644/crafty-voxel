@@ -49,14 +49,15 @@ extern void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh);
 extern void DrawFrustumCullingViewTop(Eternal::Renderer &renderer, Camera &cam, Map &myMap, float xoffs, float yoffs); // Visualizes the frustum and chunk visibility
 extern void DrawFrustumCullingViewSide(Eternal::Renderer &renderer, Camera &cam, Map &myMap, float xoffs, float yoffs); // Visualizes the frustum and chunk visibility
 
+using TimerUnits = std::chrono::microseconds;
 
 bool bEnableVSync = true;
 bool bDrawColliders = false;
 int frameCounter = 0;
 int fpsTimer = 0;
 int lastAvgFps = 0;
-std::chrono::milliseconds CameraUpdateDuration;
-std::chrono::milliseconds MapDrawDuration, MapBuildDuration, FrameTime, SwapTime, OrthoTime;
+TimerUnits CameraUpdateDuration;
+TimerUnits MapDrawDuration, MapBuildDuration, FrameTime, SwapTime, OrthoTime;
 
 bool bDebugMenuOpen = true;
 
@@ -130,14 +131,14 @@ int main(int argc, char* args[]) {
         auto start = std::chrono::high_resolution_clock::now();
         myCamera.Update(myMap, myShader, myInputHandle, myBrickWidget);
         auto end = std::chrono::high_resolution_clock::now();
-        CameraUpdateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        CameraUpdateDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
         // Draw the map
         start = std::chrono::high_resolution_clock::now();
         myMap.Draw(myCamera);
 
         end = std::chrono::high_resolution_clock::now();
-        MapDrawDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        MapDrawDuration = std::chrono::duration_cast<TimerUnits>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
         DrawBrickTarget(myCamera, brickTargetMesh);
@@ -169,7 +170,7 @@ int main(int argc, char* args[]) {
 
         DrawDebugUI(myCamera, myMap);
         end = std::chrono::high_resolution_clock::now();
-        OrthoTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        OrthoTime = std::chrono::duration_cast<TimerUnits>(end - start);
 
 
         myRendererShader.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
@@ -181,13 +182,13 @@ int main(int argc, char* args[]) {
         start = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
         end = std::chrono::high_resolution_clock::now();
-        SwapTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        SwapTime = std::chrono::duration_cast<TimerUnits>(end - start);
 
         frameCounter++;
         gblPolyCount = 0;
 
         auto frameEndTime = std::chrono::high_resolution_clock::now();
-        FrameTime = std::chrono::duration_cast<std::chrono::milliseconds>(frameEndTime - frameStartTime);
+        FrameTime = std::chrono::duration_cast<TimerUnits>(frameEndTime - frameStartTime);
 	}
 
 	Cleanup();
