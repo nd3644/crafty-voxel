@@ -22,12 +22,11 @@ class Camera
         bool IsInThirdPersonMode() const;
         float GetCurrentFovModifier() const;
 
-        bool DoesLineIntersectFrustum(glm::vec3 start, glm::vec3 end) {
-            return DoesLineIntersectFrustum(start,end,0);
+        bool DoesLineIntersectFrustum(glm::vec3 &start, glm::vec3 &end) {
+            return DoesLineIntersectFrustum(start,end,0,8);
         }
-        bool DoesLineIntersectFrustum(glm::vec3 start, glm::vec3 end, int depth) {
-            const int RECURSIVE_LIMIT = 4;
-            if(depth >= RECURSIVE_LIMIT) {
+        bool DoesLineIntersectFrustum(glm::vec3 &start, glm::vec3 &end, int depth, int maxdepth) {
+            if(depth >= maxdepth) {
                 return false;
             }
 
@@ -45,7 +44,7 @@ class Camera
                 return true;
             }
 
-            return DoesLineIntersectFrustum(start,point,depth+1) || DoesLineIntersectFrustum(point,end, depth+1);
+            return DoesLineIntersectFrustum(start,point,depth+1,maxdepth) || DoesLineIntersectFrustum(point,end, depth+1,maxdepth);
         }
 
     private: // Private methods

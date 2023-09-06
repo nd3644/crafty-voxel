@@ -418,6 +418,8 @@ void Map::Draw(Camera &cam) {
     int skip = 0;
     int len = 0;
 
+    int timerRes = 0;
+
     // Loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
@@ -449,7 +451,11 @@ void Map::Draw(Camera &cam) {
             chunk_edges[6] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
             chunk_edges[7] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
 
-/*             for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 2) {
+            auto startTime = std::chrono::high_resolution_clock::now();
+            
+
+/* 
+             for(float px = (x * CHUNK_SIZE);px < (x * CHUNK_SIZE) + CHUNK_SIZE;px += 2) {
                 for(float pz = (z * CHUNK_SIZE);pz < (z * CHUNK_SIZE) + CHUNK_SIZE;pz += 2) {
                     for(float py = 0;py < MAX_HEIGHT;py += 32) {
                         glm::vec3 point(px,py,pz);
@@ -463,17 +469,21 @@ void Map::Draw(Camera &cam) {
                         }
                     }
                 }
-            }
-            found: */
-            for(int i = 0;i < 8;i++) {
-                for(int j = i+1;j < 8;j++) {
-                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j])) {
+            }  */
+             for(int i = 0;i < 4;i++) {
+                for(int j = 4;j < 8;j++) {
+                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j], 0, 3)) {
                         bVisible = true;
                         goto found;
                     }
                 }
-            }
+            } 
             found:
+
+
+            auto endTime = std::chrono::high_resolution_clock::now();
+            timerRes += std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
+
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
             chunk.bVisible = bVisible;
@@ -514,6 +524,8 @@ void Map::Draw(Camera &cam) {
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();
     }
+
+    std::cout << timerRes << std::endl;
 }
 
 void Map::RebuildAllVisible() {
