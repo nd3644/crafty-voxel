@@ -14,8 +14,8 @@ double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
 double ay[numPoints] = { 20, 05, 80, 90, 110, 256 }; */
 
 
-std::vector<double>ax = { -1, -0.9, -0.8, -0.5, 0.0, 0.5, 0.8, 1 };
-std::vector<double>ay = { 25, 30, 100, 105, 130, 150, 200, 256 };
+std::vector<double> ax = { -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
+std::vector<double> ay = { 20, 40, 60, 65, 100, 130, 150, 170, 190, 220, 256 };
 
 double interpolateY(double x)
 {
@@ -72,7 +72,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen || bIsCurrentlyGenerating)
         return;
 
-    const int SEA_LEVEL = 63;
+    const int SEA_LEVEL = 86;
 
     bIsCurrentlyGenerating = true;
     bool bMount = (rand()%5 == 1) ? true : false;
@@ -87,7 +87,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     using namespace noise;
 
-    double FREQ = 0.0025;
+    double FREQ = 0.001;
 
 //    module::Perlin normalPerlin;
     module::Perlin normalPerlin, erosionPerlin;
@@ -102,8 +102,6 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     module::ScaleBias scaled;
     scaled.SetSourceModule(0, normalPerlin);
-    scaled.SetScale(0.7);
-    scaled.SetBias(-0.3);
 
     std::vector<vec3_t>toFill;
     for (int x = 0; x < CHUNK_SIZE;x++) {
@@ -133,6 +131,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
             for (int y = height; y > 0; y--) {
                 brickType = map.BrickNameMap["grass_top"];
+
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 
