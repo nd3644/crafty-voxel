@@ -12,11 +12,11 @@
 extern SDL_Window* myWindow;
 
 Camera::Camera() {
-    direction = glm::vec3(0,0,1);
+    direction = glm::vec3(-1,0,0);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
 //    position = formerPosition = glm::vec3(8,120,0);
-    position = formerPosition = glm::vec3(100 + 2000,120,100 + 2000);
+    position = formerPosition = glm::vec3(3202, 94, 2711);
     bFocus = true;
     bIsInThirdPersonMode = false;
     bIsOnGround = false;

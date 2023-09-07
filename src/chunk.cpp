@@ -15,7 +15,7 @@ double ay[numPoints] = { 20, 05, 80, 90, 110, 256 }; */
 
 
 std::vector<double> ax = { -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
-std::vector<double> ay = { 20, 40, 60, 65, 100, 130, 150, 170, 190, 220, 256 };
+std::vector<double> ay = { 20, 40, 60, 65, 100, 130, 150, 170, 190, 220, 250 };
 
 double interpolateY(double x)
 {
@@ -87,7 +87,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     using namespace noise;
 
-    double FREQ = 0.001;
+    double FREQ = 0.0008;
 
 //    module::Perlin normalPerlin;
     module::Perlin normalPerlin, erosionPerlin;
@@ -152,10 +152,20 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 	}
 
     // Plant some trees
-
-/*    if(rand() % 6 == 0) {
+    if(rand() % 6 == 0) {
         int lX = rand() % 16;
         int lZ = rand() % 16;
+
+        if(lX < 4)
+            lX = 4;
+        if(lZ < 4)
+            lZ = 4;
+        
+        if(lX > 13)
+            lX = 13;
+        if(lZ > 13)
+            lZ = 13;
+
         lX += chunkx * CHUNK_SIZE;
         lZ += chunkz * CHUNK_SIZE;
         int height = (rand() % 6) + 5;
@@ -192,46 +202,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             }
         }
         
-    }*/
-
-
-/*     module::RidgedMulti valleyNoise;
-    valleyNoise.SetSeed(987);
-    valleyNoise.SetFrequency(FREQ);
-
-    module::ScaleBias scaledValley;
-    scaledValley.SetSourceModule(0, valleyNoise);
-
-    const int waterRepDepth = 15;
-    for (int x = 0; x < CHUNK_SIZE;x++) {
-        int xindex = (chunkx*CHUNK_SIZE)+x;
-		for (int z = 0; z < CHUNK_SIZE; z++) {
-            int zindex = (chunkz*CHUNK_SIZE)+z;
-
-            if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
-                continue;
-            }
-
-            float unit = scaledValley.GetValue((float)xindex,(float)zindex,0.5) * (float)MAX_HEIGHT;
-            int depth = (int)unit;
-
-            depth -= (scaled.GetValue((float)xindex,(float)zindex,0.5) * (float)MAX_HEIGHT);
-
-            int yStop = (MAX_HEIGHT-depth < 0) ? 0 : MAX_HEIGHT-depth;
-
-            int replacementDepth = 0;
-            for(int y = MAX_HEIGHT;y > yStop;y--) {
-                if(y < SEA_LEVEL) {
-                    map.SetBrick(xindex,zindex,y,0);
-                    map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
-                }
-                else if(map.GetBrick(xindex,zindex,y) != 0) {
-                    map.SetBrick(xindex,zindex,y,0);
-                }
-                
-            }
-        }
-    } */
+    }
 
     curStage = BUILD_STAGE;
 
