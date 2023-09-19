@@ -55,7 +55,8 @@ bool bEnableVSync = true;
 bool bDrawColliders = false;
 int frameCounter = 0;
 int fpsTimer = 0;
-int lastAvgFps = 0;
+int lastAvgFps = 0;   // Average fps overall
+
 TimerUnits CameraUpdateDuration;
 TimerUnits MapDrawDuration, MapBuildDuration, FrameTime, SwapTime, OrthoTime;
 
@@ -87,7 +88,7 @@ int main(int argc, char* args[]) {
 	float fdelta = 0.0f;
 	bool bDone = false;
 
-    myMap.GenerateChunksFromOrigin((int)myCamera.position.x / chunk_t::CHUNK_SIZE, (int)myCamera.position.z / chunk_t::CHUNK_SIZE, gViewDist + 32);
+    myMap.GenerateChunksFromOrigin((int)myCamera.position.x / chunk_t::CHUNK_SIZE, (int)myCamera.position.z / chunk_t::CHUNK_SIZE, gViewDist + 2);
 
     static int counter = 0;
 	while (bDone == false) {
@@ -166,6 +167,42 @@ int main(int argc, char* args[]) {
 
         DrawCursor();
         myBrickWidget.Draw();
+        Rect r(0,0,256,256);
+        Rect c(0,0,256,256);
+
+        noise::module::Perlin perlinNoise;
+        perlinNoise.SetFrequency(0.01);
+        perlinNoise.SetOctaveCount(8);
+        perlinNoise.SetPersistence(0.5);
+        perlinNoise.SetLacunarity(2.0);
+
+        noise::module::Perlin ridgedNoise;
+        ridgedNoise.SetFrequency(0.001);      // Adjust the frequency as needed
+        ridgedNoise.SetPersistence(0.7);       // Experiment with the number of octaves
+        ridgedNoise.SetLacunarity(2.0);      // You can adjust this value
+
+        noise::module::Add addModule;
+        addModule.SetSourceModule(0, perlinNoise);
+        addModule.SetSourceModule(1, ridgedNoise);
+
+        // Generate terrain values here using scaleBiasModule
+        // Iterate through your terrain grid and sample the noise at each point
+/* 
+
+
+        Eternal::Sprite perlinSprite;
+        perlinSprite.FromNoise(perlinNoise,256,256);
+        perlinSprite.Draw(r,c);
+
+        r.x += 300;
+        perlinSprite.FromNoise(ridgedNoise,256,256);
+        perlinSprite.Draw(r,c);
+
+        r.x -= 150;
+        r.y += 300;
+        perlinSprite.FromNoise(addModule,256,256);
+        perlinSprite.Draw(r,c);
+         */
 //        DrawMiniMap(myCamera, myMap);
 
         DrawDebugUI(myCamera, myMap);
@@ -467,6 +504,10 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
         str = "avg fps: " + std::to_string(lastAvgFps);
         ImGui::Text("%s", str.c_str());
 
+        str = "Frustum skips: " + std::to_string(gFrustumSkips);
+        ImGui::Text("%s", str.c_str());
+
+
     /*    std::string polyNumber = std::to_string(gblPolyCount);
         polyNumber.insert(polyNumber.begin()+3,',');
         str = "polycount: : " + polyNumber;
@@ -485,6 +526,13 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
         ImGui::Checkbox("Colliders", &bDrawColliders);
         ImGui::Checkbox("Enable AO", &gEnableAO);
         ImGui::Checkbox("FrustumTop", &gbFrustumTopView);
+
+        if(ImGui::Checkbox("Wireframe", &gbWireFrameEnabled)) {
+            if(gbWireFrameEnabled)
+                gRenderMode = GlobalRenderModes::RENDER_MODE_WIRES;
+            else
+                gRenderMode = GlobalRenderModes::RENDER_MODE_DEFAULT;
+        }
         if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
     //        map.RebuildAllVisible();
         }

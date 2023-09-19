@@ -12,11 +12,11 @@
 extern SDL_Window* myWindow;
 
 Camera::Camera() {
-    direction = glm::vec3(-1,0,0);
+    direction = glm::vec3(-0.5,0,0.5);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
 //    position = formerPosition = glm::vec3(8,120,0);
-    position = formerPosition = glm::vec3(3202, 94, 2711);
+    position = formerPosition = glm::vec3(4117, 96, 2527);
     bFocus = true;
     bIsInThirdPersonMode = false;
     bIsOnGround = false;
@@ -104,7 +104,7 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
 
     STRAFE_SPD = DEFAULT_STRAFE_SPD;
     if (input.IsKeyDown(InputHandle::KEY_LSHIFT)) {
-        STRAFE_SPD = 0.4f;
+        STRAFE_SPD = 1.4f;
 	}
     else if (input.IsKeyDown(InputHandle::KEY_Q)) {
         STRAFE_SPD = 0.01f;
@@ -242,9 +242,11 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     int chunkZ = std::floor(targetted_brick.z / chunk_t::CHUNK_SIZE);
         
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_LEFT)) {
-        int brickType = myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y);
-        myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
-        myMap.BuildChunk(chunkX, chunkZ);
+
+        if(myMap.GetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y) != myMap.IdFromName("bedrock")) {
+            myMap.SetBrick((int)targetted_brick.x, (int)targetted_brick.z, (int)targetted_brick.y,0);
+            myMap.BuildChunk(chunkX, chunkZ);
+        }
     }
     if(input.IsMouseClick(Eternal::InputHandle::MBUTTON_RIGHT)) {
         int brickType = selectWidget.GetSelectedBrickID();

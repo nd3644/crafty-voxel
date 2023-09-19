@@ -25,8 +25,18 @@ extern int gAOLevel;
 extern int gViewDist;
 extern bool gEnableAO;
 extern bool gbFrustumTopView;
+extern bool gbWireFrameEnabled;
 
 extern bool bDbgFrustumView;
 
+extern int gFrustumSkips; // How many chunks were skipped this frame
+
+enum class GlobalRenderModes {
+    RENDER_MODE_DEFAULT = 0,
+    RENDER_MODE_WIRES = 1,
+    NUM_RENDER_MODES
+};
+
+extern GlobalRenderModes gRenderMode;
 
 #endif

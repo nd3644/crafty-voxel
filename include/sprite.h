@@ -5,6 +5,7 @@
 #include <string>
 #include <GL/glew.h>
 
+namespace noise { namespace module { class Module; } }
 namespace Eternal {
     class Mesh;
     class Sprite {
@@ -13,6 +14,7 @@ namespace Eternal {
             ~Sprite();
 
             void Load(std::string sfilename);
+            void FromNoise(noise::module::Module &sourceModule, int width, int height);
 
             void Bind(int unit = 0);
 

@@ -7,6 +7,7 @@
 #include "shader.h"
 #include "cube.h"
 #include "camera.h"
+#include "helper.h"
 #include "globals.h"
 #include <GL/glew.h>
 #include <algorithm>
@@ -24,6 +25,8 @@ Map::Map(Camera &c) : camera(c) {
         std::clog << "This PC has " << num_cores << " cores/threads." << std::endl;
         NUM_THREADS = num_cores;
     }
+
+//    NUM_THREADS = 2;
 
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
 }
@@ -246,7 +249,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 brick_ao_t curBrickAO = GetBrickAO(xindex,zindex,y);
 
-
                 int len = 1;
                 for(int i = 1;i < CHUNK_SIZE;i++) {
                     if(z < CHUNK_SIZE-i
@@ -271,9 +273,15 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
                 lv -= chunk.heatShift;
-                // Draw top
 
-                
+
+                float HEIGHT = 0.5f;
+
+                // TODO: Remove hardcode
+                if(brickID == BrickNameMap["water"])
+                    HEIGHT -= 0.15f;
+
+                // Draw top
                 uint8_t (&topamb_a)[4] = curBrickAO.ambientVecs[0];
                 float amb[4];
                 for(int k = 0;k < 4;k++) {
@@ -281,20 +289,20 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
                 
                 if(amb[0] + amb[3] > amb[1] + amb[2]) {
-                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
-                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
-                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, 0.5, 0);   // right back 1 
-                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right 2
-                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, 0.5, 0); // left back 0
-                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left 3
+                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, HEIGHT, 0); // left back 0
+                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, HEIGHT, len);  //  front right 2
+                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, HEIGHT, 0);   // right back 1 
+                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, HEIGHT, len);  //  front right 2
+                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, HEIGHT, 0); // left back 0
+                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, HEIGHT, len);  // front left 3
                 }
                 else {
-                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len); // front left
-                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, 0.5, len);  //  front right
-                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // right back
-                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, 0.5, len);  // front left
-                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, 0);   // right back
-                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // left back
+                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, HEIGHT, len); // front left
+                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(0.5, HEIGHT, len);  //  front right
+                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, HEIGHT, -0); // right back
+                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, HEIGHT, len);  // front left
+                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(0.5, HEIGHT, 0);   // right back
+                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(-0.5, HEIGHT, -0); // left back
                 }
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
@@ -305,15 +313,14 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     amb[k] = ((float)botamb_a[k] / 100.0f) * lv;
                 }
 
-
                 // TODO: add a/o here
                 // Draw bottom
                 mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
-                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(0, len);       mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
-                mesh.TexCoord2(1, len);     mesh.Vert3(0.5, -0.5, len);
+                mesh.TexCoord2(1, len);       mesh.Vert3(0.5, -0.5, len);
 
-                mesh.TexCoord2(0, len);     mesh.Vert3(-0.5, -0.5, len);
+                mesh.TexCoord2(0, len);       mesh.Vert3(-0.5, -0.5, len);
                 mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, -0.5, -0);
 
@@ -328,10 +335,10 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 // Draw left
                 mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
                 mesh.Color4(amb[2], amb[2], amb[2], 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(-0.5, -0.5, len); // br
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, HEIGHT, len); // tr
 
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, 0.5, len); // tr
-                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tl
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(-0.5, HEIGHT, len); // tr
+                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, HEIGHT, -0); // tl
                 mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0);
 
                 lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
@@ -343,13 +350,13 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
                 
                 // Draw right
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, HEIGHT, len); // tr
                 mesh.Color4(amb[2], amb[2], amb[2], 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(0.5, -0.5, len); // br
                 mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);
         
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, 0.5, len); // tr   
+                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0.5, HEIGHT, len); // tr   
                 mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0.5, -0.5, -0);                             
-                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
+                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0.5, HEIGHT, -0); // tl
 
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
@@ -362,12 +369,12 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                                 
                 // Draw back
                 mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0); // tl
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, HEIGHT, -0); // tl
                 mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, -0); // bl
 
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, -0);// tl
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, HEIGHT, -0);// tl
                 mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, -0); // br
-                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, -0); // tr
+                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, HEIGHT, -0); // tr
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
                 lv -= chunk.heatShift;
@@ -378,11 +385,11 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     amb[k] = ((float)frontamb_a[k] / 100.0f) * lv;
                 }
                             
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len); // tl
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, HEIGHT, len); // tl
                 mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
                 mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(1, 1);         mesh.Vert3(0.5, -0.5, len); // bl
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, 0.5, len);// tl
-                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, 0.5, len); // tr
+                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(0.5, HEIGHT, len);// tl
+                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(-0.5, HEIGHT, len); // tr
                 mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(-0.5, -0.5, len); // br
                 cube_count++;
             }
@@ -392,15 +399,73 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     chunk.curStage = chunk_t::UPLOAD_STAGE;
 }
 
-void Map::Draw(Camera &cam) {    
+void Map::MarkChunkVisibilities(Camera &cam) {
+    bool bVisible = false;
+    glm::vec3 newCamDir = cam.direction;
+    newCamDir = glm::normalize(newCamDir);
+
+    glm::vec3 chunk_edges[8];
+
+    auto MAX_HEIGHT = chunk_t::MAX_HEIGHT;
+    auto CHUNK_SIZE = chunk_t::CHUNK_SIZE;
+    
     int sX = ((int)camera.position.x / chunk_t::CHUNK_SIZE);
     int sZ = ((int)camera.position.z / chunk_t::CHUNK_SIZE);
 
-    if(SDL_GetKeyboardState(0)[SDL_SCANCODE_J]) {
+    // Loop through all chunks within the gViewDist
+    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        if(x < 0)
+            continue;
+        for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
+            if(z < 0)
+                continue;
+            
+            // Define the bounding box for the chunk
+            chunk_edges[0] = {(x * CHUNK_SIZE), 0.0f, (z * CHUNK_SIZE)};
+            chunk_edges[1] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE)};
+            chunk_edges[2] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE) + CHUNK_SIZE};
+            chunk_edges[3] = {(x * CHUNK_SIZE), 0.0f, (z * CHUNK_SIZE) + CHUNK_SIZE};
+
+            chunk_edges[4] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE)};
+            chunk_edges[5] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE)};
+            chunk_edges[6] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
+            chunk_edges[7] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
+
+            bVisible = false;
+
+            int timerResult = 0;
+            auto startTime = std::chrono::high_resolution_clock::now();
+            for(int i = 0;i < 4;i++) {
+                for(int j = 4;j < 8;j++) {
+                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j],0,4)) {
+                        bVisible = true;
+                        goto found;
+                    }
+                }
+            }
+            found:
+            
+            auto endTime = std::chrono::high_resolution_clock::now();
+            timerResult += std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
+
+            auto index = std::make_pair(x,z);
+            auto &chunk = Chunks[index];
+            chunk.bVisible = bVisible;
+        }
+    }
+}
+
+void Map::Draw(Camera &cam) {
+    gFrustumSkips = 0; // Reset counter
+
+    int sX = ((int)camera.position.x / chunk_t::CHUNK_SIZE);
+    int sZ = ((int)camera.position.z / chunk_t::CHUNK_SIZE);
+
+    if(gRenderMode == GlobalRenderModes::RENDER_MODE_DEFAULT) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         fAmbient = 1;
     }
-    else if(SDL_GetKeyboardState(0)[SDL_SCANCODE_K]) {
+    else if(gRenderMode == GlobalRenderModes::RENDER_MODE_WIRES) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
 
@@ -415,10 +480,9 @@ void Map::Draw(Camera &cam) {
     int curThread = 0;
     std::thread builder;
 
-    int skip = 0;
-    int len = 0;
+    int drawCount = 0;
 
-    int timerRes = 0;
+    MarkChunkVisibilities(cam);
 
     // Loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
@@ -427,50 +491,12 @@ void Map::Draw(Camera &cam) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
             if(z < 0)
                 continue;
-            
-            len++;
-
 //            std::cout << "drawing " << x << " , " << z << std::endl;
-
-            bool bVisible = false;
-            glm::vec3 newCamDir = cam.direction;
-            newCamDir = glm::normalize(newCamDir);
-
-            glm::vec3 chunk_edges[8];
-
-            auto MAX_HEIGHT = chunk_t::MAX_HEIGHT;
-            auto CHUNK_SIZE = chunk_t::CHUNK_SIZE;
-            
-
-            // Define the bounding box for the chunk
-            chunk_edges[0] = {(x * CHUNK_SIZE), 0.0f, (z * CHUNK_SIZE)};
-            chunk_edges[1] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE)};
-            chunk_edges[2] = {(x * CHUNK_SIZE) + CHUNK_SIZE, 0.0f, (z * CHUNK_SIZE) + CHUNK_SIZE};
-            chunk_edges[3] = {(x * CHUNK_SIZE), 0.0f, (z * CHUNK_SIZE) + CHUNK_SIZE};
-
-            chunk_edges[4] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE)};
-            chunk_edges[5] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE)};
-            chunk_edges[6] = {(x * CHUNK_SIZE) + CHUNK_SIZE, MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
-            chunk_edges[7] = {(x * CHUNK_SIZE), MAX_HEIGHT, (z * CHUNK_SIZE) + CHUNK_SIZE};
-
-            auto startTime = std::chrono::high_resolution_clock::now();
-            for(int i = 0;i < 4;i++) {
-                for(int j = 4;j < 8;j++) {
-                    if(cam.DoesLineIntersectFrustum(chunk_edges[i],chunk_edges[j],0,4)) {
-                        bVisible = true;
-                        goto found;
-                    }
-                }
-            }
-            found:
-            auto endTime = std::chrono::high_resolution_clock::now();
-            timerRes += std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
 
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
-            chunk.bVisible = bVisible;
-            if(!bVisible) {
-                skip++;
+            if(!chunk.bVisible) {
+                gFrustumSkips++;
                 continue;
             }
             
@@ -485,10 +511,10 @@ void Map::Draw(Camera &cam) {
                         }
                     });
                     curThread++;
-                    continue;
                 }
                 continue;
             }
+
             if(chunk.curStage != chunk.READY_STAGE) {
                 if(chunk.curStage == chunk.UPLOAD_STAGE) {
                     chunk.mesh.BindBufferData();
@@ -500,12 +526,16 @@ void Map::Draw(Camera &cam) {
             }
             Mesh &mesh = chunk.mesh;
             mesh.Draw(Mesh::MODE_TRIANGLES);
+            drawCount++;
         }
     }
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();
     }
+
+
+    //std::cout << "count: " << drawCount << std::endl;
 
     // (debug) Print out the total time spent on binary search
     //std::cout << timerRes << std::endl;

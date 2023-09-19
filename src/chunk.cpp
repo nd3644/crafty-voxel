@@ -2,10 +2,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <libnoise/noise.h>
 #include <gsl/gsl_spline.h>
 
 #include "map.h"
+#include "helper.h"
 
 #include <cassert>
 
@@ -13,9 +13,14 @@
 double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
 double ay[numPoints] = { 20, 05, 80, 90, 110, 256 }; */
 
+Eternal::Sprite chunk_t::perlinSprite;
+noise::module::Perlin chunk_t::normalPerlin, chunk_t::erosionPerlin;
+noise::module::RidgedMulti chunk_t::ridgedPerlin;
+noise::module::Perlin chunk_t::heatPerlin;
+
 
 std::vector<double> ax = { -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
-std::vector<double> ay = { 20, 40, 60, 65, 100, 130, 150, 170, 190, 220, 250 };
+std::vector<double> ay = { 20, 40, 60, 65, 100, 130, 150, 170, 180, 230, 240 }; 
 
 double interpolateY(double x)
 {
@@ -72,7 +77,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen || bIsCurrentlyGenerating)
         return;
 
-    const int SEA_LEVEL = 86;
+    const int SEA_LEVEL = 84;
 
     bIsCurrentlyGenerating = true;
     bool bMount = (rand()%5 == 1) ? true : false;
@@ -87,21 +92,34 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     using namespace noise;
 
-    double FREQ = 0.0008;
+    double FREQ = 0.0005;
 
 //    module::Perlin normalPerlin;
-    module::Perlin normalPerlin, erosionPerlin;
-    module::Perlin heatPerlin;
-    heatPerlin.SetSeed(5331);
-    heatPerlin.SetFrequency(FREQ / 4.0);
+    static module::Perlin normalPerlin, secondPerlin;
+    normalPerlin.SetOctaveCount(8);
+
+    static module::Perlin ridgedPerlin;
+    ridgedPerlin.SetSeed(5653);
+    static module::Perlin heatPerlin;
+
+    heatPerlin.SetSeed(65456);
+    heatPerlin.SetFrequency(FREQ / 2.0);
+    heatPerlin.SetPersistence(0.2);
 
     normalPerlin.SetFrequency(FREQ);
-    erosionPerlin.SetFrequency(FREQ / 2.0);
+    secondPerlin.SetFrequency(FREQ / 2.0);
 
-    heatShift = 0;//heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8), ((chunkz*CHUNK_SIZE)+8), 0.5f) / 12.0f;
+    secondPerlin.SetSeed(444);
+
+    module::Add addModule;
+    addModule.SetSourceModule(0, normalPerlin);
+    addModule.SetSourceModule(1, secondPerlin);
 
     module::ScaleBias scaled;
-    scaled.SetSourceModule(0, normalPerlin);
+    scaled.SetSourceModule(0, addModule);
+    scaled.SetScale(0.8);
+
+    heatShift = 0;//heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8), ((chunkz*CHUNK_SIZE)+8), 0.5f) / 12.0f;
 
     std::vector<vec3_t>toFill;
     for (int x = 0; x < CHUNK_SIZE;x++) {
@@ -109,28 +127,28 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
             float unit = scaled.GetValue((float)xindex,(float)zindex,0.5);
+
             int height = 0;//(((unit + 1) / 2) * MAX_HEIGHT);
 
-            normalPerlin.SetOctaveCount(noise::module::DEFAULT_PERLIN_OCTAVE_COUNT);
+            height = interpolateY(unit);
 
-            if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
-                normalPerlin.SetOctaveCount(5);
-            }
+            height = ((scaled.GetValue((float)xindex,(float)zindex,0.5)+1)/2.0) * MAX_HEIGHT;
 
-            double xValue = unit;
-//            double yValue = gsl_spline_eval(spline, xValue, accel);
-//            height = yValue;
-            height = interpolateY(xValue);
-
-            if(height >= chunk_t::MAX_HEIGHT)
-                height = chunk_t::MAX_HEIGHT - 1;
-            
+            height = ClampValue(height, 0, MAX_HEIGHT-1);
 
             // default to grass
             brickType = map.BrickNameMap["grass_top"];
 
             for (int y = height; y > 0; y--) {
-                brickType = map.BrickNameMap["grass_top"];
+
+                if(height < MAX_HEIGHT && map.GetBrick(xindex,zindex,y+1) == 0)
+                    brickType = map.BrickNameMap["grass_top"];
+                else
+                    brickType = map.BrickNameMap["stone"];
+
+                if(y > 200) {
+                    brickType = map.BrickNameMap["snow_top"];
+                }
 
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
@@ -202,6 +220,43 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             }
         }
         
+    }
+
+    // Dig cavess
+    module::RidgedMulti caves;
+    caves.SetFrequency(FREQ*25);
+    caves.SetOctaveCount(4);
+    caves.SetSeed(33356);
+
+    module::ScaleBias scaledCaves;
+    scaledCaves.SetSourceModule(0, caves);
+    scaledCaves.SetBias(-0.1);
+
+    for (int x = 0; x < CHUNK_SIZE;x++) {
+        int xindex = (chunkx*CHUNK_SIZE)+x;
+		for (int z = 0; z < CHUNK_SIZE; z++) {
+            int zindex = (chunkz*CHUNK_SIZE)+z;
+            for(int y = SEA_LEVEL-4;y > 0;y--) { //-4 is just a random offset
+                double val = scaledCaves.GetValue((float)xindex * 0.5, (float)(y-(SEA_LEVEL/2)), (float)zindex * 0.5); // 0.7 scaling factor
+                if(val > 0.8) {
+                    int curBrick = map.GetBrick(xindex,zindex,y);
+                    if(curBrick == map.IdFromName("stone")
+                    || map.GetBrick(xindex,zindex,y) == map.IdFromName("sand")) {
+                        map.SetBrick(xindex,zindex,y,0);
+                    }
+                }
+            }
+        }
+    }
+
+
+    // Apply bedrock
+    for (int x = 0; x < CHUNK_SIZE;x++) {
+        int xindex = (chunkx*CHUNK_SIZE)+x;
+		for (int z = 0; z < CHUNK_SIZE; z++) {
+            int zindex = (chunkz*CHUNK_SIZE)+z;
+            map.SetBrick(xindex,zindex,2,map.IdFromName("bedrock"));
+        }
     }
 
     curStage = BUILD_STAGE;

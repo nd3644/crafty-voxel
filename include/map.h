@@ -78,7 +78,8 @@ public: // public vars
     
     std::map<std::string, int>BrickNameMap;
 private: // private methods
-
+    void MarkChunkVisibilities(Camera &cam);
+    
 private:
     std::thread threads[16];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
@@ -92,7 +93,6 @@ private:
     std::vector<float>BrickTransparencies;
 
     std::map <std::pair<int,int>, chunk_t>Chunks;
-
 };
 
 #endif

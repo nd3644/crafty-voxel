@@ -2,7 +2,9 @@
 #define CHUNK_H
 
 #include "mesh.h"
+#include "sprite.h"
 #include <cstdint>
+#include <libnoise/noise.h>
 
 class Map;
 struct chunk_t {
@@ -39,6 +41,15 @@ struct chunk_t {
     void Generate(int chunkx, int chunkz, Map &map);
 
     float heatShift;
+
+    static void InitSprites() {
+        perlinSprite.FromNoise(chunk_t::normalPerlin,512,512);
+    }
+
+    static Eternal::Sprite perlinSprite, erosionSprite;
+    static noise::module::Perlin normalPerlin, erosionPerlin;
+    static noise::module::RidgedMulti ridgedPerlin;
+    static noise::module::Perlin heatPerlin;
 };
 
 #endif

@@ -17,8 +17,13 @@ int gAOLevel = 90;
 bool gEnableAO = true;
 
 bool gbFrustumTopView = false;
+bool gbWireFrameEnabled = false;
 
 int gViewDist = 20;
 float fFov = 75.0f;
 float gfZNear = 0.1f;
 float gfZFar = 1000.0f;
+
+int gFrustumSkips = 0; // How many chunks were skipped this frame
+
+GlobalRenderModes gRenderMode = GlobalRenderModes::RENDER_MODE_DEFAULT;

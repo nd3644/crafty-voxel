@@ -3,6 +3,12 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <iostream>
+#include <tuple>
+#include <libnoise/noise.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 Eternal::Sprite::Sprite() {
     w = h = 0;
@@ -31,7 +37,67 @@ void Eternal::Sprite::Cleanup() {
         glDeleteBuffers(4, arrayBuffers);
     }
 }
+uint8_t mapDoubleToUint8(double input) {
+    // Ensure the input is within the [-1, 1] range
+    if (input < -1.0) {
+        input = -1.0;
+    } else if (input > 1.0) {
+        input = 1.0;
+    }
 
+    // Map the double to a uint8_t using linear mapping
+    uint8_t output = static_cast<uint8_t>((input + 1.0) * 127.5);
+
+    return output;
+}
+void Eternal::Sprite::FromNoise(noise::module::Module &sourceModule, int width, int height) {
+    sName = "FromNoise";
+
+    Cleanup();
+    
+    glGenTextures(1, &myTexID);
+
+    glGenVertexArrays(1, &vertArrObj);
+    glBindVertexArray(vertArrObj);
+    glGenBuffers(4, arrayBuffers);
+
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[0]);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[1]);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[2]);
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(2);
+
+    glEnableVertexAttribArray(3);
+    glBindBuffer(GL_ARRAY_BUFFER, arrayBuffers[3]);
+    glVertexAttribIPointer(3, 1, GL_INT, 0, 0);
+    
+    glBindTexture(GL_TEXTURE_2D, myTexID);
+   
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    auto *pixelBuffer = new glm::u8vec3[width*height];
+
+    for(int x = 0;x < width;x++) {
+        for(int y = 0;y < height;y++) {
+            uint8_t val = mapDoubleToUint8(sourceModule.GetValue(x,y,0.5));
+            pixelBuffer[(y*width)+x] = {val,val,val};
+        }
+    }
+
+    GLuint format = GL_RGB;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, pixelBuffer);
+
+    bLoaded = true;
+
+    delete [] pixelBuffer;
+}
 
 void Eternal::Sprite::Load(std::string sfile) {
     sName = sfile;
@@ -66,7 +132,7 @@ void Eternal::Sprite::Load(std::string sfile) {
         exit(1);
     }
 
-    ;
+    
     glBindTexture(GL_TEXTURE_2D, myTexID);
    
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -83,7 +149,6 @@ void Eternal::Sprite::Load(std::string sfile) {
 }
 
 void Eternal::Sprite::Bind(int unit) {
-    ;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, myTexID);
 }
