@@ -8,3 +8,6 @@ textures/water.png
 textures/trunk_top.png
 textures/trunk_side.png
 textures/leaves.png
+textures/snow_top.png
+textures/snow_side.png
+textures/bedrock.png

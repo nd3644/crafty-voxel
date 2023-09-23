@@ -397,9 +397,15 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     }
 //    mesh.BindBufferData();
     chunk.curStage = chunk_t::UPLOAD_STAGE;
+    chunk.iRebuildCounter++;
+    if(chunk.iRebuildCounter > 5)
+        chunk.iRebuildCounter = 0;
+    chunk.bRequiresRebuild = false;
 }
 
 void Map::MarkChunkVisibilities(Camera &cam) {
+    gFrustumSkips = 0; // Reset counter
+
     bool bVisible = false;
     glm::vec3 newCamDir = cam.direction;
     newCamDir = glm::normalize(newCamDir);
@@ -451,13 +457,16 @@ void Map::MarkChunkVisibilities(Camera &cam) {
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
             chunk.bVisible = bVisible;
+
+            if(!chunk.bVisible) {
+                gFrustumSkips++;
+                continue;
+            }
         }
     }
 }
 
 void Map::Draw(Camera &cam) {
-    gFrustumSkips = 0; // Reset counter
-
     int sX = ((int)camera.position.x / chunk_t::CHUNK_SIZE);
     int sZ = ((int)camera.position.z / chunk_t::CHUNK_SIZE);
 
@@ -480,10 +489,11 @@ void Map::Draw(Camera &cam) {
     int curThread = 0;
     std::thread builder;
 
+    int lowestBuildCount = std::numeric_limits<int>::max();
+    std::pair<int,int>toRebuildChunk;
+
     int drawCount = 0;
-
     MarkChunkVisibilities(cam);
-
     // Loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         if(x < 0)
@@ -495,24 +505,30 @@ void Map::Draw(Camera &cam) {
 
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
+            
             if(!chunk.bVisible) {
-                gFrustumSkips++;
                 continue;
             }
             
             if(chunk.curStage < chunk_t::UPLOAD_STAGE) {
-                if(curThread < NUM_THREADS) {
+                if(curThread < NUM_THREADS-1) {
                     threads[curThread] = std::thread([this, &chunk, x, z]() {
                         if(!chunk.bGen) {
                             chunk.Generate(x,z,*this);
                         }
-                        else if(!chunk.bIniialBuild) {
+                        else if(!chunk.bIniialBuild || chunk.bRequiresRebuild) {
                             BuildChunk(x,z);
                         }
                     });
                     curThread++;
                 }
                 continue;
+            }
+
+            if(chunk.iRebuildCounter < lowestBuildCount) {
+                lowestBuildCount = chunk.iRebuildCounter;
+                toRebuildChunk.first = x;
+                toRebuildChunk.second = z;
             }
 
             if(chunk.curStage != chunk.READY_STAGE) {
@@ -530,11 +546,15 @@ void Map::Draw(Camera &cam) {
         }
     }
 
+    threads[NUM_THREADS] = std::thread([this, toRebuildChunk]() {
+        BuildChunk(toRebuildChunk.first,toRebuildChunk.second);
+    });
+
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();
     }
 
-
+    
     //std::cout << "count: " << drawCount << std::endl;
 
     // (debug) Print out the total time spent on binary search

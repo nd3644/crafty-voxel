@@ -68,6 +68,8 @@ chunk_t::chunk_t() {
     }
 
     heatShift = 1.0f;
+    iRebuildCounter = 0;
+    bRequiresRebuild = false;
 }
 
 chunk_t::~chunk_t() {
@@ -76,6 +78,16 @@ chunk_t::~chunk_t() {
 void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     if(bGen || bIsCurrentlyGenerating)
         return;
+
+    for(int x = -1;x < 1;x++) {
+        if(x == 0)
+            continue;
+        for(int z = -1;z < 1;z++) {
+            if(z == 0)
+                continue;
+            map.GetChunk(chunkx,chunkz)->bRequiresRebuild = true;
+        }
+    }
 
     const int SEA_LEVEL = 84;
 
@@ -110,6 +122,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     secondPerlin.SetFrequency(FREQ / 2.0);
 
     secondPerlin.SetSeed(444);
+    secondPerlin.SetOctaveCount(8);
 
     module::Add addModule;
     addModule.SetSourceModule(0, normalPerlin);
@@ -223,21 +236,31 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     }
 
     // Dig cavess
-    module::RidgedMulti caves;
-    caves.SetFrequency(FREQ*25);
+/*     module::RidgedMulti caves;
+    caves.SetFrequency(FREQ*30);
     caves.SetOctaveCount(4);
     caves.SetSeed(33356);
 
+    module::Perlin caves2;
+    caves2.SetFrequency(FREQ*30);
+    caves2.SetOctaveCount(4);
+    caves2.SetSeed(33357);
+
+    module::Add addedCaves;
+    addedCaves.SetSourceModule(0, caves);
+    addedCaves.SetSourceModule(1, caves2);
+
     module::ScaleBias scaledCaves;
-    scaledCaves.SetSourceModule(0, caves);
-    scaledCaves.SetBias(-0.1);
+    scaledCaves.SetSourceModule(0, addedCaves);
+    scaledCaves.SetBias(-0.25);
+    scaledCaves.SetScale(0.8);
 
     for (int x = 0; x < CHUNK_SIZE;x++) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
             for(int y = SEA_LEVEL-4;y > 0;y--) { //-4 is just a random offset
-                double val = scaledCaves.GetValue((float)xindex * 0.5, (float)(y-(SEA_LEVEL/2)), (float)zindex * 0.5); // 0.7 scaling factor
+                double val = scaledCaves.GetValue((float)xindex * 0.4, (float)(y-(SEA_LEVEL/2)), (float)zindex * 0.4); // 0.4 scaling factor
                 if(val > 0.8) {
                     int curBrick = map.GetBrick(xindex,zindex,y);
                     if(curBrick == map.IdFromName("stone")
@@ -247,7 +270,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
                 }
             }
         }
-    }
+    } */
 
 
     // Apply bedrock

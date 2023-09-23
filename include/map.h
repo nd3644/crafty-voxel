@@ -55,7 +55,7 @@ public: // public methods
 
     float GetBrickTransparency(int id) const;
 
-    /*!
+    /*! 
         @brief Rebuilds all chunks within the view distance
         This is mostly for debugging
     */
@@ -79,9 +79,11 @@ public: // public vars
     std::map<std::string, int>BrickNameMap;
 private: // private methods
     void MarkChunkVisibilities(Camera &cam);
+    void SpawnGeneratorThreads(Camera &cam);
+    void SpawnBuilderThreads(Camera &cam);
     
 private:
-    std::thread threads[16];
+    std::thread threads[32];
     std::vector<std::string> TextureNamesFromFile(std::string filename);
     std::vector<std::string>BrickTextureFilenames;
 

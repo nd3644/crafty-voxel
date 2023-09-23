@@ -50,6 +50,10 @@ struct chunk_t {
     static noise::module::Perlin normalPerlin, erosionPerlin;
     static noise::module::RidgedMulti ridgedPerlin;
     static noise::module::Perlin heatPerlin;
+
+
+    int iRebuildCounter; // Reflects the number of times this chunk has been rebuilt
+    bool bRequiresRebuild;
 };
 
 #endif
