@@ -26,7 +26,7 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = num_cores;
     }
 
-//    NUM_THREADS = 2;
+    NUM_THREADS = 24;
 
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
 }
@@ -395,7 +395,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
             }
         }
     }
-//    mesh.BindBufferData();
+//    mesh.BindBufferData();`
     chunk.curStage = chunk_t::UPLOAD_STAGE;
     chunk.iRebuildCounter++;
     if(chunk.iRebuildCounter > 5)
@@ -481,6 +481,7 @@ void Map::Draw(Camera &cam) {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    // Wait for threads from previous frame
     for(auto &t: threads) {
         if(t.joinable())
             t.join();
@@ -489,11 +490,38 @@ void Map::Draw(Camera &cam) {
     int curThread = 0;
     std::thread builder;
 
-    int lowestBuildCount = std::numeric_limits<int>::max();
-    std::pair<int,int>toRebuildChunk;
-
     int drawCount = 0;
     MarkChunkVisibilities(cam);
+
+    // First run the generation pass
+    for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+        if(x < 0)
+            continue;
+        for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
+            if(z < 0)
+                continue;
+
+            auto index = std::make_pair(x,z);
+            auto &chunk = Chunks[index];
+
+            // Note that it's better not to discriminate on visibility here.
+            // Generating the terrain should be done pretty freely as this information
+            // is invaluable for rendering later
+            
+            if(chunk.curStage == chunk_t::DEFAULT_STAGE) {
+                if(curThread < NUM_THREADS) {
+                    threads[curThread] = std::thread([this, &chunk, x, z]() {
+                        if(!chunk.bGen) {
+                            chunk.Generate(x,z,*this);
+                        }
+                    });
+                    curThread++;
+                }
+                continue;
+            }
+        }
+    }
+
     // Loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         if(x < 0)
@@ -501,7 +529,6 @@ void Map::Draw(Camera &cam) {
         for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
             if(z < 0)
                 continue;
-//            std::cout << "drawing " << x << " , " << z << std::endl;
 
             auto index = std::make_pair(x,z);
             auto &chunk = Chunks[index];
@@ -510,27 +537,6 @@ void Map::Draw(Camera &cam) {
                 continue;
             }
             
-            if(chunk.curStage < chunk_t::UPLOAD_STAGE) {
-                if(curThread < NUM_THREADS-1) {
-                    threads[curThread] = std::thread([this, &chunk, x, z]() {
-                        if(!chunk.bGen) {
-                            chunk.Generate(x,z,*this);
-                        }
-                        else if(!chunk.bIniialBuild || chunk.bRequiresRebuild) {
-                            BuildChunk(x,z);
-                        }
-                    });
-                    curThread++;
-                }
-                continue;
-            }
-
-            if(chunk.iRebuildCounter < lowestBuildCount) {
-                lowestBuildCount = chunk.iRebuildCounter;
-                toRebuildChunk.first = x;
-                toRebuildChunk.second = z;
-            }
-
             if(chunk.curStage != chunk.READY_STAGE) {
                 if(chunk.curStage == chunk.UPLOAD_STAGE) {
                     chunk.mesh.BindBufferData();
@@ -546,9 +552,54 @@ void Map::Draw(Camera &cam) {
         }
     }
 
-    threads[NUM_THREADS] = std::thread([this, toRebuildChunk]() {
-        BuildChunk(toRebuildChunk.first,toRebuildChunk.second);
-    });
+
+    // Run the builder pass
+    if(curThread == 0) {
+        for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
+            if(x < 0)
+                continue;
+            for(int z = sZ-gViewDist;z < sZ+gViewDist;z++) {
+                if(z < 0)
+                    continue;
+
+                auto index = std::make_pair(x,z);
+                auto &chunk = Chunks[index];
+
+                if(!chunk.bVisible) {
+                    continue;
+                }
+
+                if(chunk.curStage == chunk_t::BUILD_STAGE) {
+
+                    bool canbuild = true;
+                    for(int lx = -2;lx < 2;lx++) {
+                        for(int lz = -2;lz < 2;lz++) {
+                            if(lx == 0 && lz == 0)
+                                continue;
+                            chunk_t &chunk = Chunks[std::make_pair(x+lx,z+lz)];
+                            if(chunk.bGen == false){
+                                lx = 2;
+                                canbuild = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(canbuild) {
+                        if(curThread < NUM_THREADS) {
+                            threads[curThread] = std::thread([this, &chunk, x, z]() {
+                                BuildChunk(x,z);
+//                                std::cout << "BUILDING " << x << " , " << z << std::endl;
+                            });
+                            curThread++;
+                        }
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+
 
     if(SDL_GetKeyboardState(0)[SDL_SCANCODE_T]) {
         RebuildAllVisible();

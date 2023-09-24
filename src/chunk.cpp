@@ -99,7 +99,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         brickType = 1;
     }
 
-    std::cout << "generating " << chunkx << " , " << chunkz << " ";
+//    std::cout << "generating " << chunkx << " , " << chunkz << std::endl;
 //    constexpr int HEAT_PERLIN_SEED = 4321;
 
     using namespace noise;
@@ -236,7 +236,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     }
 
     // Dig cavess
-/*     module::RidgedMulti caves;
+/*      module::RidgedMulti caves;
     caves.SetFrequency(FREQ*30);
     caves.SetOctaveCount(4);
     caves.SetSeed(33356);
@@ -270,8 +270,8 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
                 }
             }
         }
-    } */
-
+    } 
+ */
 
     // Apply bedrock
     for (int x = 0; x < CHUNK_SIZE;x++) {
