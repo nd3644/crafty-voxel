@@ -26,8 +26,6 @@ Map::Map(Camera &c) : camera(c) {
         NUM_THREADS = num_cores;
     }
 
-    NUM_THREADS = 24;
-
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
 }
 

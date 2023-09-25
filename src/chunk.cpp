@@ -18,32 +18,65 @@ noise::module::Perlin chunk_t::normalPerlin, chunk_t::erosionPerlin;
 noise::module::RidgedMulti chunk_t::ridgedPerlin;
 noise::module::Perlin chunk_t::heatPerlin;
 
+namespace continentalness {
+    double ax[] = { -1, -0.5, -0.4, -0.1,  -0.05, 0.0,    0.4, 0.8, 1 };
+    double ay[] = { 50.0 / 255.0,    51.0 / 255.0,  70.0 / 255.0,  71.0 / 255.0, 120.0 / 255.0, 125.0 / 255.0, 130.0 / 255.0, 135.0 / 255.0, 180 / 255.0 };
 
-std::vector<double> ax = { -1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 };
-std::vector<double> ay = { 20, 40, 60, 65, 100, 130, 150, 170, 180, 230, 240 }; 
+    double interpolateY(double x)
+    {
+        int numPoints = sizeof(ax) / sizeof(ax[0]);
 
-double interpolateY(double x)
-{
-    assert(ax.size() == ay.size());
+        if(x < -1)
+            x = -1;
+        if(x > 1)
+            x = 1;
+        
+        gsl_interp_accel* accel = gsl_interp_accel_alloc();
+        gsl_interp* interp = gsl_interp_alloc(gsl_interp_cspline, numPoints);
 
-    int numPoints = ax.size();
+        gsl_interp_init(interp, ax, ay, numPoints);
+        double interpolatedY = gsl_interp_eval(interp, ax, ay, x, accel);
+        interpolatedY += 0.1;
+        if(interpolatedY > 1)
+            interpolatedY = 1;
 
-    if(x < -1)
-        x = -1;
-    if(x > 1)
-        x = 1;
-    
-    gsl_interp_accel* accel = gsl_interp_accel_alloc();
-    gsl_interp* interp = gsl_interp_alloc(gsl_interp_linear, numPoints);
+        gsl_interp_free(interp);
+        gsl_interp_accel_free(accel);
 
-    gsl_interp_init(interp, ax.data(), ay.data(), numPoints);
-    double interpolatedY = gsl_interp_eval(interp, ax.data(), ay.data(), x, accel);
-
-    gsl_interp_free(interp);
-    gsl_interp_accel_free(accel);
-
-    return interpolatedY;
+        return interpolatedY;
+    }
 }
+
+
+namespace erosion {
+     double ax[] = { -100.0 / 100.0, -70.0 / 100.0, -35.0 / 100.0, -25.0 / 100.0, -10.0 / 100.0, 50.0 / 100.0, 80.0 / 100.0, 85.0 / 100.0, 88.0 / 100.0, 90.0 / 100.0, 100.0 / 100.0 };
+     double ay[] = { 250.0 / 255.0,  200.0 / 255.0, 170.0 / 255.0, 175.0 / 255.0, 100.0 / 255.0, 90.0 / 255.0, 92.0 / 255.0, 115.0 / 255.0, 115.0 / 255.0, 92.0 / 255.0, 89.0 / 255.0 };  
+
+    double interpolateY(double x)
+    {
+        int numPoints = sizeof(ax) / sizeof(ax[0]);
+
+        if(x < -1)
+            x = -1;
+        if(x > 1)
+            x = 1;
+        
+        gsl_interp_accel* accel = gsl_interp_accel_alloc();
+        gsl_interp* interp = gsl_interp_alloc(gsl_interp_cspline, numPoints);
+
+        gsl_interp_init(interp, ax, ay, numPoints);
+        double interpolatedY = gsl_interp_eval(interp, ax, ay, x, accel);
+        interpolatedY += 0.1;
+        if(interpolatedY > 1)
+            interpolatedY = 1;
+
+        gsl_interp_free(interp);
+        gsl_interp_accel_free(accel);
+
+        return interpolatedY;
+    }
+}
+
 
 chunk_t::chunk_t() {
     curStage = DEFAULT_STAGE;
@@ -89,7 +122,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         }
     }
 
-    const int SEA_LEVEL = 84;
+    const int SEA_LEVEL = 40;
 
     bIsCurrentlyGenerating = true;
     bool bMount = (rand()%5 == 1) ? true : false;
@@ -104,10 +137,17 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
     using namespace noise;
 
-    double FREQ = 0.0005;
+    double FREQ = 0.0005*2;
 
 //    module::Perlin normalPerlin;
     static module::Perlin normalPerlin, secondPerlin;
+
+    normalPerlin.SetSeed(321);
+    secondPerlin.SetSeed(432);
+
+    normalPerlin.SetFrequency(FREQ);
+    secondPerlin.SetFrequency(FREQ);
+
     normalPerlin.SetOctaveCount(8);
 
     static module::Perlin ridgedPerlin;
@@ -118,19 +158,6 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     heatPerlin.SetFrequency(FREQ / 2.0);
     heatPerlin.SetPersistence(0.2);
 
-    normalPerlin.SetFrequency(FREQ);
-    secondPerlin.SetFrequency(FREQ / 2.0);
-
-    secondPerlin.SetSeed(444);
-    secondPerlin.SetOctaveCount(8);
-
-    module::Add addModule;
-    addModule.SetSourceModule(0, normalPerlin);
-    addModule.SetSourceModule(1, secondPerlin);
-
-    module::ScaleBias scaled;
-    scaled.SetSourceModule(0, addModule);
-    scaled.SetScale(0.8);
 
     heatShift = 0;//heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8), ((chunkz*CHUNK_SIZE)+8), 0.5f) / 12.0f;
 
@@ -139,13 +166,18 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         int xindex = (chunkx*CHUNK_SIZE)+x;
 		for (int z = 0; z < CHUNK_SIZE; z++) {
             int zindex = (chunkz*CHUNK_SIZE)+z;
-            float unit = scaled.GetValue((float)xindex,(float)zindex,0.5);
+
+            double firstVal = normalPerlin.GetValue((float)xindex,(float)zindex,0.5);
+            double secondVal = secondPerlin.GetValue((float)xindex,(float)zindex,0.5);
+
+            
+            double a = continentalness::interpolateY(firstVal);
+            double b = erosion::interpolateY(secondVal);
 
             int height = 0;//(((unit + 1) / 2) * MAX_HEIGHT);
 
-            height = interpolateY(unit);
+            height = (a*b) * MAX_HEIGHT;
 
-            height = ((scaled.GetValue((float)xindex,(float)zindex,0.5)+1)/2.0) * MAX_HEIGHT;
 
             height = ClampValue(height, 0, MAX_HEIGHT-1);
 
@@ -154,19 +186,19 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
             for (int y = height; y > 0; y--) {
 
-                if(height < MAX_HEIGHT && map.GetBrick(xindex,zindex,y+1) == 0)
+                 if(height < MAX_HEIGHT && map.GetBrick(xindex,zindex,y+1) == 0)
                     brickType = map.BrickNameMap["grass_top"];
                 else
                     brickType = map.BrickNameMap["stone"];
 
                 if(y > 200) {
                     brickType = map.BrickNameMap["snow_top"];
-                }
+                } 
 
 				map.SetBrick(xindex, zindex, y, brickType);
 			}
 
-            for(int y = 1;y < SEA_LEVEL + 5;y++) {
+             for(int y = 1;y < SEA_LEVEL + 5;y++) {
                 if(map.GetBrick(xindex,zindex,y) == 1) {
                     map.SetBrick(xindex,zindex,y,map.IdFromName("sand"));
                 }
@@ -178,11 +210,11 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
                         brickType = map.BrickNameMap["sand"];
                     }
                 }
-            }
+            } 
 		}
 	}
 
-    // Plant some trees
+/*     // Plant some trees
     if(rand() % 6 == 0) {
         int lX = rand() % 16;
         int lZ = rand() % 16;
@@ -233,7 +265,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             }
         }
         
-    }
+    } */
 
     // Dig cavess
 /*      module::RidgedMulti caves;

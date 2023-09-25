@@ -64,7 +64,7 @@ class Camera
             NUM_PLANES
         };
         plane_t myFrustumPlanes[NUM_PLANES];
-        static constexpr float DEFAULT_STRAFE_SPD = 0.05f;
+        static constexpr float DEFAULT_STRAFE_SPD = 10.0f;
         float STRAFE_SPD = DEFAULT_STRAFE_SPD;
         
         glm::vec3 position, formerPosition, direction, up, right;

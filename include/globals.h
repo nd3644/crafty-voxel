@@ -18,6 +18,8 @@ extern float fFov;
 extern float gfZNear;
 extern float gfZFar;
 
+extern float gfDeltaTime;
+
 extern std::vector<vec3_t>bricklist;
 extern std::vector<vec3_t>cameralist;
 

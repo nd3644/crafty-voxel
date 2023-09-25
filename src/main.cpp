@@ -70,6 +70,9 @@ Shader myShader,           // Default terrain shader
         myRendererShader;  // For Renderer, 2D primitives
 
 int main(int argc, char* args[]) {
+
+    system("pwd");
+
 	CompileArr();
 	Init();
     Eternal::InputHandle myInputHandle;
@@ -226,6 +229,8 @@ int main(int argc, char* args[]) {
 
         auto frameEndTime = std::chrono::high_resolution_clock::now();
         FrameTime = std::chrono::duration_cast<TimerUnits>(frameEndTime - frameStartTime);
+        std::chrono::duration<float> duration = frameEndTime - frameStartTime;
+        gfDeltaTime = duration.count();
 	}
 
 	Cleanup();

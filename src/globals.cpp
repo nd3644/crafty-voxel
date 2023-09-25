@@ -23,6 +23,7 @@ int gViewDist = 20;
 float fFov = 75.0f;
 float gfZNear = 0.1f;
 float gfZFar = 1000.0f;
+float gfDeltaTime = 0.0f;
 
 int gFrustumSkips = 0; // How many chunks were skipped this frame
 

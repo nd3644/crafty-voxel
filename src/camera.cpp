@@ -102,7 +102,7 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
 
     right = glm::normalize(glm::cross(direction, up));
 
-    STRAFE_SPD = DEFAULT_STRAFE_SPD;
+    STRAFE_SPD = DEFAULT_STRAFE_SPD * gfDeltaTime;
     if (input.IsKeyDown(InputHandle::KEY_LSHIFT)) {
         STRAFE_SPD = 1.4f;
 	}
