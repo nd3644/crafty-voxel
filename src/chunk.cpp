@@ -156,7 +156,6 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 
             height = (a*b) * MAX_HEIGHT;
 
-
             height = ClampValue(height, 0, MAX_HEIGHT-1);
 
             // default to grass

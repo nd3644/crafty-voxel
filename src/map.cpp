@@ -749,3 +749,14 @@ int Map::IdFromName(std::string str) {
 std::vector<std::string> Map::GetTextureFilenames() {
     return BrickTextureFilenames;
 }
+
+double Map::GetContinentalness(float x, float z) const {
+    noise::module::Perlin module;
+    chunk_t::ConfigureContinentalness(module);
+    return module.GetValue(x,z, 0.5);
+}
+double Map::GetErosion(float x, float z) const {
+    noise::module::Perlin module;
+    chunk_t::ConfigureErosion(module);
+    return module.GetValue(x,z, 0.5);
+}

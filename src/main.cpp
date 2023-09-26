@@ -546,6 +546,14 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
             ImGui::Text("%s", str.c_str());
             str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / chunk_t::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / chunk_t::CHUNK_SIZE) + ")";
             ImGui::Text("%s", str.c_str());
+
+            double continentalness = map.GetContinentalness(myCamera.position.x, myCamera.position.z);
+            double erosion = map.GetErosion(myCamera.position.x, myCamera.position.z);
+
+            str = std::to_string(continentalness);
+            ImGui::Text("Continentalness %s", str.c_str());
+            str = std::to_string(erosion);
+            ImGui::Text("Erosion %s", str.c_str());
         }
 
 

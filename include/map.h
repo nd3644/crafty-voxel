@@ -72,6 +72,10 @@ public: // public methods
     */
     void GenerateChunksFromOrigin(int fromX, int fromZ, int radius);
 
+
+    double GetContinentalness(float x, float z) const;
+    double GetErosion(float x, float z) const;
+
 public: // public vars
     int NUM_THREADS;
     static constexpr int MAX_LIGHT_LEVEL = 16;
