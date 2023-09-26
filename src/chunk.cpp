@@ -122,7 +122,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         }
     }
 
-    const int SEA_LEVEL = 40;
+    const int SEA_LEVEL = 45;
 
     bIsCurrentlyGenerating = true;
     bool bMount = (rand()%5 == 1) ? true : false;

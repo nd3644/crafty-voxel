@@ -483,34 +483,70 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowBgAlpha(0.5f);
-        ImGui::SetNextWindowSize(ImVec2(-1, 280));
+        ImGui::SetNextWindowSize(ImVec2(-1, -1));
         // ImGui content goes here
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); 
         ImGui::Begin("Debug",&bDebugMenuOpen, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "ms";
-        ImGui::Text("%s", str.c_str());
 
-        str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "ms";
-        ImGui::Text("%s", str.c_str());
+        if(ImGui::CollapsingHeader("Controls")) {
+            ImGui::Checkbox("V-Sync", &bEnableVSync);
+            if (ImGui::IsItemDeactivatedAfterEdit()) {
+                SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
+            }
 
-        str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "ms";
-        ImGui::Text("%s", str.c_str());
+            if(ImGui::Checkbox("Wireframe", &gbWireFrameEnabled)) {
+                if(gbWireFrameEnabled)
+                    gRenderMode = GlobalRenderModes::RENDER_MODE_WIRES;
+                else
+                    gRenderMode = GlobalRenderModes::RENDER_MODE_DEFAULT;
+            }
 
-        str = "FrameTime: " + std::to_string(FrameTime.count()) + "ms";
-        ImGui::Text("%s", str.c_str());
-        
-        str = "SwapTime: " + std::to_string(SwapTime.count()) + "ms";
-        ImGui::Text("%s", str.c_str());
+            ImGui::Checkbox("Colliders", &bDrawColliders);
+            ImGui::Checkbox("Enable AO", &gEnableAO);
+            ImGui::Checkbox("FrustumTop", &gbFrustumTopView);
 
-        str = "OrthoTime: " + std::to_string(OrthoTime.count()) + "ms";
-        ImGui::Text("%s", str.c_str());
+            ImGui::Separator();
 
-        str = "avg fps: " + std::to_string(lastAvgFps);
-        ImGui::Text("%s", str.c_str());
+            // Sliders
+            if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
+                //map.RebuildAllVisible();
+            }
+            ImGui::SliderInt("AO Level", &gAOLevel, 0, 100);
+            ImGui::SliderInt("View dist", &gViewDist, 8, 32);
+            ImGui::SliderFloat("FOV", &fFov, 70, 120);
+        }
+        if(ImGui::CollapsingHeader("Performance")) {
+            std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "us";
+            ImGui::Text("%s", str.c_str());
 
-        str = "Frustum skips: " + std::to_string(gFrustumSkips);
-        ImGui::Text("%s", str.c_str());
+            str = "MapBuild: " + std::to_string(MapBuildDuration.count()) + "us";
+            ImGui::Text("%s", str.c_str());
+
+            str = "CamUpdate: " + std::to_string(CameraUpdateDuration.count()) + "us";
+            ImGui::Text("%s", str.c_str());
+
+            str = "FrameTime: " + std::to_string(FrameTime.count()) + "us";
+            ImGui::Text("%s", str.c_str());
+            
+            str = "SwapTime: " + std::to_string(SwapTime.count()) + "us";
+            ImGui::Text("%s", str.c_str());
+
+            str = "OrthoTime: " + std::to_string(OrthoTime.count()) + "us";
+            ImGui::Text("%s", str.c_str());
+
+            str = "avg fps: " + std::to_string(lastAvgFps);
+            ImGui::Text("%s", str.c_str());
+
+            str = "Frustum skips: " + std::to_string(gFrustumSkips);
+            ImGui::Text("%s", str.c_str());
+        }
+        if(ImGui::CollapsingHeader("Camera")) {
+            std::string str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
+            ImGui::Text("%s", str.c_str());
+            str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / chunk_t::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / chunk_t::CHUNK_SIZE) + ")";
+            ImGui::Text("%s", str.c_str());
+        }
 
 
     /*    std::string polyNumber = std::to_string(gblPolyCount);
@@ -518,32 +554,6 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
         str = "polycount: : " + polyNumber;
         ImGui::Text("%s", str.c_str());*/
 
-        str = "CamXYZ: (" + std::to_string((int)myCamera.position.x) + " , " + std::to_string((int)myCamera.position.y) + " , " + std::to_string((int)myCamera.position.z) + ")";
-        ImGui::Text("%s", str.c_str());
-        str = "ChunkXYZ: (" + std::to_string((int)myCamera.position.x / chunk_t::CHUNK_SIZE) + " , " + std::to_string((int)myCamera.position.z / chunk_t::CHUNK_SIZE) + ")";
-        ImGui::Text("%s", str.c_str());
-
-        ImGui::Separator();
-        ImGui::Checkbox("V-Sync", &bEnableVSync);
-        if (ImGui::IsItemDeactivatedAfterEdit()) {
-            SDL_GL_SetSwapInterval(bEnableVSync ? 1 : 0);
-        }
-        ImGui::Checkbox("Colliders", &bDrawColliders);
-        ImGui::Checkbox("Enable AO", &gEnableAO);
-        ImGui::Checkbox("FrustumTop", &gbFrustumTopView);
-
-        if(ImGui::Checkbox("Wireframe", &gbWireFrameEnabled)) {
-            if(gbWireFrameEnabled)
-                gRenderMode = GlobalRenderModes::RENDER_MODE_WIRES;
-            else
-                gRenderMode = GlobalRenderModes::RENDER_MODE_DEFAULT;
-        }
-        if(ImGui::SliderFloat("Ambient", &fAmbient, 0.0f, 1.0f)) {
-    //        map.RebuildAllVisible();
-        }
-        ImGui::SliderInt("AO Level", &gAOLevel, 0, 100);
-        ImGui::SliderInt("View dist", &gViewDist, 8, 32);
-        ImGui::SliderFloat("FOV", &fFov, 70, 120);
         ImGui::End();
         ImGui::PopStyleColor(1);
 
