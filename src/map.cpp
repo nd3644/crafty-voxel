@@ -27,6 +27,8 @@ Map::Map(Camera &c) : camera(c) {
     }
 
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
+
+    double FREQ = 0.0005*2;
 }
 
 Map::~Map() {
@@ -34,7 +36,7 @@ Map::~Map() {
 }
 
 void Map::FillWater(int fx, int fz, int fy) {
-    const int water = IdFromName("water");
+/*     const int water = IdFromName("water");
 
     std::stack<vec3i_t>stack;
     stack.push({ fx, fy, fz });
@@ -43,15 +45,14 @@ void Map::FillWater(int fx, int fz, int fy) {
 
     while(stack.size() > 0) {
         if(stack.size() > RECURSIVE_LIMIT) {
-            break;
-        }
-        vec3i_t cur = stack.top();
-        stack.pop();
-        int x = cur.x;
-        int y = cur.y;
-        int z = cur.z;
+            break;// Init the noise modules
+    normalPerlin.SetSeed(321);
+    secondPerlin.SetSeed(432);
 
-        int initialPixel = GetBrick(x,z,y);
+    normalPerlin.SetFrequency(FREQ);
+    secondPerlin.SetFrequency(FREQ);
+
+    normalPerlin.SetOctaveCount(8);
         if(initialPixel == water) {
             continue;
         }
@@ -76,7 +77,7 @@ void Map::FillWater(int fx, int fz, int fy) {
         if(GetBrick(x,z,y-1) == initialPixel) {
             stack.push({x,y-1,z});
         }
-    }
+    } */
 }
 
 std::vector<std::string> Map::TextureNamesFromFile(std::string filename) {

@@ -13,10 +13,6 @@
 double ax[numPoints] = { -1, -0.8, 0.3, 0.5, 0.8, 1.0 };
 double ay[numPoints] = { 20, 05, 80, 90, 110, 256 }; */
 
-Eternal::Sprite chunk_t::perlinSprite;
-noise::module::Perlin chunk_t::normalPerlin, chunk_t::erosionPerlin;
-noise::module::RidgedMulti chunk_t::ridgedPerlin;
-noise::module::Perlin chunk_t::heatPerlin;
 
 namespace continentalness {
     double ax[] = { -1, -0.5, -0.4, -0.1,  -0.05, 0.0,    0.4, 0.8, 1 };
@@ -122,8 +118,6 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
         }
     }
 
-    const int SEA_LEVEL = 45;
-
     bIsCurrentlyGenerating = true;
     bool bMount = (rand()%5 == 1) ? true : false;
 
@@ -136,28 +130,12 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
 //    constexpr int HEAT_PERLIN_SEED = 4321;
 
     using namespace noise;
-
-    double FREQ = 0.0005*2;
-
 //    module::Perlin normalPerlin;
-    static module::Perlin normalPerlin, secondPerlin;
 
-    normalPerlin.SetSeed(321);
-    secondPerlin.SetSeed(432);
+    module::Perlin normalPerlin, secondPerlin;
 
-    normalPerlin.SetFrequency(FREQ);
-    secondPerlin.SetFrequency(FREQ);
-
-    normalPerlin.SetOctaveCount(8);
-
-    static module::Perlin ridgedPerlin;
-    ridgedPerlin.SetSeed(5653);
-    static module::Perlin heatPerlin;
-
-    heatPerlin.SetSeed(65456);
-    heatPerlin.SetFrequency(FREQ / 2.0);
-    heatPerlin.SetPersistence(0.2);
-
+    ConfigureContinentalness(normalPerlin);
+    ConfigureErosion(secondPerlin);
 
     heatShift = 0;//heatPerlin.GetValue(((chunkx*CHUNK_SIZE)+8), ((chunkz*CHUNK_SIZE)+8), 0.5f) / 12.0f;
 
@@ -206,15 +184,12 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             for(int y = 1;y < SEA_LEVEL;y++) {
                 if(map.GetBrick(xindex,zindex,y) == 0) {
                     map.SetBrick(xindex,zindex,y,map.IdFromName("water"));
-                    if(heatPerlin.GetValue((float)xindex, (float)zindex, 0.5) > 0.5) {
-                        brickType = map.BrickNameMap["sand"];
-                    }
                 }
             } 
 		}
 	}
 
-/*     // Plant some trees
+     // Plant some trees
     if(rand() % 6 == 0) {
         int lX = rand() % 16;
         int lZ = rand() % 16;
@@ -265,7 +240,7 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
             }
         }
         
-    } */
+    } 
 
     // Dig cavess
 /*      module::RidgedMulti caves;
@@ -317,4 +292,16 @@ void chunk_t::Generate(int chunkx, int chunkz, Map &map) {
     curStage = BUILD_STAGE;
 
     bGen = true;
+}
+
+
+void chunk_t::ConfigureContinentalness(noise::module::Perlin &module) {
+    module.SetSeed(DEFAULT_CONTINENTALNESS_SEED);
+    module.SetFrequency(DEFAULT_FREQUENCY);
+    module.SetOctaveCount(DEFAULT_CONTINENTALNESS_OCTAVES);
+}
+
+void chunk_t::ConfigureErosion(noise::module::Perlin &module) {
+    module.SetSeed(DEFAULT_EROSION_SEED);
+    module.SetFrequency(DEFAULT_FREQUENCY);
 }

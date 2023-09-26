@@ -17,6 +17,16 @@ struct chunk_t {
         NUM_STAGES
     };
 
+    constexpr static int DEFAULT_CONTINENTALNESS_SEED = 321;
+    constexpr static int DEFAULT_EROSION_SEED = 432;
+    constexpr static double DEFAULT_FREQUENCY = 0.0005*2;
+    
+    constexpr static int DEFAULT_CONTINENTALNESS_OCTAVES = 8;
+    constexpr static int SEA_LEVEL = 45;
+
+    static void ConfigureContinentalness(noise::module::Perlin &perlin);
+    static void ConfigureErosion(noise::module::Perlin &perlin);
+
     ChunkState curStage;
 
     chunk_t();
@@ -42,14 +52,6 @@ struct chunk_t {
 
     float heatShift;
 
-    static void InitSprites() {
-        perlinSprite.FromNoise(chunk_t::normalPerlin,512,512);
-    }
-
-    static Eternal::Sprite perlinSprite, erosionSprite;
-    static noise::module::Perlin normalPerlin, erosionPerlin;
-    static noise::module::RidgedMulti ridgedPerlin;
-    static noise::module::Perlin heatPerlin;
 
 
     int iRebuildCounter; // Reflects the number of times this chunk has been rebuilt
