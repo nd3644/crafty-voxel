@@ -70,9 +70,6 @@ Shader myShader,           // Default terrain shader
         myRendererShader;  // For Renderer, 2D primitives
 
 int main(int argc, char* args[]) {
-
-    system("pwd");
-
 	CompileArr();
 	Init();
     Eternal::InputHandle myInputHandle;
@@ -93,12 +90,8 @@ int main(int argc, char* args[]) {
 
     myMap.GenerateChunksFromOrigin((int)myCamera.position.x / chunk_t::CHUNK_SIZE, (int)myCamera.position.z / chunk_t::CHUNK_SIZE, gViewDist + 4);
 
-    static int counter = 0;
 	while (bDone == false) {
         auto frameStartTime = std::chrono::high_resolution_clock::now();
-        if(counter++ == 30) {
-            //exit(1);
-        }
 		fdelta += 0.01f;
         mouseWheelDelta = 0; // Reset this every frame
 		while (SDL_PollEvent(&myEvent)) {
@@ -127,7 +120,7 @@ int main(int argc, char* args[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float fAspect = (float)WIN_W / (float)WIN_H;
-        myShader.projMatrix = glm::perspective(glm::radians(fFov + myCamera.GetCurrentFovModifier()), fAspect, gfZNear, gfZFar);
+        myShader.projMatrix = glm::perspective(glm::radians(fFov), fAspect, gfZNear, gfZFar);
 
         myShader.Bind();
 
@@ -173,51 +166,18 @@ int main(int argc, char* args[]) {
         Rect r(0,0,256,256);
         Rect c(0,0,256,256);
 
-        noise::module::Perlin perlinNoise;
-        perlinNoise.SetFrequency(0.01);
-        perlinNoise.SetOctaveCount(8);
-        perlinNoise.SetPersistence(0.5);
-        perlinNoise.SetLacunarity(2.0);
-
-        noise::module::Perlin ridgedNoise;
-        ridgedNoise.SetFrequency(0.001);      // Adjust the frequency as needed
-        ridgedNoise.SetPersistence(0.7);       // Experiment with the number of octaves
-        ridgedNoise.SetLacunarity(2.0);      // You can adjust this value
-
-        noise::module::Add addModule;
-        addModule.SetSourceModule(0, perlinNoise);
-        addModule.SetSourceModule(1, ridgedNoise);
-
-        // Generate terrain values here using scaleBiasModule
-        // Iterate through your terrain grid and sample the noise at each point
-/* 
-
-
-        Eternal::Sprite perlinSprite;
-        perlinSprite.FromNoise(perlinNoise,256,256);
-        perlinSprite.Draw(r,c);
-
-        r.x += 300;
-        perlinSprite.FromNoise(ridgedNoise,256,256);
-        perlinSprite.Draw(r,c);
-
-        r.x -= 150;
-        r.y += 300;
-        perlinSprite.FromNoise(addModule,256,256);
-        perlinSprite.Draw(r,c);
-         */
-//        DrawMiniMap(myCamera, myMap);
-
         DrawDebugUI(myCamera, myMap);
         end = std::chrono::high_resolution_clock::now();
         OrthoTime = std::chrono::duration_cast<TimerUnits>(end - start);
-
 
         myRendererShader.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
         myRendererShader.modelMatrix = glm::mat4(1);
         myRendererShader.viewMatrix = glm::mat4(1);
         myRendererShader.Bind();
         DrawFrustumCullingViewTop(myRenderer, myCamera, myMap, 500,256);
+
+        myCamera.DbgDrawCollision_FromSide(100,200,myRenderer, myMap);
+        myCamera.DbgDrawCollision_FromTop(100,50,myRenderer, myMap);
 
         start = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
@@ -272,7 +232,7 @@ void Init() {
 
 
 	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_W, WIN_H, SDL_WINDOW_OPENGL);
-	if (myWindow == NULL) {
+	if (myWindow == nullptr) {
 		std::cout << "Couldn't create window" << std::endl;
 		std::cout << "\t *" << SDL_GetError() << std::endl;
 		exit(0);
@@ -280,7 +240,7 @@ void Init() {
     
 	myGLContext = SDL_GL_CreateContext(myWindow);
     SDL_GL_MakeCurrent(myWindow, myGLContext);
-	if (myGLContext == NULL) {
+	if (myGLContext == nullptr) {
 		std::cout << "Problem creating GL context" << std::endl;
 		std::cout << "\t *" << SDL_GetError() << std::endl;
 		exit(0);
@@ -414,7 +374,7 @@ void DrawBrickTarget(Camera &myCamera, Mesh &brickTargetMesh) {
     brickTargetMesh.SetTranslation((int)myCamera.targetted_brick.x,(int)myCamera.targetted_brick.y,(int)myCamera.targetted_brick.z);
     for(size_t i = 0;i < vertList.size();i++) {
         brickTargetMesh.Index1(1);
-        brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z+0.5f);
+        brickTargetMesh.Vert3(vertList[i].x, vertList[i].y, vertList[i].z);
         brickTargetMesh.TexCoord2(uvList[i].x, uvList[i].y);
         brickTargetMesh.Color4(0,0,0,1);
     }

@@ -9,6 +9,7 @@
 #include "globals.h"
 
 class BrickSelectorWidget;
+namespace Eternal { class Renderer; }
 class Camera
 {
     public: // Public methods
@@ -32,16 +33,21 @@ class Camera
 
             glm::vec3 point = (start+end) * 0.5f;
 
-            if(glm::dot(myFrustumPlanes[Camera::PLANE_LEFT].position - point,myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
-            && glm::dot(myFrustumPlanes[Camera::PLANE_RIGHT].position - point,myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10
-            && glm::dot(myFrustumPlanes[Camera::PLANE_NEAR].position - point,myFrustumPlanes[Camera::PLANE_NEAR].normal)
-            && glm::dot(myFrustumPlanes[Camera::PLANE_TOP].position - point,myFrustumPlanes[Camera::PLANE_TOP].normal) <= 10
-            && glm::dot(myFrustumPlanes[Camera::PLANE_BOTTOM].position - point,myFrustumPlanes[Camera::PLANE_BOTTOM].normal) <= 10) {
+            if(    glm::dot(myFrustumPlanes[Camera::PLANE_LEFT].position - point,myFrustumPlanes[Camera::PLANE_LEFT].normal) <= 10
+                && glm::dot(myFrustumPlanes[Camera::PLANE_RIGHT].position - point,myFrustumPlanes[Camera::PLANE_RIGHT].normal) <= 10
+                && glm::dot(myFrustumPlanes[Camera::PLANE_NEAR].position - point,myFrustumPlanes[Camera::PLANE_NEAR].normal) <= 10
+                && glm::dot(myFrustumPlanes[Camera::PLANE_TOP].position - point,myFrustumPlanes[Camera::PLANE_TOP].normal) <= 10
+                && glm::dot(myFrustumPlanes[Camera::PLANE_BOTTOM].position - point,myFrustumPlanes[Camera::PLANE_BOTTOM].normal) <= 10) {
                 return true;
             }
 
             return DoesLineIntersectFrustum(start,point,depth+1,maxdepth) || DoesLineIntersectFrustum(point,end, depth+1,maxdepth);
         }
+
+
+        /* Both methods assume 2D rendering is possible */
+        void DbgDrawCollision_FromTop(float xPos, float yPos, Eternal::Renderer &renderer, Map &myMap);
+        void DbgDrawCollision_FromSide(float xPos, float yPos, Eternal::Renderer &renderer, Map &myMap);
 
     private: // Private methods
         void CheckInput(Eternal::InputHandle &input);
@@ -64,19 +70,20 @@ class Camera
             NUM_PLANES
         };
         plane_t myFrustumPlanes[NUM_PLANES];
-        static constexpr float DEFAULT_STRAFE_SPD = 10.0f;
+        static constexpr float DEFAULT_STRAFE_SPD = 2.5f;
         float STRAFE_SPD = DEFAULT_STRAFE_SPD;
         
         glm::vec3 position, formerPosition, direction, up, right;
         glm::vec3 targetted_brick;
 
     private: // Private vars
-        float fFovModifier;
-        bool bSprinting;
-        int ticksSinceLastForwardPress;
+
+        glm::vec3 vMoveAccel;
 
         bool bIsInThirdPersonMode;
         int jumpCooldown;
+
+        float forwardVel;
 
         Rect collidingBrick;
         glm::vec3 moveDelta;

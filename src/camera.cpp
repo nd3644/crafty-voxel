@@ -6,7 +6,9 @@
 
 #include "mesh.h"
 #include "brick_selector_widget.h" 
+#include "renderer.h"
 
+#include <types.h>
 #include <imgui.h>
 
 extern SDL_Window* myWindow;
@@ -15,15 +17,11 @@ Camera::Camera() {
     direction = glm::vec3(-0.5,0,0.5);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
-//    position = formerPosition = glm::vec3(8,120,0);
-    position = formerPosition = glm::vec3(4117, 96, 2527);
+//    position = formerPosition = glm::vec3(4117, 96, 2527); // This is a good starting point. Below is debugging only
+    position = formerPosition = glm::vec3(107,60,88);
     bFocus = true;
     bIsInThirdPersonMode = false;
     bIsOnGround = false;
-    bSprinting = false;
-    ticksSinceLastForwardPress = 0;
-
-    fFovModifier = 0.0f;
 }
 
 Camera::~Camera() { }
@@ -33,7 +31,7 @@ void Camera::CalcViewMatrix(Shader &myShader) {
     // The position isn't really different but the view is kind of "zoomed out"
     if(bIsInThirdPersonMode) {
         glm::vec3 newPosition = position;
-        newPosition -= (direction*64.0f);
+        newPosition -= (direction*6.0f);
         myShader.viewMatrix = glm::lookAt(newPosition, position + direction, up);
     }
     else {
@@ -60,21 +58,21 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
 
     CheckGround(myMap);
     if(!bIsOnGround) {
-        fJumpVel += 0.001f;
+        fJumpVel += 50.0f * gfDeltaTime;
     }
     else {
         fJumpVel = 0;
     }
 
     if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround) {
-        fJumpVel = -0.05f;
-        position.y += 0.05f;
+        fJumpVel = -10;
+//        position.y += 0.05f;
 	}
 	else if (input.IsKeyDown(InputHandle::KEY_LCTRL)) {
         position -= up * 0.25f;
 	}
 
-    position.y -= fJumpVel;
+    position.y -= fJumpVel * gfDeltaTime;
     
     // Push the position for drawing the collider in debug modes
     cameralist.emplace_back(position.x,position.y,position.z - 0.5f);
@@ -85,14 +83,6 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         position.y += 0.25f;
     }
 
-    if(bSprinting) {
-        if(fFovModifier < 5)
-            fFovModifier += 0.1f;
-    }
-    else {
-        if(fFovModifier > 0)
-            fFovModifier -= 0.1f;
-    }
 }
 
 void Camera::CheckInput(Eternal::InputHandle &input) {
@@ -100,56 +90,75 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
 
     moveDelta = glm::vec3(0,0,0);
 
+    glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
     right = glm::normalize(glm::cross(direction, up));
 
-    STRAFE_SPD = DEFAULT_STRAFE_SPD * gfDeltaTime;
+    float fAccelModifier = 0.8f;
+
+    STRAFE_SPD = DEFAULT_STRAFE_SPD / 10.0f;
     if (input.IsKeyDown(InputHandle::KEY_LSHIFT)) {
-        STRAFE_SPD = 1.4f;
-	}
-    else if (input.IsKeyDown(InputHandle::KEY_Q)) {
-        STRAFE_SPD = 0.01f;
-	}
+        STRAFE_SPD *= 5.0f;
+    }
+
 	if (input.IsKeyDown(InputHandle::KEY_A)) {
-        moveDelta -= right * STRAFE_SPD;
+//        moveDelta -= right * STRAFE_SPD * gfDeltaTime;
+        vMoveAccel -= right * STRAFE_SPD * gfDeltaTime * fAccelModifier;
 	}
 	else if (input.IsKeyDown(InputHandle::KEY_D)) {
-        moveDelta += right * STRAFE_SPD;
+        //moveDelta += right * STRAFE_SPD * gfDeltaTime;
+        vMoveAccel += right * STRAFE_SPD * gfDeltaTime * fAccelModifier;
 	}
 
     if (input.IsKeyTap(InputHandle::KEY_F5)) {
         bIsInThirdPersonMode = !bIsInThirdPersonMode;
 	}
 
-    if(input.IsKeyTap((Eternal::InputHandle::Key)SDL_SCANCODE_W)) {
-        ticksSinceLastForwardPress = SDL_GetTicks();
-    }
-	else if (input.IsKeyDown(InputHandle::KEY_W)) {
-        if(SDL_GetTicks() - ticksSinceLastForwardPress < 10) {
-            bSprinting = true;
-        }
-        glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
-        moveDelta += forward * STRAFE_SPD;
+	if (input.IsKeyDown(InputHandle::KEY_W)) {
+        vMoveAccel += forward * STRAFE_SPD * gfDeltaTime * fAccelModifier;
 	}
     else {
-        bSprinting = false;
         if (input.IsKeyDown(InputHandle::KEY_S)) {
-            glm::vec3 forward = glm::normalize(glm::vec3(direction.x, 0.0f, direction.z));
             forward.y = 0;
-            moveDelta -= forward * STRAFE_SPD;
+            vMoveAccel -= forward * STRAFE_SPD * gfDeltaTime * fAccelModifier;
         }
     }
+
+    glm::vec3 startValue(1.0f, 2.0f, 3.0f);
+    glm::vec3 endValue(4.0f, 5.0f, 6.0f);
+
+    // Interpolate between the two values with a factor of 0.5
+    float interpolationFactor = 1.f;
+    glm::vec3 interpolatedValue = glm::mix(startValue, endValue, interpolationFactor);
+
+    
+    if(glm::length(vMoveAccel) > STRAFE_SPD) {
+        vMoveAccel = glm::normalize(vMoveAccel) * STRAFE_SPD;
+    }
+    vMoveAccel = glm::mix(vMoveAccel, glm::vec3(0,0,0), 6.0f * gfDeltaTime);
 }
 
 void Camera::UpdatePositionFrmoMoveDelta(Map &myMap) {
+
+    // We have to shift the y position a little otherwise we get false positives on X/Z collision that will
+    // cause the camera to move more slowly on the ground. TODO: Fix this.
+    float yOffset = 0.1f;
+
+    moveDelta = vMoveAccel;
+
+    position.y += yOffset;
     position.x += moveDelta.x;
     if(CheckCollision(myMap)) {
         position.x -= moveDelta.x;
+//        std::cout << "x ";
     }
 
     position.z += moveDelta.z;
     if(CheckCollision(myMap)) {
-        position.z -= moveDelta.z;   
+        position.z -= moveDelta.z;
+//        std::cout << "z ";
     }
+    std::cout.flush();
+    position.y -= yOffset;
 }
 
 void Camera::RunMouseLogic(Eternal::InputHandle &input) {
@@ -212,6 +221,7 @@ void Camera::FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSe
     glm::vec3 outter;
 
     p.x += 0.5f;
+    p.z += 0.5f;
     p.y += 0.5f;
 
     if((int)position.x <= 0)
@@ -301,10 +311,10 @@ void Camera::CalcNewFrustumPlanes() {
 void Camera::CheckGround(Map &map) {
     bIsOnGround = false;
     float d = 0.25f;
-    if(map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z - d)), (int)position.y-1) > 0
-    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z - d)), (int)position.y-1) > 0
-    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z + d)), (int)position.y-1) > 0
-    || map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z + d)), (int)position.y-1) > 0) {
+    if(map.GetBrick((int)(floor(position.x + 1.0f - d)), (int)(floor(position.z + 1.0f - d)), (int)position.y-1) > 0
+    || map.GetBrick((int)(floor(position.x + 1.0f + d)), (int)(floor(position.z + 1.0f - d)), (int)position.y-1) > 0
+    || map.GetBrick((int)(floor(position.x + 1.0f + d)), (int)(floor(position.z + 1.0f + d)), (int)position.y-1) > 0
+    || map.GetBrick((int)(floor(position.x + 1.0f - d)), (int)(floor(position.z + 1.0f + d)), (int)position.y-1) > 0) {
         bIsOnGround = true;
         float standingPos = ((int)position.y-1)+2.0f;
         if(position.y < standingPos)
@@ -312,14 +322,14 @@ void Camera::CheckGround(Map &map) {
         bricklist.emplace_back((int)(position.x+0.5f), (int)position.y-1, (int)(position.z));
     }
 
-    // Check the roof just for fun
-    if(map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
-    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
-    || map.GetBrick((int)(floor(position.x+0.5f + d)), (int)(floor(position.z + d)), (int)position.y+1) > 0
-    || map.GetBrick((int)(floor(position.x+0.5f - d)), (int)(floor(position.z + d)), (int)position.y+1) > 0) {
+/*     // Check the roof just for fun
+    if(map.GetBrick((int)(floor(position.x - d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
+    || map.GetBrick((int)(floor(position.x + d)), (int)(floor(position.z - d)), (int)position.y+1) > 0
+    || map.GetBrick((int)(floor(position.x + d)), (int)(floor(position.z + d)), (int)position.y+1) > 0
+    || map.GetBrick((int)(floor(position.x - d)), (int)(floor(position.z + d)), (int)position.y+1) > 0) {
         if(fJumpVel < 0)
             fJumpVel = 0;
-    }
+    } */
 }
 
 bool Camera::CheckCollision(Map &map) {
@@ -343,10 +353,12 @@ bool Camera::CheckCollision(Map &map) {
                 Rect p;
                 p.x = position.x * size;
                 p.y = position.z * size;
+
                 p.y -= (size/2);
+                
                 p.w = p.h = 0.5f;
-                p.x += 0.25f;
-                p.y += 0.25f;
+                p.x += 0.5f;
+                p.y += 0.5f;
                 glm::vec2 n;
                 if(p.IsColliding(r, n)) {
                     collidingBrick = r;
@@ -363,6 +375,100 @@ bool Camera::CheckCollision(Map &map) {
     return false; 
 }
 
-float Camera::GetCurrentFovModifier() const {
-    return fFovModifier;
+void Camera::DbgDrawCollision_FromTop(float xPos, float yPos, Eternal::Renderer &renderer, Map &myMap) {
+    int xindex = 0;
+    int zindex = 0;
+
+    // This is just the width of each brick in pixels. This helps to display the fractional intersection into bricks
+    float width = 16.0f;
+
+    // These scroll values are intended to keep this "widget" on the screen
+    float xOffs = (position.x > 50) ? ((position.x-50)*width) : 0;
+    float yOffs = (position.z > 25) ? ((position.z-25)*(width)) : 0;
+
+    xOffs -= xPos;
+    yOffs -= yPos;
+
+    // d represents the "viewdistance" for the widget
+    int d = 5;
+    int startx = position.x - d;
+    int endx = position.x + d;
+
+    int startz = position.z - d;
+    int endz = position.z + d;
+
+    for (int x = startx; x < endx;x++) {
+        for (int z = startz;z < endz;z++) {
+
+            // Empty space is white, occupied space is gray
+            bool bShaded = (myMap.GetBrick(x, z, position.y) == 0) ? false : true;
+            renderer.SetColor(1, 1, 1, 1);
+
+            if (bShaded) {
+                renderer.SetColor(0.5, 0.5, 0.5, 1.0);
+            }
+
+            Rect r(x*width,z*width,width,width);
+            r.x -= xOffs;
+            r.y -= yOffs;
+
+            renderer.DrawQuad(r);
+
+        }
+    }
+
+    Rect r(position.x*width,position.z*width,width,width);
+    r.x -= xOffs;
+    r.y -= yOffs;
+    renderer.SetColor(1.0f,0,0,1.0f);
+    renderer.DrawQuad(r);
+}
+
+
+void Camera::DbgDrawCollision_FromSide(float xPos, float yPos, Eternal::Renderer &renderer, Map &myMap) {
+    int xindex = 0;
+    int zindex = 0;
+
+    // This is just the width of each brick in pixels. This helps to display the fractional intersection into bricks
+    float width = 16.0f;
+
+    // These scroll values are intended to keep this "widget" on the screen
+    float xOffs = (position.x > 50) ? ((position.x-50)*width) : 0;
+    float yOffs = (position.z > 25) ? ((position.y-25)*(width)) : 0;
+
+    xOffs -= xPos;
+    yOffs -= yPos;
+
+    // d represents the "viewdistance" for the widget
+    int d = 5;
+    int starty = position.y - d;
+    int endy = position.y + d;
+
+    int startx = position.x - d;
+    int endx = position.x + d;
+
+    for (int x = startx; x < endx;x++) {
+        for (int y = starty;y < endy;y++) {
+            // Empty space is white, occupied space is gray
+            bool bShaded = (myMap.GetBrick(x, position.z, y) == 0) ? false : true;
+            renderer.SetColor(1, 1, 1, 1);
+
+            if (bShaded) {
+                renderer.SetColor(0.5, 0.5, 0.5, 1.0);
+            }
+
+            Rect r(x*width,(y+0.75f)*width,width,width);
+            r.x -= xOffs;
+            r.y -= yOffs;
+
+            renderer.DrawQuad(r);
+
+        }
+    }
+
+    Rect r(position.x*width,(position.y-0.25f)*width,width,width);
+    r.x -= xOffs;
+    r.y -= yOffs;
+    renderer.SetColor(1.0f,0,0,1.0f);
+    renderer.DrawQuad(r);
 }

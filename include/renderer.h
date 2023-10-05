@@ -3,9 +3,9 @@
 
 #include "types.h"
 #include <GL/glew.h>
+#include "globals.h"
 
 namespace Eternal {
-    extern int WIN_W, WIN_H;
     class Renderer {
         public:
             Renderer();

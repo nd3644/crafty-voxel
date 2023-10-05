@@ -1,9 +1,6 @@
 #include "renderer.h"
 #include <stdio.h>
 
-int Eternal::WIN_W = 640;
-int Eternal::WIN_H = 480;
-
 Eternal::Renderer::Renderer() {
     bInitialized = false;
 }
