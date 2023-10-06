@@ -38,6 +38,16 @@ void Eternal::Renderer::SetColor(float r, float g, float b, float a) {
     }
 }
 
+void Eternal::Renderer::SetColor(RGBA v1, RGBA v2, RGBA v3, RGBA v4) {
+    ColorBuffer[0] = v1; // tl
+    ColorBuffer[1] = v2;
+    ColorBuffer[2] = v4; // br
+
+    ColorBuffer[3] = v1; // tl
+    ColorBuffer[4] = v4; // br
+    ColorBuffer[5] = v3;
+}
+
 void Eternal::Renderer::DrawQuad(Rect r) {
     Quad q;
     q.FromRect(r);

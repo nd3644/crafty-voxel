@@ -116,9 +116,26 @@ int main(int argc, char* args[]) {
         myInputHandle.PollInputs();
         myCamera.RunMouseLogic(myInputHandle);
 
-        glEnable(GL_DEPTH_TEST);
         glClearColor(0.494 * fAmbient, 0.752 * fAmbient, 0.933f * fAmbient, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // 2D, before frame
+        myRendererShader.projMatrix = glm::ortho(0.0f,(float)WIN_W,(float)WIN_H,0.0f,-100.0f,100.0f);
+        myRendererShader.modelMatrix = glm::mat4(1);
+        myRendererShader.viewMatrix = glm::mat4(1);
+        myRendererShader.Bind();
+
+        RGBA darkBlue(123.0f / 255.0f, 168.0f / 255.0f, 1.0f, 1.0f);
+        RGBA lightBlue(180.0f / 255.0f, 208.0f / 255.0f, 208.0 / 255.0f, 1.0f);
+        darkBlue.b -= 0.05f;
+        darkBlue.g -= 0.05f;
+        darkBlue.r -= 0.05f;
+
+        myRenderer.SetColor(darkBlue,darkBlue,lightBlue,lightBlue);
+
+        myRenderer.DrawQuad(Rect(0,0,WIN_W,WIN_H));
+
+        glEnable(GL_DEPTH_TEST);
 
         float fAspect = (float)WIN_W / (float)WIN_H;
         myShader.projMatrix = glm::perspective(glm::radians(fFov), fAspect, gfZNear, gfZFar);
@@ -232,6 +249,9 @@ void Init() {
 	}
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+
 
 
 	myWindow = SDL_CreateWindow("glm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_W, WIN_H, SDL_WINDOW_OPENGL);

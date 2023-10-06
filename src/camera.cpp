@@ -25,6 +25,7 @@ Camera::Camera() {
     bIsInThirdPersonMode = false;
     bIsOnGround = false;
     iGroundCounter = 0;
+    fJumpVel = 0.0f;
 }
 
 Camera::~Camera() { }
@@ -67,8 +68,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         iGroundCounter++;
     }
 
-    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround && fJumpVel >= 0.0f) {
-            fJumpVel = -1100 * gfDeltaTime;
+    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround && fJumpVel >= 0.0f && iGroundCounter > 2) {
+            fJumpVel = -1150 * gfDeltaTime;
 //        position.y += 0.05f;
 	}
 	else if (input.IsKeyDown(InputHandle::KEY_LCTRL)) {
@@ -100,7 +101,7 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
 
     STRAFE_SPD = DEFAULT_STRAFE_SPD / 10.0f;
     if (input.IsKeyDown(InputHandle::KEY_LSHIFT)) {
-        STRAFE_SPD *= 5.0f;
+        STRAFE_SPD *= 50.0f;
     }
 
 	if (input.IsKeyDown(InputHandle::KEY_A)) {

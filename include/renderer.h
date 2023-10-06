@@ -16,6 +16,7 @@ namespace Eternal {
             void Initialize();
 
             void SetColor(float r, float g, float b, float a);
+            void SetColor(RGBA v1, RGBA v2, RGBA v3, RGBA b4);
             void DrawQuad(Quad &quad);
             void DrawQuad(Rect r);
             void DrawBox(Quad &quad);
