@@ -11,17 +11,20 @@
 #include <types.h>
 #include <imgui.h>
 
+
+// TODO: This is kind of crude
 extern SDL_Window* myWindow;
 
 Camera::Camera() {
     direction = glm::vec3(-0.5,0,0.5);
     up = glm::vec3(0,1,0);
     right = glm::vec3(1,0,0);
-//    position = formerPosition = glm::vec3(4117, 96, 2527); // This is a good starting point. Below is debugging only
-    position = formerPosition = glm::vec3(107,60,88);
+    position = formerPosition = glm::vec3(4117, 96, 2527); // This is a good starting point. Below is debugging only
+//    position = formerPosition = glm::vec3(107,60,88);
     bFocus = true;
     bIsInThirdPersonMode = false;
     bIsOnGround = false;
+    iGroundCounter = 0;
 }
 
 Camera::~Camera() { }
@@ -52,20 +55,20 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
     CalcViewMatrix(myShader);
 
     CheckInput(input);
-    UpdatePositionFrmoMoveDelta(myMap);
-
-    RunMouseLogic(input);
+    UpdatePositionFromMoveDelta(myMap);
 
     CheckGround(myMap);
     if(!bIsOnGround) {
-        fJumpVel += 50.0f * gfDeltaTime;
+        fJumpVel += 25.0f * gfDeltaTime;
+        iGroundCounter = 0;
     }
     else {
         fJumpVel = 0;
+        iGroundCounter++;
     }
 
-    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround) {
-        fJumpVel = -10;
+    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround && fJumpVel >= 0.0f) {
+            fJumpVel = -1100 * gfDeltaTime;
 //        position.y += 0.05f;
 	}
 	else if (input.IsKeyDown(InputHandle::KEY_LCTRL)) {
@@ -137,7 +140,7 @@ void Camera::CheckInput(Eternal::InputHandle &input) {
     vMoveAccel = glm::mix(vMoveAccel, glm::vec3(0,0,0), 6.0f * gfDeltaTime);
 }
 
-void Camera::UpdatePositionFrmoMoveDelta(Map &myMap) {
+void Camera::UpdatePositionFromMoveDelta(Map &myMap) {
 
     // We have to shift the y position a little otherwise we get false positives on X/Z collision that will
     // cause the camera to move more slowly on the ground. TODO: Fix this.
@@ -149,12 +152,14 @@ void Camera::UpdatePositionFrmoMoveDelta(Map &myMap) {
     position.x += moveDelta.x;
     if(CheckCollision(myMap)) {
         position.x -= moveDelta.x;
+        vMoveAccel.x = 0;
 //        std::cout << "x ";
     }
 
     position.z += moveDelta.z;
     if(CheckCollision(myMap)) {
         position.z -= moveDelta.z;
+        vMoveAccel.z = 0;
 //        std::cout << "z ";
     }
     std::cout.flush();
@@ -309,17 +314,25 @@ void Camera::CalcNewFrustumPlanes() {
 }
 
 void Camera::CheckGround(Map &map) {
+     
+    float zd = -0.5f;
+
     bIsOnGround = false;
+    if(fJumpVel < 0)
+        return;
+
+    position.x += zd;
+    position.z += zd;
     float d = 0.25f;
     if(map.GetBrick((int)(floor(position.x + 1.0f - d)), (int)(floor(position.z + 1.0f - d)), (int)position.y-1) > 0
     || map.GetBrick((int)(floor(position.x + 1.0f + d)), (int)(floor(position.z + 1.0f - d)), (int)position.y-1) > 0
     || map.GetBrick((int)(floor(position.x + 1.0f + d)), (int)(floor(position.z + 1.0f + d)), (int)position.y-1) > 0
     || map.GetBrick((int)(floor(position.x + 1.0f - d)), (int)(floor(position.z + 1.0f + d)), (int)position.y-1) > 0) {
         bIsOnGround = true;
-        float standingPos = ((int)position.y-1)+2.0f;
+        float standingPos = ((int)position.y-1)+1.0f;
         if(position.y < standingPos)
             position.y = standingPos;
-        bricklist.emplace_back((int)(position.x+0.5f), (int)position.y-1, (int)(position.z));
+        bricklist.emplace_back((int)(position.x), (int)position.y-1, (int)(position.z));
     }
 
 /*     // Check the roof just for fun
@@ -330,6 +343,9 @@ void Camera::CheckGround(Map &map) {
         if(fJumpVel < 0)
             fJumpVel = 0;
     } */
+
+    position.x -= zd;
+    position.z -= zd;
 }
 
 bool Camera::CheckCollision(Map &map) {
@@ -357,8 +373,8 @@ bool Camera::CheckCollision(Map &map) {
                 p.y -= (size/2);
                 
                 p.w = p.h = 0.5f;
-                p.x += 0.5f;
-                p.y += 0.5f;
+                p.x += 0.25f;
+                p.y += 0.75f;
                 glm::vec2 n;
                 if(p.IsColliding(r, n)) {
                     collidingBrick = r;
@@ -376,9 +392,6 @@ bool Camera::CheckCollision(Map &map) {
 }
 
 void Camera::DbgDrawCollision_FromTop(float xPos, float yPos, Eternal::Renderer &renderer, Map &myMap) {
-    int xindex = 0;
-    int zindex = 0;
-
     // This is just the width of each brick in pixels. This helps to display the fractional intersection into bricks
     float width = 16.0f;
 
@@ -426,9 +439,6 @@ void Camera::DbgDrawCollision_FromTop(float xPos, float yPos, Eternal::Renderer 
 
 
 void Camera::DbgDrawCollision_FromSide(float xPos, float yPos, Eternal::Renderer &renderer, Map &myMap) {
-    int xindex = 0;
-    int zindex = 0;
-
     // This is just the width of each brick in pixels. This helps to display the fractional intersection into bricks
     float width = 16.0f;
 

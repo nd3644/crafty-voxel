@@ -20,6 +20,7 @@ class Camera
             Updates myShader's view matrix by handling inputs and resolving any collisions with the map.
         */
         void Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
+        void RunMouseLogic(Eternal::InputHandle &input);
         bool IsInThirdPersonMode() const;
         float GetCurrentFovModifier() const;
 
@@ -52,10 +53,9 @@ class Camera
     private: // Private methods
         void CheckInput(Eternal::InputHandle &input);
         void FindTargettedBrick(Map &myMap, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget);
-        void RunMouseLogic(Eternal::InputHandle &input);
         void CalcNewFrustumPlanes();
         void CalcViewMatrix(Shader &myShader);
-        void UpdatePositionFrmoMoveDelta(Map &myMap);
+        void UpdatePositionFromMoveDelta(Map &myMap);
         bool CheckCollision(Map &map);
         void CheckGround(Map &map);
 
@@ -77,6 +77,8 @@ class Camera
         glm::vec3 targetted_brick;
 
     private: // Private vars
+
+        int iGroundCounter;
 
         glm::vec3 vMoveAccel;
 

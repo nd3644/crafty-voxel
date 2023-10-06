@@ -27,8 +27,6 @@ Map::Map(Camera &c) : camera(c) {
     }
 
     std::cout << "Map::Map(): size: " << Chunks.size() << std::endl;
-
-    double FREQ = 0.0005*2;
 }
 
 Map::~Map() {

@@ -31,6 +31,8 @@ extern bool gbWireFrameEnabled;
 
 extern bool bDbgFrustumView;
 
+extern bool bDbgCollisionViews;
+
 extern int gFrustumSkips; // How many chunks were skipped this frame
 
 enum class GlobalRenderModes {

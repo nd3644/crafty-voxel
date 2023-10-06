@@ -13,7 +13,7 @@ float fAmbient = 0.8f;
 std::vector<vec3_t>bricklist;
 std::vector<vec3_t>cameralist;
 
-int gAOLevel = 90;
+int gAOLevel = 88;
 bool gEnableAO = true;
 
 bool gbFrustumTopView = false;
@@ -26,5 +26,7 @@ float gfZFar = 1000.0f;
 float gfDeltaTime = 0.0f;
 
 int gFrustumSkips = 0; // How many chunks were skipped this frame
+
+bool bDbgCollisionViews = false;
 
 GlobalRenderModes gRenderMode = GlobalRenderModes::RENDER_MODE_DEFAULT;

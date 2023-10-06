@@ -114,6 +114,7 @@ int main(int argc, char* args[]) {
 			}
 		}
         myInputHandle.PollInputs();
+        myCamera.RunMouseLogic(myInputHandle);
 
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.494 * fAmbient, 0.752 * fAmbient, 0.933f * fAmbient, 0);
@@ -124,17 +125,11 @@ int main(int argc, char* args[]) {
 
         myShader.Bind();
 
-        // Update the camera
-        auto start = std::chrono::high_resolution_clock::now();
-        myCamera.Update(myMap, myShader, myInputHandle, myBrickWidget);
-        auto end = std::chrono::high_resolution_clock::now();
-        CameraUpdateDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-
         // Draw the map
-        start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         myMap.Draw(myCamera);
 
-        end = std::chrono::high_resolution_clock::now();
+        auto end = std::chrono::high_resolution_clock::now();
         MapDrawDuration = std::chrono::duration_cast<TimerUnits>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
@@ -176,8 +171,16 @@ int main(int argc, char* args[]) {
         myRendererShader.Bind();
         DrawFrustumCullingViewTop(myRenderer, myCamera, myMap, 500,256);
 
-        myCamera.DbgDrawCollision_FromSide(100,200,myRenderer, myMap);
-        myCamera.DbgDrawCollision_FromTop(100,50,myRenderer, myMap);
+        if(bDbgCollisionViews) {
+            myCamera.DbgDrawCollision_FromSide(100,200,myRenderer, myMap);
+            myCamera.DbgDrawCollision_FromTop(100,50,myRenderer, myMap);
+        }
+
+        // Update the camera. This should happen last in the frame due to the collision widgets.
+        start = std::chrono::high_resolution_clock::now();
+        myCamera.Update(myMap, myShader, myInputHandle, myBrickWidget);
+        end = std::chrono::high_resolution_clock::now();
+        CameraUpdateDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
         start = std::chrono::high_resolution_clock::now();
         SDL_GL_SwapWindow(myWindow);
@@ -465,6 +468,8 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
             ImGui::Checkbox("Colliders", &bDrawColliders);
             ImGui::Checkbox("Enable AO", &gEnableAO);
             ImGui::Checkbox("FrustumTop", &gbFrustumTopView);
+            ImGui::Checkbox("2D Collision Views", &bDbgCollisionViews);
+            
 
             ImGui::Separator();
 
@@ -475,6 +480,7 @@ void DrawDebugUI(Camera &myCamera, Map &map) {
             ImGui::SliderInt("AO Level", &gAOLevel, 0, 100);
             ImGui::SliderInt("View dist", &gViewDist, 8, 32);
             ImGui::SliderFloat("FOV", &fFov, 70, 120);
+            
         }
         if(ImGui::CollapsingHeader("Performance")) {
             std::string str = "MapDraw: " + std::to_string(MapDrawDuration.count()) + "us";
