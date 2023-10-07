@@ -68,9 +68,8 @@ void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, B
         iGroundCounter++;
     }
 
-    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround && fJumpVel >= 0.0f && iGroundCounter > 2) {
-            fJumpVel = -1150 * gfDeltaTime;
-//        position.y += 0.05f;
+    if (input.IsKeyDown(InputHandle::KEY_SPACE) && bIsOnGround && fJumpVel == 0.0f && iGroundCounter > 2) {
+            fJumpVel = -8;
 	}
 	else if (input.IsKeyDown(InputHandle::KEY_LCTRL)) {
         position -= up * 0.25f;
