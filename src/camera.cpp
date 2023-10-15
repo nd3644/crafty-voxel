@@ -45,7 +45,6 @@ void Camera::CalcViewMatrix(Shader &myShader) {
     // Update the uniform
     GLuint view = glGetUniformLocation(myShader.myProgram, "View");
     glUniformMatrix4fv(view, 1, GL_FALSE, glm::value_ptr(myShader.viewMatrix));
-
 }
 
 void Camera::Update(Map &myMap, Shader &myShader, Eternal::InputHandle &input, BrickSelectorWidget &selectWidget) {

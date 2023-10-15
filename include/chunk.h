@@ -35,7 +35,8 @@ struct chunk_t {
     static constexpr int CHUNK_SIZE = 16;
     static constexpr int MAX_HEIGHT = 256;
 
-    Mesh mesh;
+    Mesh mesh, trans;
+    std::vector<std::pair<Mesh,float>>TransMeshes;
     uint8_t iBricks[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
     uint8_t iLightLevels[CHUNK_SIZE][MAX_HEIGHT][CHUNK_SIZE];
     
@@ -51,7 +52,6 @@ struct chunk_t {
     void Generate(int chunkx, int chunkz, Map &map);
 
     float heatShift;
-
 
 
     int iRebuildCounter; // Reflects the number of times this chunk has been rebuilt

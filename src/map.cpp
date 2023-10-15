@@ -219,39 +219,59 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
     std::cout << "size: " << Chunks.size() << std::endl;*/
 
     int cube_count = 0;
-    chunk_t &chunk = Chunks[std::make_pair(chunkX,chunkZ)];
-    Mesh &mesh = chunk.mesh;
 
+    auto it = Chunks.find(std::make_pair(chunkX,chunkZ));
+    if(it == Chunks.end()) {
+        return;     // Chunk doesn't exist
+    }
+    auto &chunk = it->second;
+    
     chunk.bIniialBuild = true;
 
-    mesh.Clean();
-    for (int y = 2; y < MAX_HEIGHT; y++) {
+    chunk.mesh.Clean();
+    chunk.TransMeshes.clear();
+    for (int y = 2; y < MAX_HEIGHT; y++) {                              // Leaving a small margin at the base of the world helps with some batching issues. TODO: Address this.
         for (int x = 0; x < CHUNK_SIZE;x++) {
             int xindex = (chunkX*CHUNK_SIZE)+x;
             for (int z = 0; z < CHUNK_SIZE;z++) {
-                int zindex = (chunkZ*CHUNK_SIZE)+z;
+                int zindex = (chunkZ*CHUNK_SIZE)+z;                     // The actual "brick index coordinate" that applies to our world-view array. e.g. 17 instead of the local index 1
 
-                int brickID = GetBrick(xindex,zindex,y);
-                if (brickID <= 0                                    // Is the brick air
-                || IsBrickSurroundedByOpaque(xindex,zindex,y)                       // Is it visible or occluded by bricks?
-                ) {            // Is it opaque? Transparencies are handled in a seperate pass
+                // The first and most important thing to do to try and find an excuse not to draw the brick at all.
+                int brickID = GetBrick(xindex,zindex,y);                // The actual "ID" of the brick
+                if (brickID <= 0                                        // Continue if the brick is just empty air
+                || IsBrickSurroundedByOpaque(xindex,zindex,y)) {        // If the brick is surrounded by opaque bricks then it is considered occluded and can be skipped
                     continue;
                 }
 
-                int brickLightLevel = GetLightLevel(xindex,zindex,y);
+                // We have to draw the brick. Let's collect some more information about the brick we're working with.
+                float alpha = GetBrickTransparency(brickID-1);          // This is the conistent transparency level of the brick. e.g. water, glass etc
 
-                float posX = (chunkX*CHUNK_SIZE)+x;
-                float posZ = (chunkZ*CHUNK_SIZE)+z;
-                mesh.SetTranslation(posX-0.5f,y,posZ-0.5f);
+                if(alpha < 1.0f) {
+                    chunk.TransMeshes.emplace_back();
+                }
 
-                brick_ao_t curBrickAO = GetBrickAO(xindex,zindex,y);
-                
+                Mesh &mesh = (alpha == 1.0f) ? chunk.mesh : chunk.TransMeshes.back().first;
+                float HEIGHT = 0.5f;                                    // From the centre of the brick, how tall should it be? e.g. water bricks are a little shorter
+                int brickLightLevel = GetLightLevel(xindex,zindex,y);   // This is for the lighting engine but is currently always just 1.0. TODO: Implement this.
+                float posX = (chunkX*CHUNK_SIZE)+x;                     // This is the floating point "world position" for actual translating of the rendering.
+                float posZ = (chunkZ*CHUNK_SIZE)+z;                     // as above, for Z.
+
+                double dist = glm::distance(glm::vec3(posX, y, posZ), glm::vec3(camera.position.x, camera.position.y, camera.position.z)); // Get the average distance from the camera
+                if(alpha < 1.0f) {
+                    chunk.TransMeshes.back().second = dist;
+                }
+
+                mesh.SetTranslation(posX-0.5f,y,posZ-0.5f);             // Apply the translation. Note: -0.5 allow for the bricks to start centred at (0,0).
+
+                brick_ao_t curBrickAO = GetBrickAO(xindex,zindex,y);    // This calculates the AO through the brick_ao_t struct. AO is a little complicated so this struct attempts to simplify things, esp comparison between brick AO values (which are many).
+
+                /* The following routing is a little crude but will determine how many bricks along the Z-axis are of the same type, and also share the same AO.
+                   These bricks can be "tiled" with a single polygon and a repeating texture. */
                 int len = 1;
                 for(int i = 1;i < CHUNK_SIZE;i++) {
                     if(z < CHUNK_SIZE-i
                     && brickID == GetBrick(xindex,zindex+i,y)
                     && brickLightLevel == GetLightLevel(xindex,zindex+i,y)) {
-
                         if(GetBrickAO(xindex,zindex+i,y) != curBrickAO) {
                             goto skip;
                         }
@@ -262,23 +282,24 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     }
                 }
                 skip:
+                z += len-1;                                             // Skip along the z-axis depending on how wide our polygon will be. This could be anything between 1 (just a block) and 16 (the entire chunk)
 
-                z += len-1;
-
+                /* BrickLookup stores which brick has which texture for each face. Index1 just tells the vertex shader which index into
+                 the texture array to use for a given polygon. This loop will assign the correct information for the shaders. */
                 for(int i = 0;i < 6*6;i++)
                     mesh.Index1(BrickLookup[brickID-1][i/6]);
 
                 float lv = fAmbient + (float)GetLightLevel(xindex,zindex,y+1) / (float)MAX_LIGHT_LEVEL;
-                lv -= chunk.heatShift;
 
                 float xlen = 1.0;
 
-
-                float HEIGHT = 0.5f;
-
-                // TODO: Remove hardcode
-                if(brickID == BrickNameMap["water"] && GetBrick(xindex,zindex,y+1) <= 0)
+                if(brickID == BrickNameMap["water"] && GetBrick(xindex,zindex,y+1) <= 0)    // This is a hardcode to make water look a little better. TODO: Remove this and store this information somewhere sensible.
                     HEIGHT -= 0.15f;
+
+                /*
+                    NOTE: THE VERTICES ARE LABELD, FR, TR, BL, BR, ETC. THIS WAS DONE AFTER THE FACT FOR CONVENIENCE BUT SADLY, ARE LIKELY NOT CORRECT.
+                    TODO: Label these properly.
+                */
 
                 // Draw top
                 uint8_t (&topamb_a)[4] = curBrickAO.ambientVecs[0];
@@ -288,24 +309,23 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
                 
                 if(amb[0] + amb[3] > amb[1] + amb[2]) {
-                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(0, HEIGHT, 0); // left back 0
-                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(xlen, HEIGHT, len);  //  front right 2
-                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(xlen, HEIGHT, 0);   // right back 1 
-                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(xlen, HEIGHT, len);  //  front right 2
-                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(0, HEIGHT, 0); // left back 0
-                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(0, HEIGHT, len);  // front left 3
+                    mesh.Color4(amb[2], amb[2], amb[2], alpha); mesh.TexCoord2(0, 0);       mesh.Vert3(0, HEIGHT, 0); // left back 0
+                    mesh.Color4(amb[1], amb[1], amb[1], alpha); mesh.TexCoord2(1, len);     mesh.Vert3(xlen, HEIGHT, len);  //  front right 2
+                    mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(1, 0);       mesh.Vert3(xlen, HEIGHT, 0);   // right back 1 
+                    mesh.Color4(amb[1], amb[1], amb[1], alpha); mesh.TexCoord2(1, len);     mesh.Vert3(xlen, HEIGHT, len);  //  front right 2
+                    mesh.Color4(amb[2], amb[2], amb[2], alpha); mesh.TexCoord2(0, 0);       mesh.Vert3(0, HEIGHT, 0); // left back 0
+                    mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(0, len);     mesh.Vert3(0, HEIGHT, len);  // front left 3
                 }
                 else {
-                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(0, HEIGHT, len); // front left
-                    mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(1, len);     mesh.Vert3(xlen, HEIGHT, len);  //  front right
-                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(xlen, HEIGHT, -0); // right back
-                    mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(0, len);     mesh.Vert3(0, HEIGHT, len);  // front left
-                    mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(1, 0);       mesh.Vert3(xlen, HEIGHT, 0);   // right back
-                    mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(0, 0);       mesh.Vert3(0, HEIGHT, -0); // left back
+                    mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(0, len);     mesh.Vert3(0, HEIGHT, len); // front left
+                    mesh.Color4(amb[1], amb[1], amb[1], alpha); mesh.TexCoord2(1, len);     mesh.Vert3(xlen, HEIGHT, len);  //  front right
+                    mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(1, 0);       mesh.Vert3(xlen, HEIGHT, -0); // right back
+                    mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(0, len);     mesh.Vert3(0, HEIGHT, len);  // front left
+                    mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(1, 0);       mesh.Vert3(xlen, HEIGHT, 0);   // right back
+                    mesh.Color4(amb[2], amb[2], amb[2], alpha); mesh.TexCoord2(0, 0);       mesh.Vert3(0, HEIGHT, -0); // left back
                 }
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex,y-1) / (float)MAX_LIGHT_LEVEL;
-                lv -= chunk.heatShift;
 
                 uint8_t (&botamb_a)[4] = curBrickAO.ambientVecs[1];
                 for(int k = 0;k < 4;k++) {
@@ -314,7 +334,7 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 
                 // TODO: add a/o here
                 // Draw bottom
-                mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);mesh.Color4(lv, lv, lv, 1); mesh.Color4(lv, lv, lv, 1);
+                mesh.Color4(lv, lv, lv, alpha); mesh.Color4(lv, lv, lv, alpha); mesh.Color4(lv, lv, lv, alpha); mesh.Color4(lv, lv, lv, alpha);mesh.Color4(lv, lv, lv, alpha); mesh.Color4(lv, lv, lv, alpha);
                 mesh.TexCoord2(0, len);       mesh.Vert3(0, -0.5, len);
                 mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, -0.5, -0);
                 mesh.TexCoord2(1, len);       mesh.Vert3(xlen, -0.5, len);
@@ -324,7 +344,6 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, -0.5, -0);
 
                 lv = fAmbient + (float)GetLightLevel(xindex-1,zindex,y) / (float)MAX_LIGHT_LEVEL;
-                lv -= chunk.heatShift;
 
                 uint8_t (&leftamb_a)[4] = curBrickAO.ambientVecs[2];
                 for(int k = 0;k < 4;k++) {
@@ -332,16 +351,15 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
 
                 // Draw left
-                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0);
-                mesh.Color4(amb[2], amb[2], amb[2], 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(0, -0.5, len); // br
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0, HEIGHT, len); // tr
+                mesh.Color4(amb[3], amb[3], amb[3], alpha);  mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0);
+                mesh.Color4(amb[2], amb[2], amb[2], alpha);  mesh.TexCoord2(len, 1);       mesh.Vert3(0, -0.5, len); // br
+                mesh.Color4(amb[1], amb[1], amb[1], alpha);  mesh.TexCoord2(len, 0);       mesh.Vert3(0, HEIGHT, len); // tr
 
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(0, HEIGHT, len); // tr
-                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(0, HEIGHT, -0); // tl
-                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0);
+                mesh.Color4(amb[1], amb[1], amb[1], alpha);  mesh.TexCoord2(len, 0);       mesh.Vert3(0, HEIGHT, len); // tr
+                mesh.Color4(amb[0], amb[0], amb[0], alpha);  mesh.TexCoord2(0, 0);         mesh.Vert3(0, HEIGHT, -0); // tl
+                mesh.Color4(amb[3], amb[3], amb[3], alpha);  mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0);
 
                 lv = fAmbient + (float)GetLightLevel(xindex+1,zindex,y) / (float)MAX_LIGHT_LEVEL;
-                lv -= chunk.heatShift;
 
                 uint8_t (&rightamb_a)[4] = curBrickAO.ambientVecs[3];
                 for(int k = 0;k < 4;k++) {
@@ -349,17 +367,15 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
                 
                 // Draw right
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(xlen, HEIGHT, len); // tr
-                mesh.Color4(amb[2], amb[2], amb[2], 1);  mesh.TexCoord2(len, 1);       mesh.Vert3(xlen, -0.5, len); // br
-                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(xlen, -0.5, -0);
+                mesh.Color4(amb[1], amb[1], amb[1], alpha);  mesh.TexCoord2(len, 0);       mesh.Vert3(xlen, HEIGHT, len); // tr
+                mesh.Color4(amb[2], amb[2], amb[2], alpha);  mesh.TexCoord2(len, 1);       mesh.Vert3(xlen, -0.5, len); // br
+                mesh.Color4(amb[3], amb[3], amb[3], alpha);  mesh.TexCoord2(0, 1);         mesh.Vert3(xlen, -0.5, -0);
         
-                mesh.Color4(amb[1], amb[1], amb[1], 1);  mesh.TexCoord2(len, 0);       mesh.Vert3(xlen, HEIGHT, len); // tr   
-                mesh.Color4(amb[3], amb[3], amb[3], 1);  mesh.TexCoord2(0, 1);         mesh.Vert3(xlen, -0.5, -0);                             
-                mesh.Color4(amb[0], amb[0], amb[0], 1);  mesh.TexCoord2(0, 0);         mesh.Vert3(xlen, HEIGHT, -0); // tl
-
+                mesh.Color4(amb[1], amb[1], amb[1], alpha);  mesh.TexCoord2(len, 0);       mesh.Vert3(xlen, HEIGHT, len); // tr   
+                mesh.Color4(amb[3], amb[3], amb[3], alpha);  mesh.TexCoord2(0, 1);         mesh.Vert3(xlen, -0.5, -0);                             
+                mesh.Color4(amb[0], amb[0], amb[0], alpha);  mesh.TexCoord2(0, 0);         mesh.Vert3(xlen, HEIGHT, -0); // tl
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex-1,y) / (float)MAX_LIGHT_LEVEL;
-                lv -= chunk.heatShift;
 
                 uint8_t (&backamb_a)[4] = curBrickAO.ambientVecs[4];
                 for(int k = 0;k < 4;k++) {
@@ -367,16 +383,15 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                 }
                                 
                 // Draw back
-                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0); // br
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, -0); // tl
-                mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(1, 1);         mesh.Vert3(xlen, -0.5, -0); // bl
+                mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0); // br
+                mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, -0); // tl
+                mesh.Color4(amb[2], amb[2], amb[2], alpha); mesh.TexCoord2(1, 1);         mesh.Vert3(xlen, -0.5, -0); // bl
 
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, -0);// tl
-                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0); // br
-                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(0, HEIGHT, -0); // tr
+                mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, -0);// tl
+                mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, -0); // br
+                mesh.Color4(amb[1], amb[1], amb[1], alpha); mesh.TexCoord2(0, 0);         mesh.Vert3(0, HEIGHT, -0); // tr
 
                 lv = fAmbient + (float)GetLightLevel(xindex,zindex+1,y) / (float)MAX_LIGHT_LEVEL;
-                lv -= chunk.heatShift;
 
                 // Draw front
                 uint8_t (&frontamb_a)[4] = curBrickAO.ambientVecs[5];
@@ -384,12 +399,12 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
                     amb[k] = ((float)frontamb_a[k] / 100.0f) * lv;
                 }
                             
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, len); // tl
-                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, len); // br
-                mesh.Color4(amb[2], amb[2], amb[2], 1); mesh.TexCoord2(1, 1);         mesh.Vert3(xlen, -0.5, len); // bl
-                mesh.Color4(amb[0], amb[0], amb[0], 1); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, len);// tl
-                mesh.Color4(amb[1], amb[1], amb[1], 1); mesh.TexCoord2(0, 0);         mesh.Vert3(0, HEIGHT, len); // tr
-                mesh.Color4(amb[3], amb[3], amb[3], 1); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, len); // br
+                mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, len); // tl
+                mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, len); // br
+                mesh.Color4(amb[2], amb[2], amb[2], alpha); mesh.TexCoord2(1, 1);         mesh.Vert3(xlen, -0.5, len); // bl
+                mesh.Color4(amb[0], amb[0], amb[0], alpha); mesh.TexCoord2(1, 0);         mesh.Vert3(xlen, HEIGHT, len);// tl
+                mesh.Color4(amb[1], amb[1], amb[1], alpha); mesh.TexCoord2(0, 0);         mesh.Vert3(0, HEIGHT, len); // tr
+                mesh.Color4(amb[3], amb[3], amb[3], alpha); mesh.TexCoord2(0, 1);         mesh.Vert3(0, -0.5, len); // br
                 cube_count++;
             }
         }
@@ -397,8 +412,9 @@ void Map::BuildChunk(int chunkX, int chunkZ) {
 //    mesh.BindBufferData();`
     chunk.curStage = chunk_t::UPLOAD_STAGE;
     chunk.iRebuildCounter++;
-    if(chunk.iRebuildCounter > 5)
+    if(chunk.iRebuildCounter > 5) // TODO: Review whatever this is. I don't actually remember?
         chunk.iRebuildCounter = 0;
+    
     chunk.bRequiresRebuild = false;
 }
 
@@ -506,7 +522,6 @@ void Map::Draw(Camera &cam) {
             // Note that it's better not to discriminate on visibility here.
             // Generating the terrain should be done pretty freely as this information
             // is invaluable for rendering later
-            
             if(chunk.curStage == chunk_t::DEFAULT_STAGE) {
                 if(curThread < NUM_THREADS) {
                     threads[curThread] = std::thread([this, &chunk, x, z]() {
@@ -521,7 +536,7 @@ void Map::Draw(Camera &cam) {
         }
     }
 
-    // Loop through all chunks within the gViewDist
+    // First, loop through all chunks within the gViewDist
     for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
         if(x < 0)
             continue;
@@ -552,7 +567,7 @@ void Map::Draw(Camera &cam) {
     }
 
 
-    // Run the builder pass
+    // Then, run the builder pass
     if(curThread == 0) {
         for(int x = sX - gViewDist;x < sX+gViewDist;x++) {
             if(x < 0)
@@ -641,6 +656,7 @@ void Map::LoadBrickMetaData() {
             infile >> arr[i];
         }
         infile >> transparency;
+        std::cout << "brick " << brickName << " has transparency level of " << transparency << std::endl;
         BrickTransparencies.push_back(transparency);
         BrickLookup.push_back(arr);
     }
@@ -685,7 +701,7 @@ int Map::Map::GetBrick(int x, int z, int y) {
     auto key = std::make_pair(xchunk,zchunk);
     auto it = Chunks.find(key);
     if(it != Chunks.end()) {
-        auto &chunk = Chunks[key];
+        auto &chunk = it->second;
         val = chunk.iBricks[xindex][y][zindex];
     }
 
@@ -701,11 +717,10 @@ void Map::Map::SetBrick(int x, int z, int y, int id) {
     int xindex = x % chunk_t::CHUNK_SIZE;
     int zindex = z % chunk_t::CHUNK_SIZE;
 
-
     auto key = std::make_pair(xchunk,zchunk);
     auto it = Chunks.find(key);
     if(it != Chunks.end()) {
-        auto &chunk = Chunks[key];
+        auto &chunk = it->second;
         chunk.iBricks[xindex][y][zindex] = id;
     }
 }
