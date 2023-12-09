@@ -28,8 +28,8 @@
 
 #ifdef ENABLE_IMGUI
     #include <imgui.h>
-    #include <imgui_impl_sdl.h>
-    #include <imgui_impl_opengl3.h>
+    #include <imgui/backends/imgui_impl_sdl2.h>
+    #include <imgui/backends/imgui_impl_opengl3.h>
 #endif
 
 #define BUFFER_OFFSET(i) ((void*)(i))
